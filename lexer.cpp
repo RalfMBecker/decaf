@@ -1,8 +1,15 @@
 /********************************************************************
 * lexer.cpp - lexer for Decaf
 * 
+* Note: space is optional. By and large, lexer reads through it, and 
+*       it is the task of the parser to refuse such sequences.
+*       However, we forbid the following character sequence types:
+*       - 0x1af
+*       - 1.1.e
 ********************************************************************/
 
+#include <string>
+#include <sstream>
 #include <cctype>
 #include "compiler.h"
 #include "error.h"
@@ -75,7 +82,10 @@ checkReserved(std::string word){
 }
 
 static void
-cError(const char* what, const char* type){
+cError(const char* what, const char* type, int which){
+	std::ostringstream tmp_Str;
+	tmp_Str << "Lexer: error translating";
+	std::cerr << tmp_Str;
 	std::cerr << "Lexer: error translating" << what << "to " << type << "type\n";
 	exit(EXIT_FAILURE);
 }
@@ -91,6 +101,53 @@ tooLong(const char* what_Type, const char* what, const char* type_Str,int type){
 	exit(EXIT_FAILURE);
 }
 
+static void
+strtolError(const char* str, const char* type, char* end_Ptr, int base){
+
+	std::ostringstream tmp_Str;
+	tmp_Str << "Lexer: error translating ";
+	if (8 == base)
+		tmp_Str << "0";
+	else if (16 == base)
+		tmp_Str << "Ox";
+	tmp_Str << str << " to " << type;
+
+	// overflow/underflow
+	if ( 0 != errno){
+		std::cerr << tmp_Str.str() << " - ";
+		perror("strtol");
+		exit(EXIT_FAILURE);
+	}
+
+	if ( (0 != end_Ptr) ){
+		tmp_Str << " - offending character: " << *end_Ptr << "\n";
+		std::cerr << tmp_Str.str();
+		exit(EXIT_FAILURE);
+	}
+}
+
+
+// upon return, points to first digit (if any) of number
+static int
+getBase(int* last){
+
+	if ( ('0' != (*last)) )
+		return 10; 
+	else{
+		if ( ('x' == ((*last) = input->get())) || ('X' == (*last)) ){
+			*last = input->get();
+			return 16;
+		}
+		else if ( isdigit(*last) )
+			return 8;
+		else{
+			input->putback(*last);
+			*last = '0';
+			return 10;
+		}
+	}
+}
+
 // gettok - Return the next token from standard input.
 int 
 getTok() {
@@ -104,7 +161,7 @@ getTok() {
   if ( std::isalpha(last_Char) ){ // found an identifier
 		int i = 0;
     identifier_Str = last_Char;
-		while ( (std::isalnum(last_Char = input->get())) ){
+		while ( (std::isalnum(last_Char = input->get())) || ('_' == last_Char) ){
 			if ( (MAX_ID == ++i) )
 				tooLong("Identifier", identifier_Str.c_str(), "MAX_ID", MAX_ID);
 			identifier_Str += last_Char;
@@ -114,20 +171,45 @@ getTok() {
     return checkReserved(identifier_Str);
   }
  
-  // process numbers: [0-9]+([.][0-9]*)
+  // process numbers: [0-9]+([.][0-9]*) (-: NN)
+	//                  octal: 0NN; hex: [0xNN, 0XNN]
 	//            - unary +/- are processed at end of gettoken()
   //            - we don't allow scientific notation so far
 	//            - we allow d., but not .d style of doubles
-	//            - extension to read in octal/hex easy
   if ( std::isdigit(last_Char) ) {
     std::string tmp_Str;
-		int i = 0;
+		char *end_Ptr;
+		int i = 0, base;
+
+		base = getBase(&last_Char);
+
+		if ( (8 == base) || (16 == base) ){
+			do{
+				if ( (MAX_LIT == ++i) )
+					tooLong("Integer literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+				tmp_Str += last_Char;
+				last_Char = input->get();
+			} while ( ((8==base) && isdigit(last_Char)) || 
+								((16==base) && isxdigit(last_Char)) );
+
+			if 	( (16 == base) && (isalpha(last_Char)) ) // catch 0x1ag
+				tmp_Str += last_Char;
+
+			val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
+			if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
+				strtolError(tmp_Str.c_str(), "integer", end_Ptr, base);
+
+			std::cout << "Found integer literal: " << val_Int << "\n";
+			return tok_int;
+		}
+
+		// dealing with decimal input
 		do{
 			if ( (MAX_LIT == ++i) )
 				tooLong("Integer literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
       tmp_Str += last_Char;
       last_Char = input->get();
-    } while ( isdigit(last_Char) );
+    } while (isdigit(last_Char) );
 
     if ( ('.' == last_Char) ) { 
 			if ( (MAX_LIT == ++i) )
@@ -137,9 +219,10 @@ getTok() {
     }
 		else{
 			errno = 0;
-			val_Int = strtol(tmp_Str.c_str(), 0, 10);
-			if ( (0 != errno) ) 
-				cError(tmp_Str.c_str(), "integer");
+			val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
+			if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
+				strtolError(tmp_Str.c_str(), "integer", end_Ptr, base);
+
 			std::cout << "Found integer literal: " << val_Int << "\n";
 			return tok_int;
 		}
@@ -150,10 +233,31 @@ getTok() {
       tmp_Str += last_Char;
       last_Char = input->get();
     }
+
+		// deal with scientific notation
+		if ( ('e' == last_Char) || ('E' == last_Char) ){
+			if ( (MAX_LIT == ++i) )
+				tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+			tmp_Str += last_Char;
+
+			last_Char = input->get();
+			tmp_Str += last_Char;
+			if ( !(std::isdigit(last_Char)) && 
+					 ('-' != last_Char ) && ('+' != last_Char) )
+				throw(Lexer_Error(tmp_Str.c_str()));
+
+			while ( isdigit(last_Char = input->get())  ){
+				if ( (MAX_LIT == ++i) )
+					tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+				tmp_Str += last_Char;
+			}
+		}
+
+		// TO: CORRECT ERROR CHECKING HERE ********************************
 		errno = 0;
     val_Flt = strtod(tmp_Str.c_str(), 0);
 		if ( (0 != errno) )
-			cError(tmp_Str.c_str(), "float");
+			cError(tmp_Str.c_str(), "float", errno);
 		std::cout << "Found float literal: " << val_Flt << "\n";
     return tok_double;
   } // end 'if number' scope
