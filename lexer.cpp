@@ -180,6 +180,7 @@ getTok() {
     std::string tmp_Str;
 		char *end_Ptr;
 		int i = 0, base;
+		errno = 0;
 
 		base = getBase(&last_Char);
 
@@ -218,7 +219,6 @@ getTok() {
       last_Char = input->get();
     }
 		else{
-			errno = 0;
 			val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
 			if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
 				strtolError(tmp_Str.c_str(), "integer", end_Ptr, base);
