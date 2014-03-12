@@ -67,8 +67,8 @@ Lexer_Error(const std::string& name, const std::string& second)
 	if ( Second.empty() )
 	    tmp_Str << "\n";
 	else
-	    tmp_Str << ": " << Second.c_str() << "\n";
-	std::cerr << tmp_Str;
+	    tmp_Str << ": " << Second << "\n";
+	std::cerr << tmp_Str.str();
     }
 private: 
     std::string Name; 

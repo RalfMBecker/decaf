@@ -23,7 +23,7 @@ enum token{
 
 // it is more logical to make them extern here: they are defined in 
 // lexer.cpp translation unit
-extern std::string identifier_Str;  // for tok_identifier
+extern std::string id_Str;  // for tok_identifier
 extern long val_Int;       // for tok_number
 extern double val_Flt; 
 

@@ -18,7 +18,7 @@
 
 extern std::istream* input;
 
-std::string identifier_Str;  // for tok_identifier
+std::string id_Str;  // for tok_identifier
 long val_Int;              // for tok_Int (int type, not just int)
 double val_Flt;            // for tok_Flt (type)
 
@@ -82,8 +82,84 @@ checkReserved(std::string word)
     return tok_ID;
 }
 
+// cannot use readIntValue as we also keep recording into the string
+// errors handled here; returns length of escape sequence if ok
+// upon entry, *last points to 'O'/'x' in escape sequence
+// upon exit, it points to the last valid number in it
+// reports len = -1 if nothing read
+static int
+readOctHex(int* last, std::string& Str, int base)
+{
+    int i = 0;;
+    int max = (8 == base)?3:2; 
+    std::string test_Str;
+
+    while ( i++ < max ){
+	*last = input->get();
+	if ( ( (8 == base) && ('0' <= *last) && ('8' > *last) ) || 
+	     ( (16 == base) && (std::isxdigit(*last)) ) ){
+	    Str += *last;
+	    test_Str += *last;
+	}
+	else{
+	    input->putback(*last);
+	    break;
+	}
+    }
+
+    if ( (8 == base) ){ // check if valid ascii (always valid if base = 16)
+	char* endPtr;
+	long range = strtol(test_Str.c_str(), &endPtr, 8);
+	if ( (255 < range) )
+	    throw(Lexer_Error(Str, "illegal ascii value"));
+    }
+
+    return i-1; // we read one too far
+}
+
+// errors handled here; void return if fine
+// upon entry, *last point to '\\'. upon exit, to the last valid
+// character in the escape sequence
+static int
+validEscape(int* last, std::string& tmp_Str)
+{
+    int len = 1;
+
+    *last = input->get();
+    switch(*last){
+
+    case 'a': case 'b': case 'f': case 'n': case 'r': case 't':
+    case 'v': case '\\': case '\?': case '\'': case '\"':
+	tmp_Str += *last;
+	break;
+
+    case '0':
+	tmp_Str += *last;
+	len += readOctHex(last, tmp_Str, 8);
+	if ( (1 == len) ) // \0[non-octal]
+	    throw(Lexer_Error(tmp_Str, "invalid escape sequence"));
+	break;
+
+    case 'x': case 'X':
+	tmp_Str += *last; 
+	len += readOctHex(last, tmp_Str, 16);
+	if ( (1 == len) ) // \x[non-octal]
+	    throw(Lexer_Error(tmp_Str, "invalid escape sequence"));
+	break;
+
+    default: 
+	std::string err_Str;
+	err_Str += static_cast<char> (*last);
+	throw(Lexer_Error(err_Str, 0));
+	break;
+    }
+
+    return len;
+}
+
+
 // Example:
-// what_Type="identifier", what=identifier_Str, type_Str="MAX_ID", type=MAX_ID
+// what_Type="identifier", what=id_Str, type_Str="MAX_ID", type=MAX_ID
 static void
 tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
 {
@@ -215,16 +291,16 @@ getTok()
     // legal identifier names are of form [al][alnum]*
     if ( std::isalpha(last_Char) ){ // found an identifier
 	int i = 0;
-	identifier_Str = last_Char;
+	id_Str = last_Char;
 	while ( (std::isalnum(last_Char = input->get())) || 
 		('_' == last_Char) ){
 	    if ( (MAX_ID == ++i) )
-		tooLong("Identifier", identifier_Str.c_str(), "MAX_ID", MAX_ID);
-	    identifier_Str += last_Char;
+		tooLong("Identifier", id_Str.c_str(), "MAX_ID", MAX_ID);
+	    id_Str += last_Char;
 	}
 
-	std::cout << "Found identifier: " << identifier_Str << "\n";
-	return checkReserved(identifier_Str);
+	std::cout << "Found identifier: " << id_Str << "\n";
+	return checkReserved(id_Str);
     }
  
     // process numbers: [0-9]+([.][0-9]*) (-: NN)
@@ -278,7 +354,7 @@ getTok()
 	    tmp_Str += last_Char;
 	    if ( !(std::isdigit(last_Char)) && 
 		 ('-' != last_Char ) && ('+' != last_Char) )
-		throw(Lexer_Error(tmp_Str.c_str(), 0));
+		throw(Lexer_Error(tmp_Str, 0));
 
 	    while ( isdigit(last_Char = input->get())  ){
 		if ( (MAX_LIT == ++i) )
@@ -297,21 +373,23 @@ getTok()
     // process strings
     if ( ('\"' == last_Char) ){	
 	int i = 0;
-	identifier_Str.clear();
+	id_Str.clear();
 	while ( ('\"' != (last_Char = input->get())) && (EOF != last_Char)){
 	    if ( (MAX_STR == ++i) )
-		tooLong("Str const",identifier_Str.c_str(),"MAX_STR", MAX_STR);
-	    // no multi-line strings
-	    if ( ('\n' == last_Char) ){
-		const char* addtl = "no multi-line strings";
-		throw(Lexer_Error(identifier_Str.c_str(), addtl));
+		tooLong("Str const",id_Str.c_str(),"MAX_STR", MAX_STR);
+	    if ( ('\n' == last_Char) )
+		throw(Lexer_Error(id_Str, "no multi-line strings"));
+
+	    if ( ('\\' == last_Char) ){
+		id_Str += '\\';
+		i += validEscape(&last_Char, id_Str);
+		if ( (MAX_STR < i) )
+		    tooLong("Str const",id_Str.c_str(),"MAX_STR",MAX_STR);
 	    }
-	    if ( ('\\' == last_Char) )
-		; // TO DO
 	    else
-		identifier_Str += last_Char;
+		id_Str += last_Char;
 	}
-	std::cout << "Found string const: " << identifier_Str.c_str() << "\n";
+	std::cout << "Found string const: " << id_Str.c_str() << "\n";
 	last_Char = input->get();
 	return tok_string;
     }
@@ -336,7 +414,7 @@ getTok()
 	}
 	else{ // found a '/'
 	    input->putback(last_Char);
-	    return '/'; // *** RECONSIDER AFTER DEC ON TOKENS
+	    return '/';
 	}
 
 	std::cout << "\t\t...processed a comment type...\n";
