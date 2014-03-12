@@ -15,6 +15,7 @@
 
 #define MAX_ID 31
 #define MAX_LIT 32
+#define MAX_STR 32
 
 /*
 extern std::map<char, int> BinopPrecedence;

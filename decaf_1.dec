@@ -3,6 +3,7 @@ int x = 072;
 int y = 0x1a;
 double yfl_1 = 1.1;
 double yfl_2 = 1.1e-1;
+string tmp_Str = "onlyalpha123";
 
 if (x < 4)
 	 double z = 4;
