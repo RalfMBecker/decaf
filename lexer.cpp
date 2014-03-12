@@ -1,12 +1,19 @@
 /********************************************************************
 * lexer.cpp - lexer for Decaf
 * 
+*       All Decaf features are covered (or believed to be). Addtl., 
+*       we allow C-style string constant syntax, octal integers,
+*       and a few other constructs that are not expected of Decaf.
+*
+*       Lexer can be relied upon to perform lexer-level syntax checks
+*
 * Note: space is optional. By and large, lexer reads through it, and 
 *       it is the task of the parser to refuse such sequences.
 *       However, we forbid the following character sequence types:
 *       - 0x1af
 *       - 1.1.e
-*       We allow C-style string constants syntax
+*       (this is as specified in the Brown grammer)
+*
 ********************************************************************/
 
 #include <string>
@@ -18,9 +25,9 @@
 
 extern std::istream* input;
 
-std::string id_Str;  // for tok_identifier
-long val_Int;              // for tok_Int (int type, not just int)
-double val_Flt;            // for tok_Flt (type)
+std::string id_Str;      // for tok_identifier
+long val_Int;            // for tok_Int (int type, not just int)
+double val_Flt;          // for tok_Flt (type)
 
 static token
 checkReserved(std::string word)
@@ -39,6 +46,10 @@ checkReserved(std::string word)
 	return tok_double;
     if ( ("bool" == word) )
 	return tok_bool;
+    if ( ("true" == word) )
+	return tok_true;
+    if ( ("false" == word) )
+	return tok_false;
     if ( ("string" == word) )
 	return tok_string;
     if ( ("null" == word) )
@@ -82,7 +93,25 @@ checkReserved(std::string word)
     return tok_ID;
 }
 
-// cannot use readIntValue as we also keep recording into the string
+// returns 0 if character in dictionary; -1 if not
+// as some operators consist of 2 characters, they are checked elsewhere
+// some duplication with prior checks (e.g., '<') (for safety in case
+// of later re-design)
+static int
+checkValidOpPunct(int test)
+{
+    if ( ('+' == test) || ('-' == test) || ('*' == test) || ('/' == test) || 
+	 ('%' == test) || ('<' == test) || ('>' == test) || ('=' == test) ||
+	 ('!' == test) || (';' == test) || (',' == test) || ('.' == test) ||
+	 ('[' == test) || (']' == test) || ('(' == test) || (')' == test) ||
+	 ('{' == test) || ('}' == test) )
+	return 0;
+    else
+	return -1;
+}
+
+
+// cannot use readIntValue as we also keep recording into id_Str here
 // errors handled here; returns length of escape sequence if ok
 // upon entry, *last points to 'O'/'x' in escape sequence
 // upon exit, it points to the last valid number in it
@@ -117,9 +146,9 @@ readOctHex(int* last, std::string& Str, int base)
     return i-1; // we read one too far
 }
 
-// errors handled here; void return if fine
-// upon entry, *last point to '\\'. upon exit, to the last valid
-// character in the escape sequence
+// errors handled here; returns lenght of escape sequence if fine
+// upon entry, *last point to '\\'. 
+// upon exit, it points to the last valid character in the escape sequence
 static int
 validEscape(int* last, std::string& tmp_Str)
 {
@@ -150,7 +179,7 @@ validEscape(int* last, std::string& tmp_Str)
     default: 
 	std::string err_Str;
 	err_Str += static_cast<char> (*last);
-	throw(Lexer_Error(err_Str, 0));
+	throw(Lexer_Error(err_Str, ""));
 	break;
     }
 
@@ -158,7 +187,7 @@ validEscape(int* last, std::string& tmp_Str)
 }
 
 
-// Example:
+// Enforcing max lengths of identifiers, etc. Sample usage:
 // what_Type="identifier", what=id_Str, type_Str="MAX_ID", type=MAX_ID
 static void
 tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
@@ -169,6 +198,7 @@ tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
     exit(EXIT_FAILURE);
 }
 
+// strtol has arcane error-reporting, so handled separately
 static void
 strtolError(const char* str, const char* type, char* end_Ptr, int base)
 {
@@ -195,6 +225,7 @@ strtolError(const char* str, const char* type, char* end_Ptr, int base)
     }
 }
 
+// strtod has arcane error-reporting, so handled separately
 static void
 strtodError(const char* str, const char* type, char* end_Ptr)
 {
@@ -239,13 +270,13 @@ getBase(int* last)
 }
 
 // returns tok_int if octal/hex; 0 if so far correct processing of a dec int
+// (handled differently as octal/hex can only be integers; but for decimals,
+// we might have parsed only the 'x' part of x.y[e[+|-]z]] )
 static int
 readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
 
     char* end_Ptr;
     int base = *pbase;
-
-    // base = getBase(*last);
 
     if ( (8 == base) || (16 == base) ){
 	do{
@@ -278,7 +309,7 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
 }
 
 
-// gettok - Return the next token from standard input.
+// gettok - return the next token from 'input'-stream
 int 
 getTok()
 {
@@ -303,11 +334,12 @@ getTok()
 	return checkReserved(id_Str);
     }
  
-    // process numbers: [0-9]+([.][0-9]*) (-: NN)
+    // process numbers: [0-9]+([.][0-9]*) (=: NN)
     //                  octal: 0NN; hex: [0xNN, 0XNN]
     //                  floats are expected in decimal presentation
     //                  - unary +/- are processed at end of gettoken()
     //                  - we allow d., but not .d style of doubles
+    //                    (as also specified in Decaf grammar)
     if ( std::isdigit(last_Char) ){
 	std::string tmp_Str;
 	std::string& rtmp_Str = tmp_Str;
@@ -354,7 +386,7 @@ getTok()
 	    tmp_Str += last_Char;
 	    if ( !(std::isdigit(last_Char)) && 
 		 ('-' != last_Char ) && ('+' != last_Char) )
-		throw(Lexer_Error(tmp_Str, 0));
+		throw(Lexer_Error(tmp_Str, ""));
 
 	    while ( isdigit(last_Char = input->get())  ){
 		if ( (MAX_LIT == ++i) )
@@ -404,12 +436,12 @@ getTok()
 		;
 	    if ( ('*' == last_Char) ){
 		if ( ('/' != (last_Char = input->get())) )
-		    throw Lexer_Error("/", 0);
+		    throw Lexer_Error("/", "");
 	    }
 	    else{
 		std::string tmp_String;
 		tmp_String += last_Char;
-		throw Lexer_Error(tmp_String, 0);
+		throw Lexer_Error(tmp_String, "");
 	    }
 	}
 	else{ // found a '/'
@@ -425,9 +457,89 @@ getTok()
     // did we hit EOF?
     if ( (EOF == last_Char) )
 	return tok_eof;
- 
-    // if we come here, we have found no token etc, and return the char we found
+
+    // 2 character operator tokens
+    if ( ('<' == last_Char) ){
+	if ('=' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '<='" << "\n";
+	    return tok_se;
+	}
+	else{
+	    std::cout << "found a '<'" << "\n";
+	    return '<';
+	}
+    }
+    if ( ('>' == last_Char) ){
+	if ('=' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '>='" << "\n";
+	    return tok_ge;
+	}
+	else{
+	    std::cout << "found a '>'" << "\n";
+	    return '>';
+	}
+    }
+    if ( ('=' == last_Char) ){
+	if ('=' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '=='" << "\n";
+	    return tok_log_eq;
+	}
+	else{
+	    std::cout << "found a '='" << "\n";
+	    return '=';
+	}
+    }
+    if ( ('!' == last_Char) ){
+	if ('=' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '!='" << "\n";
+	    return tok_log_ne;
+	}
+	else
+	    throw(Lexer_Error("!", ""));
+    }
+    if ( ('&' == last_Char) ){
+	if ('&' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '&&'" << "\n";
+	    return tok_log_and;
+	}
+	else
+	    throw(Lexer_Error("&", ""));
+    }
+    if ( ('|' == last_Char) ){
+	if ('|' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '||'" << "\n";
+	    return tok_log_or;
+	}
+	else
+	    throw(Lexer_Error("|", ""));
+    }
+    if ( ('[' == last_Char) ){
+	if (']' == (last_Char = input->get()) ){
+	    last_Char = input->get();
+	    std::cout << "found a '[]'" << "\n";
+	    return tok_sqbrack_closed;
+	}
+	else{
+	    std::cout << "found a '['" << "\n";
+	    return '[';
+	}
+    }
+
+    // if we come here, we are down to single character operators and 
+    // punctuation symbols, and illegal characters. 
+    // for legal characters, we return their ascii value
     // note that we also need to ready the next last_Char
+    if ( (-1 == checkValidOpPunct(last_Char)) ){
+	std::string tmp;
+	tmp += static_cast<char> (last_Char);
+	throw(Lexer_Error(tmp, ""));
+    }
     int tmp_Char = last_Char;
     last_Char = input->get();
     std::cout << "Found character: " << static_cast<char> (tmp_Char) << "\n";
