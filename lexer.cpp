@@ -29,6 +29,8 @@ std::string id_Str;      // for tok_identifier
 long val_Int;            // for tok_Int (int type, not just int)
 double val_Flt;          // for tok_Flt (type)
 
+int lineNo = 1;
+
 static token
 checkReserved(std::string word)
 {
@@ -193,8 +195,8 @@ static void
 tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
 {
 
-    std::cerr << "Error: " << what_Type << " (" << what << ") exceeds " 
-	      << type_Str << " (" << type << ")\n";
+    std::cerr << "Error in line " << lineNo << ": " << what_Type << " (" 
+	      << what << ") exceeds " << type_Str << " (" << type << ")\n";
     exit(EXIT_FAILURE);
 }
 
@@ -204,7 +206,7 @@ strtolError(const char* str, const char* type, char* end_Ptr, int base)
 {
 
     std::ostringstream tmp_Str;
-    tmp_Str << "Lexer: error translating ";
+    tmp_Str << "Lexer in line " << lineNo << ": error translating ";
     if (8 == base)
 	tmp_Str << "0";
     else if (16 == base)
@@ -231,7 +233,8 @@ strtodError(const char* str, const char* type, char* end_Ptr)
 {
 
     std::ostringstream tmp_Str;
-    tmp_Str << "Lexer: error translating " << str << " to " << type;
+    tmp_Str << "Lexer in line " << lineNo << ": error translating " 
+	    << str << " to " << type;
 
     // overflow/underflow
     if ( 0 != errno){
@@ -316,8 +319,11 @@ getTok()
     static int last_Char = ' ';
 
     // eat ws
-    while (std::isspace(last_Char))
+    while (std::isspace(last_Char)){
+	if ( ('\n' == last_Char) )
+	    lineNo++;
 	last_Char = input->get();
+    }
 
     // legal identifier names are of form [al][alnum]*
     if ( std::isalpha(last_Char) ){ // found an identifier

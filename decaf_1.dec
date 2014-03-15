@@ -1,6 +1,6 @@
  // comment type 1
 int x = 072;
-int y = 0x1a;
+int y = 0x1f;
 
 double yfl_1 = 1.1;
 double yfl_2 = 1.1e-1;

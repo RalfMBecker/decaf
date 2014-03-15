@@ -30,6 +30,8 @@ extern std::string id_Str;  // for tok_identifier
 extern long val_Int;       // for tok_number
 extern double val_Flt; 
 
+extern int lineNo;
+
 int getTok(void);
 
 #endif

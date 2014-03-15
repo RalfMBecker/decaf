@@ -9,10 +9,12 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include "lexer.h"
 
 class Error{
 public:
-    virtual void print() const { std::cerr << "Error: "; };
+    virtual void print() const 
+    { std::cerr << "Error in line " <<  lineNo << ": "; };
 };
 
 // *********** update when better understood how used ********
