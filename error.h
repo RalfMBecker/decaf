@@ -14,7 +14,7 @@
 class Error{
 public:
     virtual void print() const 
-    { std::cerr << "Error in line " <<  lineNo << ": "; };
+    { std::cerr << "Error near " <<  lineNo << "::" << colNo << ": "; };
 };
 
 // *********** update when better understood how used ********

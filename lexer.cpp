@@ -30,6 +30,7 @@ long val_Int;            // for tok_Int (int type, not just int)
 double val_Flt;          // for tok_Flt (type)
 
 int lineNo = 1;
+int colNo = 0;
 
 static token
 checkReserved(std::string word)
@@ -195,8 +196,9 @@ static void
 tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
 {
 
-    std::cerr << "Error in line " << lineNo << ": " << what_Type << " (" 
-	      << what << ") exceeds " << type_Str << " (" << type << ")\n";
+    std::cerr << "Error near " << lineNo << "::" << colNo << ": " << what_Type 
+	      << " (" << what << ") exceeds " << type_Str << " (" << type 
+	      << ")\n";
     exit(EXIT_FAILURE);
 }
 
@@ -206,7 +208,8 @@ strtolError(const char* str, const char* type, char* end_Ptr, int base)
 {
 
     std::ostringstream tmp_Str;
-    tmp_Str << "Lexer in line " << lineNo << ": error translating ";
+    tmp_Str << "Lexer near " << lineNo << "::" << colNo << 
+	": error translating ";
     if (8 == base)
 	tmp_Str << "0";
     else if (16 == base)
@@ -233,8 +236,8 @@ strtodError(const char* str, const char* type, char* end_Ptr)
 {
 
     std::ostringstream tmp_Str;
-    tmp_Str << "Lexer in line " << lineNo << ": error translating " 
-	    << str << " to " << type;
+    tmp_Str << "Lexer near " << lineNo << "::" << colNo 
+	    << ": error translating " << str << " to " << type;
 
     // overflow/underflow
     if ( 0 != errno){
@@ -311,6 +314,12 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
     return 0;
 }
 
+static int
+getNext(int* col)
+{
+    (*col)++;
+    return input->get();
+}
 
 // gettok - return the next token from 'input'-stream
 int 
@@ -320,16 +329,18 @@ getTok()
 
     // eat ws
     while (std::isspace(last_Char)){
-	if ( ('\n' == last_Char) )
+	if ( ('\n' == last_Char) ){
 	    lineNo++;
-	last_Char = input->get();
+	    colNo = 0;
+	}
+	last_Char = getNext(&colNo);
     }
 
     // legal identifier names are of form [al][alnum]*
     if ( std::isalpha(last_Char) ){ // found an identifier
 	int i = 0;
 	id_Str = last_Char;
-	while ( (std::isalnum(last_Char = input->get())) || 
+	while ( (std::isalnum(last_Char = getNext(&colNo))) || 
 		('_' == last_Char) ){
 	    if ( (MAX_ID == ++i) )
 		tooLong("Identifier", id_Str.c_str(), "MAX_ID", MAX_ID);
@@ -363,7 +374,7 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
 	    tmp_Str += last_Char;
-	    last_Char = input->get();
+	    last_Char = getNext(&colNo);
 	}
 	else{ // we found a dec int, and are done
 	    val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
@@ -380,7 +391,7 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
 	    tmp_Str += last_Char;
-	    last_Char = input->get();
+	    last_Char = getNext(&colNo);
 	}
 
 	// deal with scientific notation
@@ -388,13 +399,13 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
 	    tmp_Str += last_Char;
-	    last_Char = input->get();
+	    last_Char = getNext(&colNo);
 	    tmp_Str += last_Char;
 	    if ( !(std::isdigit(last_Char)) && 
 		 ('-' != last_Char ) && ('+' != last_Char) )
 		throw(Lexer_Error(tmp_Str, ""));
 
-	    while ( isdigit(last_Char = input->get())  ){
+	    while ( isdigit(last_Char = getNext(&colNo))  ){
 		if ( (MAX_LIT == ++i) )
 		    tooLong("Float literal",tmp_Str.c_str(),"MAX_LIT", MAX_LIT);
 		tmp_Str += last_Char;
@@ -412,12 +423,13 @@ getTok()
     if ( ('\"' == last_Char) ){	
 	int i = 0;
 	id_Str.clear();
-	while ( ('\"' != (last_Char = input->get())) && (EOF != last_Char)){
+	while ( ('\"' != (last_Char = getNext(&colNo))) && (EOF != last_Char)){
 	    if ( (MAX_STR == ++i) )
 		tooLong("Str const",id_Str.c_str(),"MAX_STR", MAX_STR);
-	    if ( ('\n' == last_Char) )
+	    if ( ('\n' == last_Char) ){
 		throw(Lexer_Error(id_Str, "no multi-line strings"));
-
+		last_Char = getNext(&colNo);
+	    }
 	    if ( ('\\' == last_Char) ){
 		id_Str += '\\';
 		i += validEscape(&last_Char, id_Str);
@@ -428,20 +440,20 @@ getTok()
 		id_Str += last_Char;
 	}
 	std::cout << "Found string const: " << id_Str.c_str() << "\n";
-	last_Char = input->get();
+	last_Char = getNext(&colNo);
 	return tok_string;
     }
 
     // eat comments
     if ( ('/' == last_Char) ){
-	if ( ('/' == (last_Char = input->get())) ) // comment type 1
-	    while (('\n' != (last_Char = input->get()))  && (EOF != last_Char) )
+	if ( ('/' == (last_Char = getNext(&colNo))) ) // comment type 1
+	    while (('\n' != (last_Char = getNext(&colNo)))  && (EOF != last_Char) )
 		;
 	else if ( ('*' == (last_Char)) ){ // potential comment type 2
-	    while ( ('*' != (last_Char = input->get())) && (EOF != last_Char) )
+	    while ( ('*' != (last_Char = getNext(&colNo))) && (EOF != last_Char) )
 		;
 	    if ( ('*' == last_Char) ){
-		if ( ('/' != (last_Char = input->get())) )
+		if ( ('/' != (last_Char = getNext(&colNo))) )
 		    throw Lexer_Error("/", "");
 	    }
 	    else{
@@ -466,8 +478,8 @@ getTok()
 
     // 2 character operator tokens
     if ( ('<' == last_Char) ){
-	if ('=' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('=' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '<='" << "\n";
 	    return tok_se;
 	}
@@ -477,8 +489,8 @@ getTok()
 	}
     }
     if ( ('>' == last_Char) ){
-	if ('=' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('=' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '>='" << "\n";
 	    return tok_ge;
 	}
@@ -488,8 +500,8 @@ getTok()
 	}
     }
     if ( ('=' == last_Char) ){
-	if ('=' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('=' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '=='" << "\n";
 	    return tok_log_eq;
 	}
@@ -499,8 +511,8 @@ getTok()
 	}
     }
     if ( ('!' == last_Char) ){
-	if ('=' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('=' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '!='" << "\n";
 	    return tok_log_ne;
 	}
@@ -508,8 +520,8 @@ getTok()
 	    throw(Lexer_Error("!", ""));
     }
     if ( ('&' == last_Char) ){
-	if ('&' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('&' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '&&'" << "\n";
 	    return tok_log_and;
 	}
@@ -517,8 +529,8 @@ getTok()
 	    throw(Lexer_Error("&", ""));
     }
     if ( ('|' == last_Char) ){
-	if ('|' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if ('|' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '||'" << "\n";
 	    return tok_log_or;
 	}
@@ -526,8 +538,8 @@ getTok()
 	    throw(Lexer_Error("|", ""));
     }
     if ( ('[' == last_Char) ){
-	if (']' == (last_Char = input->get()) ){
-	    last_Char = input->get();
+	if (']' == (last_Char = getNext(&colNo)) ){
+	    last_Char = getNext(&colNo);
 	    std::cout << "found a '[]'" << "\n";
 	    return tok_sqbrack_closed;
 	}
@@ -547,7 +559,7 @@ getTok()
 	throw(Lexer_Error(tmp, ""));
     }
     int tmp_Char = last_Char;
-    last_Char = input->get();
+    last_Char = getNext(&colNo);
     std::cout << "Found character: " << static_cast<char> (tmp_Char) << "\n";
     return tmp_Char;
 }
