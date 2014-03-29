@@ -124,12 +124,14 @@ private:
     char* endPtr;
 };
 
-// if this is called for a Lexer_Error object with Second == "", we 
-// want to print a '\n'; however, if it is called from a derived class,
-// we want to keep printing errors from that class, and suppress the '\n'
-// the syntax chosen to do this (const case followed by dynamic_cast is
+// If called for a Lexer_Error object with Second == "", we want to print
+// a '\n'; however, if it is called from a derived class, we want to keep
+// printing errors from that class, and suppress the '\n'.
+//
+// The syntax chosen (a const_cast followed by a dynamic_cast) is
 // probably not ideal, but we need the function to be const (see class
-// declaration above)
+// declaration above).
+//
 // If we don't define this inline after tooLongError, we have an incomplete
 // type reference
 inline void Lexer_Error::print() const
