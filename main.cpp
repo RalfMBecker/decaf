@@ -30,21 +30,19 @@ main(int argc, char* argv[])
     std::cout << "ready> ";
     // getNextToken();
 
-    try{
-	while ( (EOF != getTok() ) )
-	    ;
+    while (*input){
+
+	try{
+	    while ( (EOF != getTok() ) )
+		;
+	}
+
+	catch(Error& m){
+	    m.print();
+	}
     }
 
-    catch(Error& m){
-	m.print();
-    }
-
-    // enter driver, and let driver handle rest
-    /*
-    try{
-	throw Lexer_Error("test");
-    }
-    */
-
+    if ( !(&std::cin == input) )
+	delete input;
     return 0;
 }

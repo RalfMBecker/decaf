@@ -1,4 +1,4 @@
- // comment type 1
+// comment type 1
 int x = 072;
 int y = 0x1f;
 

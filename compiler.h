@@ -11,7 +11,6 @@
 //#include <string>
 
 #include "error.h"
-//#include <cstdlib> // for exit, EXIT_SUCCESS, EXIT_FAILURE, etc.
 
 #define MAX_ID 31
 #define MAX_LIT 32

@@ -20,7 +20,7 @@
 #include <sstream>
 #include <cctype>
 #include "compiler.h"
-#include "error.h"
+//#include "error.h"
 #include "lexer.h"
 
 extern std::istream* input;
@@ -189,70 +189,6 @@ validEscape(int* last, std::string& tmp_Str)
     return len;
 }
 
-
-// Enforcing max lengths of identifiers, etc. Sample usage:
-// what_Type="identifier", what=id_Str, type_Str="MAX_ID", type=MAX_ID
-static void
-tooLong(const char* what_Type, const char* what, const char* type_Str,int type)
-{
-
-    std::cerr << "Error near " << lineNo << "::" << colNo << ": " << what_Type 
-	      << " (" << what << ") exceeds " << type_Str << " (" << type 
-	      << ")\n";
-    exit(EXIT_FAILURE);
-}
-
-// strtol has arcane error-reporting, so handled separately
-static void
-strtolError(const char* str, const char* type, char* end_Ptr, int base)
-{
-
-    std::ostringstream tmp_Str;
-    tmp_Str << "Lexer near " << lineNo << "::" << colNo << 
-	": error translating ";
-    if (8 == base)
-	tmp_Str << "0";
-    else if (16 == base)
-	tmp_Str << "Ox";
-    tmp_Str << str << " to " << type;
-
-    // overflow/underflow
-    if ( 0 != errno){
-	std::cerr << tmp_Str.str() << " - ";
-	perror("strtol");
-	exit(EXIT_FAILURE);
-    }
-
-    if ( (0 != end_Ptr) ){
-	tmp_Str << " - offending character: " << *end_Ptr << "\n";
-	std::cerr << tmp_Str.str();
-	exit(EXIT_FAILURE);
-    }
-}
-
-// strtod has arcane error-reporting, so handled separately
-static void
-strtodError(const char* str, const char* type, char* end_Ptr)
-{
-
-    std::ostringstream tmp_Str;
-    tmp_Str << "Lexer near " << lineNo << "::" << colNo 
-	    << ": error translating " << str << " to " << type;
-
-    // overflow/underflow
-    if ( 0 != errno){
-	std::cerr << tmp_Str.str() << " - ";
-	perror("strtod");
-	exit(EXIT_FAILURE);
-    }
-
-    if ( (0 != end_Ptr) ){
-	tmp_Str << " - offending character: " << *end_Ptr << "\n";
-	std::cerr << tmp_Str.str();
-	exit(EXIT_FAILURE);
-    }
-}
-
 // upon return, points to first digit (if any) of number
 static int
 getBase(int* last)
@@ -287,7 +223,7 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
     if ( (8 == base) || (16 == base) ){
 	do{
 	    if ( (MAX_LIT == ++(*count)) )
-		tooLong("Integer literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += (*last);
 	    (*last) = input->get();
 	} while ( ((8==base) && isdigit(*last)) || 
@@ -297,9 +233,13 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
 	    tmp_Str += (*last);
 
 	val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
-	if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
-	    strtolError(tmp_Str.c_str(), "integer", end_Ptr, base);
-
+	if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) ||( 0 != errno) ){
+	    if (8 == base)
+		tmp_Str.insert(0, "0");
+	    else if (16 == base)
+		tmp_Str.insert(0, "0x");
+	    throw(strtoNumError(tmp_Str, "integer", end_Ptr));
+	}
 	std::cout << "Found an octal/hex integer literal: " << val_Int << "\n";
 	return tok_int;
     }
@@ -307,7 +247,7 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
     // dealing with decimal input
     do{
 	if ( (MAX_LIT == ++(*count)) )
-	    tooLong("Integer literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+	    throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	tmp_Str += (*last);
 	(*last) = input->get();
     } while (isdigit(*last) );
@@ -343,7 +283,7 @@ getTok()
 	while ( (std::isalnum(last_Char = getNext(&colNo))) || 
 		('_' == last_Char) ){
 	    if ( (MAX_ID == ++i) )
-		tooLong("Identifier", id_Str.c_str(), "MAX_ID", MAX_ID);
+		throw(tooLongError(id_Str, "MAX_ID", MAX_ID));
 	    id_Str += last_Char;
 	}
 
@@ -372,16 +312,20 @@ getTok()
 
 	if ( ('.' == last_Char) ){ 
 	    if ( (MAX_LIT == ++i) )
-		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
 	    last_Char = getNext(&colNo);
 	}
 	else{ // we found a dec int, and are done
 	    val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
 	    if ( (tmp_Str.c_str() == end_Ptr) || 
-		 (0 != *end_Ptr) || (0 != errno) )
-		strtolError(tmp_Str.c_str(), "integer", end_Ptr, base);
-
+		 (0 != *end_Ptr) || (0 != errno) ){
+		if (8 == base)
+		    tmp_Str.insert(0, "0");
+		else if (16 == base)
+		    tmp_Str.insert(0, "0x");
+		throw(strtoNumError(tmp_Str, "integer", end_Ptr));
+	    }
 	    std::cout << "Found a decimal integer literal: " << val_Int << "\n";
 	    return tok_int;
 	}
@@ -389,7 +333,7 @@ getTok()
 	// integer after '.'
 	while ( isdigit(last_Char) ){
 	    if ( (MAX_LIT == ++i) )
-		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
 	    last_Char = getNext(&colNo);
 	}
@@ -397,7 +341,7 @@ getTok()
 	// deal with scientific notation
 	if ( ('e' == last_Char) || ('E' == last_Char) ){
 	    if ( (MAX_LIT == ++i) )
-		tooLong("Float literal", tmp_Str.c_str(), "MAX_LIT", MAX_LIT);
+		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
 	    last_Char = getNext(&colNo);
 	    tmp_Str += last_Char;
@@ -407,14 +351,14 @@ getTok()
 
 	    while ( isdigit(last_Char = getNext(&colNo))  ){
 		if ( (MAX_LIT == ++i) )
-		    tooLong("Float literal",tmp_Str.c_str(),"MAX_LIT", MAX_LIT);
+		    throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 		tmp_Str += last_Char;
-	    }
+	   }
 	}
 
 	val_Flt = strtod(tmp_Str.c_str(), &end_Ptr);
 	if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
-	    strtodError(tmp_Str.c_str(), "float", end_Ptr);
+	    throw(strtoNumError(tmp_Str, "float", end_Ptr));
 	std::cout << "Found float literal: " << val_Flt << "\n";
 	return tok_double;
     } // end 'if number' scope
@@ -425,7 +369,7 @@ getTok()
 	id_Str.clear();
 	while ( ('\"' != (last_Char = getNext(&colNo))) && (EOF != last_Char)){
 	    if ( (MAX_STR == ++i) )
-		tooLong("Str const",id_Str.c_str(),"MAX_STR", MAX_STR);
+		throw(tooLongError(id_Str, "MAX_STR", MAX_STR));
 	    if ( ('\n' == last_Char) ){
 		throw(Lexer_Error(id_Str, "no multi-line strings"));
 		last_Char = getNext(&colNo);
@@ -434,7 +378,7 @@ getTok()
 		id_Str += '\\';
 		i += validEscape(&last_Char, id_Str);
 		if ( (MAX_STR < i) )
-		    tooLong("Str const",id_Str.c_str(),"MAX_STR",MAX_STR);
+		    throw(tooLongError(id_Str, "MAX_STR", MAX_STR));
 	    }
 	    else
 		id_Str += last_Char;
@@ -447,10 +391,10 @@ getTok()
     // eat comments
     if ( ('/' == last_Char) ){
 	if ( ('/' == (last_Char = getNext(&colNo))) ) // comment type 1
-	    while (('\n' != (last_Char = getNext(&colNo)))  && (EOF != last_Char) )
+	    while (('\n' != (last_Char = getNext(&colNo)))&&(EOF != last_Char) )
 		;
 	else if ( ('*' == (last_Char)) ){ // potential comment type 2
-	    while ( ('*' != (last_Char = getNext(&colNo))) && (EOF != last_Char) )
+	    while ( ('*' != (last_Char = getNext(&colNo)))&&(EOF != last_Char) )
 		;
 	    if ( ('*' == last_Char) ){
 		if ( ('/' != (last_Char = getNext(&colNo))) )
