@@ -9,7 +9,7 @@ string tmp_Str2 = "al\nf\add\xff.\xf.\066nnn\0321";
 //                 12345678901234567890123456789012
 
 if (x < 4)
-   double z = 4;
+   double z = 4/2.0;
 else if ( y == z )
      if ( (a[] == 7) || (y && z) )
      	return 1; 

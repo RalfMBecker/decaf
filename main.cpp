@@ -1,8 +1,8 @@
 #include "compiler.h"
+#include "lexer.h"
+#include "driver.h"
 
 //void MainLoop();
-
-#include "lexer.h"
 
 std::istream* input;
 
@@ -27,8 +27,9 @@ main(int argc, char* argv[])
     }
 
     // create ready-state
-    std::cout << "ready> ";
-    // getNextToken();
+    if ( (&std::cin == input) )
+	std::cout << "ready> ";
+    getNext();
 
     while (*input){
 
@@ -39,8 +40,12 @@ main(int argc, char* argv[])
 
 	catch(Error& m){
 	    m.print();
+	    panicModeFwd();
 	}
     }
+
+    if (no_lex_Errors)
+	std::cerr << "found " << no_lex_Errors << " lexical errors\n";
 
     if ( !(&std::cin == input) )
 	delete input;

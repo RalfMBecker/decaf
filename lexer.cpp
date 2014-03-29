@@ -20,7 +20,6 @@
 #include <sstream>
 #include <cctype>
 #include "compiler.h"
-//#include "error.h"
 #include "lexer.h"
 
 extern std::istream* input;
@@ -31,6 +30,7 @@ double val_Flt;          // for tok_Flt (type)
 
 int lineNo = 1;
 int colNo = 0;
+int last_Char = ' ';
 
 static token
 checkReserved(std::string word)
@@ -112,7 +112,6 @@ checkValidOpPunct(int test)
     else
 	return -1;
 }
-
 
 // cannot use readIntValue as we also keep recording into id_Str here
 // errors handled here; returns length of escape sequence if ok
@@ -233,12 +232,13 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
 	    tmp_Str += (*last);
 
 	val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
-	if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) ||( 0 != errno) ){
+	if ( (tmp_Str.c_str() == end_Ptr) || 
+	     ('\0' != end_Ptr[0]) || ( 0 != errno)){
 	    if (8 == base)
 		tmp_Str.insert(0, "0");
 	    else if (16 == base)
 		tmp_Str.insert(0, "0x");
-	    throw(strtoNumError(tmp_Str, "integer", end_Ptr));
+	    throw(strtoNumError(tmp_Str, "integer", end_Ptr[0]));
 	}
 	std::cout << "Found an octal/hex integer literal: " << val_Int << "\n";
 	return tok_int;
@@ -254,33 +254,35 @@ readIntValue(int* last, int* pbase, int* count, std::string& tmp_Str){
     return 0;
 }
 
-static int
-getNext(int* col)
+int
+getNext(void)
 {
-    (*col)++;
-    return input->get();
+    // do this first: if we pointed to '\n' when error was found, necessary
+    if ( ('\n' == last_Char) ){
+	lineNo++;
+	colNo = 1;
+    }
+    else
+	colNo++;
+
+    return (last_Char = input->get());
 }
 
 // gettok - return the next token from 'input'-stream
+// invariant: upon return (other than from EOF), last_Char has the next
+//            unprocessed char
 int 
 getTok()
 {
-    static int last_Char = ' ';
-
     // eat ws
-    while (std::isspace(last_Char)){
-	if ( ('\n' == last_Char) ){
-	    lineNo++;
-	    colNo = 0;
-	}
-	last_Char = getNext(&colNo);
-    }
+    while (std::isspace(last_Char))
+	getNext();
 
     // legal identifier names are of form [al][alnum]*
     if ( std::isalpha(last_Char) ){ // found an identifier
 	int i = 0;
 	id_Str = last_Char;
-	while ( (std::isalnum(last_Char = getNext(&colNo))) || 
+	while ( (std::isalnum(getNext())) || 
 		('_' == last_Char) ){
 	    if ( (MAX_ID == ++i) )
 		throw(tooLongError(id_Str, "MAX_ID", MAX_ID));
@@ -314,17 +316,17 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
-	    last_Char = getNext(&colNo);
+	    getNext();
 	}
 	else{ // we found a dec int, and are done
 	    val_Int = strtol(tmp_Str.c_str(), &end_Ptr, base);
 	    if ( (tmp_Str.c_str() == end_Ptr) || 
-		 (0 != *end_Ptr) || (0 != errno) ){
+		 ('\0' != end_Ptr[0]) || ( 0 != errno)){
 		if (8 == base)
 		    tmp_Str.insert(0, "0");
 		else if (16 == base)
 		    tmp_Str.insert(0, "0x");
-		throw(strtoNumError(tmp_Str, "integer", end_Ptr));
+		throw(strtoNumError(tmp_Str, "integer", end_Ptr[0]));
 	    }
 	    std::cout << "Found a decimal integer literal: " << val_Int << "\n";
 	    return tok_int;
@@ -335,7 +337,7 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
-	    last_Char = getNext(&colNo);
+	    getNext();
 	}
 
 	// deal with scientific notation
@@ -343,13 +345,13 @@ getTok()
 	    if ( (MAX_LIT == ++i) )
 		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += last_Char;
-	    last_Char = getNext(&colNo);
+	    getNext();
 	    tmp_Str += last_Char;
 	    if ( !(std::isdigit(last_Char)) && 
 		 ('-' != last_Char ) && ('+' != last_Char) )
 		throw(Lexer_Error(tmp_Str, ""));
 
-	    while ( isdigit(last_Char = getNext(&colNo))  ){
+	    while ( isdigit(getNext())  ){
 		if ( (MAX_LIT == ++i) )
 		    throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
 		tmp_Str += last_Char;
@@ -357,8 +359,8 @@ getTok()
 	}
 
 	val_Flt = strtod(tmp_Str.c_str(), &end_Ptr);
-	if ( ( tmp_Str.c_str() == end_Ptr) || (0 != *end_Ptr) || ( 0 != errno) )
-	    throw(strtoNumError(tmp_Str, "float", end_Ptr));
+	if ((tmp_Str.c_str() == end_Ptr)||('\0' != end_Ptr[0])|| ( 0 != errno) )
+	    throw(strtoNumError(tmp_Str, "float", end_Ptr[0]));
 	std::cout << "Found float literal: " << val_Flt << "\n";
 	return tok_double;
     } // end 'if number' scope
@@ -367,14 +369,12 @@ getTok()
     if ( ('\"' == last_Char) ){	
 	int i = 0;
 	id_Str.clear();
-	while ( ('\"' != (last_Char = getNext(&colNo))) && (EOF != last_Char)){
+	while ( ('\"' != getNext()) && (EOF != last_Char)){
 	    if ( (MAX_STR == ++i) )
 		throw(tooLongError(id_Str, "MAX_STR", MAX_STR));
-	    if ( ('\n' == last_Char) ){
-		throw(Lexer_Error(id_Str, "no multi-line strings"));
-		last_Char = getNext(&colNo);
-	    }
-	    if ( ('\\' == last_Char) ){
+	    else if ( ('\n' == last_Char) || (EOF == last_Char) )
+		throw(Lexer_Error(id_Str, "string missing closing \""));
+	    else if ( ('\\' == last_Char) ){
 		id_Str += '\\';
 		i += validEscape(&last_Char, id_Str);
 		if ( (MAX_STR < i) )
@@ -384,36 +384,44 @@ getTok()
 		id_Str += last_Char;
 	}
 	std::cout << "Found string const: " << id_Str.c_str() << "\n";
-	last_Char = getNext(&colNo);
+	getNext();
 	return tok_string;
     }
 
     // eat comments
     if ( ('/' == last_Char) ){
-	if ( ('/' == (last_Char = getNext(&colNo))) ) // comment type 1
-	    while (('\n' != (last_Char = getNext(&colNo)))&&(EOF != last_Char) )
+	if ('/' == getNext())
+	    while ( ('\n' != getNext()) && (EOF != last_Char) )
 		;
-	else if ( ('*' == (last_Char)) ){ // potential comment type 2
-	    while ( ('*' != (last_Char = getNext(&colNo)))&&(EOF != last_Char) )
-		;
-	    if ( ('*' == last_Char) ){
-		if ( ('/' != (last_Char = getNext(&colNo))) )
-		    throw Lexer_Error("/", "");
+	else if ( ('*' == last_Char) ){ // potential comment type 2
+	    id_Str = "/*";
+	    for (;;){ // need infinite loop to allow for /* * */ type 
+		id_Str += getNext();
+		if ( (EOF == last_Char) )
+		    throw(Lexer_Error(id_Str, "comment missing closing */"));
+		else if ( ('*' == last_Char) ){
+		    if ( ('/' == getNext()) ){
+			id_Str.clear();
+			break; // found a type 2 comment
+		    }
+		    else
+			input->putback(static_cast<char>(last_Char));
+		}
 	    }
-	    else{
-		std::string tmp_String;
-		tmp_String += last_Char;
-		throw Lexer_Error(tmp_String, "");
-	    }
-	}
-	else{ // found a '/'
-	    input->putback(last_Char);
+	} // end loop for type 2 comments
+	else{ // found a '/' char
+	    std::cout << "found a /\n";
 	    return '/';
 	}
 
+	// If we come here, we are at in one of two situations:
+	// Comment type 1: pointing to '\n' or EOF at proper comment line
+	//         type 2: pointing at the closing tag (last 2 chars '*/).
 	std::cout << "\t\t...processed a comment type...\n";
 	if ( last_Char != EOF)
 	    return getTok(); // re-throw when done with comment line
+	else 
+	    return tok_eof;
     }
 
     // did we hit EOF?
@@ -422,8 +430,8 @@ getTok()
 
     // 2 character operator tokens
     if ( ('<' == last_Char) ){
-	if ('=' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('=' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '<='" << "\n";
 	    return tok_se;
 	}
@@ -433,8 +441,8 @@ getTok()
 	}
     }
     if ( ('>' == last_Char) ){
-	if ('=' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('=' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '>='" << "\n";
 	    return tok_ge;
 	}
@@ -444,8 +452,8 @@ getTok()
 	}
     }
     if ( ('=' == last_Char) ){
-	if ('=' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('=' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '=='" << "\n";
 	    return tok_log_eq;
 	}
@@ -455,8 +463,8 @@ getTok()
 	}
     }
     if ( ('!' == last_Char) ){
-	if ('=' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('=' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '!='" << "\n";
 	    return tok_log_ne;
 	}
@@ -464,8 +472,8 @@ getTok()
 	    throw(Lexer_Error("!", ""));
     }
     if ( ('&' == last_Char) ){
-	if ('&' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('&' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '&&'" << "\n";
 	    return tok_log_and;
 	}
@@ -473,8 +481,8 @@ getTok()
 	    throw(Lexer_Error("&", ""));
     }
     if ( ('|' == last_Char) ){
-	if ('|' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( ('|' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '||'" << "\n";
 	    return tok_log_or;
 	}
@@ -482,8 +490,8 @@ getTok()
 	    throw(Lexer_Error("|", ""));
     }
     if ( ('[' == last_Char) ){
-	if (']' == (last_Char = getNext(&colNo)) ){
-	    last_Char = getNext(&colNo);
+	if ( (']' == getNext()) ){
+	    getNext();
 	    std::cout << "found a '[]'" << "\n";
 	    return tok_sqbrack_closed;
 	}
@@ -503,7 +511,7 @@ getTok()
 	throw(Lexer_Error(tmp, ""));
     }
     int tmp_Char = last_Char;
-    last_Char = getNext(&colNo);
+    getNext();
     std::cout << "Found character: " << static_cast<char> (tmp_Char) << "\n";
     return tmp_Char;
 }

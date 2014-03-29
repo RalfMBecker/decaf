@@ -1,5 +1,5 @@
 /******************************************************
-* error.cpp -   basic error classes                   *
+* error.h -   basic error classes                     *
 *                                                     *
 ******************************************************/
 
@@ -9,10 +9,13 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include "lexer.h"
 #include <cstring>
+#include "lexer.h"
+#include "driver.h"
 
 #define MAX_TEXT 32
+
+extern int no_lex_Errors;
 
 class Error{
 public:
@@ -67,7 +70,10 @@ private:
 class Lexer_Error: public Error{
 public:
 Lexer_Error(const std::string& name, const std::string& second)
-    : Name(name), Second(second) {}
+    : Name(name), Second(second)
+    {
+	no_lex_Errors++;
+    }
 
     virtual void print() const; // we rely on coercion of a reference, so must
                         // make this function const
@@ -96,12 +102,8 @@ private:
 // strtod has arcane error repoting; c./ man page
 class strtoNumError: public Lexer_Error{
 public:
-    strtoNumError(const std::string name,const std::string type,char* end_Ptr)
-	: Lexer_Error(name, ""), typeName(type)
-    {	
-	endPtr = new char[MAX_TEXT];
-	strcpy(endPtr, end_Ptr);
-    }
+    strtoNumError(const std::string& name,const std::string& type, char c)
+	: Lexer_Error(name, ""), typeName(type), offending(c) {}
 
     void print() const{
 	Lexer_Error::print();
@@ -116,12 +118,12 @@ public:
 		exit(EXIT_FAILURE);
 	    }
 	}
-	else if ( (0 != endPtr) )
-	    std::cerr << " - offending character: " << *endPtr << "\n";
+	else if ( ('\0' != offending) )
+	    std::cerr << " - offending character: " << offending << "\n";
     }
 private:
     std::string typeName;
-    char* endPtr;
+    char offending;
 };
 
 // If called for a Lexer_Error object with Second == "", we want to print

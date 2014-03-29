@@ -1,3 +1,8 @@
+/********************************************************************
+* lexer.h - header file for lexer for Decaf
+*
+********************************************************************/
+
 #ifndef LEXER_H_
 #define LEXER_H_
 
@@ -32,7 +37,9 @@ extern double val_Flt;
 
 extern int lineNo;
 extern int colNo;
+extern int last_Char; // not ideal, but nice to be able to access elsewhere
 
 int getTok(void);
+int getNext(void);
 
 #endif
