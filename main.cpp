@@ -2,6 +2,8 @@
 #include "lexer.h"
 #include "driver.h"
 
+#include "ast.h"
+
 //void MainLoop();
 
 std::istream* input;
