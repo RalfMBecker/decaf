@@ -97,20 +97,36 @@ checkReserved(std::string word)
 }
 
 // returns 0 if character in dictionary; -1 if not
-// as some operators consist of 2 characters, they are checked elsewhere
-// some duplication with prior checks (e.g., '<') (for safety in case
-// of later re-design)
+// Some operators are also the first character of a two-char operator - 
+// e.g., "<" and "<=". They are checked elsewhere.
 static int
-checkValidOpPunct(int test)
+retOpPunct(int test)
 {
-    if ( ('+' == test) || ('-' == test) || ('*' == test) || ('/' == test) || 
-	 ('%' == test) || ('<' == test) || ('>' == test) || ('=' == test) ||
-	 ('!' == test) || (';' == test) || (',' == test) || ('.' == test) ||
-	 ('[' == test) || (']' == test) || ('(' == test) || (')' == test) ||
-	 ('{' == test) || ('}' == test) )
-	return 0;
-    else
-	return -1;
+    switch(test){
+	//1 char operators
+    case '+': return tok_plus; 
+    case '-': return tok_minus;
+    case '*': return tok_mult;
+    case '/': return tok_div; // handled as part of comments
+    case '%': return tok_mod;
+    case '<': return tok_lt; // handled as part of 2-char operators
+    case '>': return tok_gt; // handled as part of 2-char operators
+    case '=': return tok_eq; // handled as part of 2-char operators
+    case '!': return tok_log_not; // handled as part of 2-char operators
+    case '.': return tok_dot; 
+    case '[': return tok_sqopen; // handled as part of 2-char operators
+
+	// other punctuation
+    case ';':
+    case ',':
+    case ']':
+    case '(':
+    case ')':
+    case '{':
+    case '}': return test;
+
+    default: return -1;
+    }
 }
 
 // cannot use readIntValue as we also keep recording into id_Str here
@@ -390,9 +406,10 @@ getTok()
 
     // eat comments
     if ( ('/' == last_Char) ){
-	if ('/' == getNext())
+	if ('/' == getNext()){
 	    while ( ('\n' != getNext()) && (EOF != last_Char) )
 		;
+	}
 	else if ( ('*' == last_Char) ){ // potential comment type 2
 	    id_Str = "/*";
 	    for (;;){ // need infinite loop to allow for /* * */ type 
@@ -411,6 +428,7 @@ getTok()
 	} // end loop for type 2 comments
 	else{ // found a '/' char
 	    std::cout << "found a /\n";
+	    getNext();
 	    return '/';
 	}
 
@@ -418,8 +436,10 @@ getTok()
 	// Comment type 1: pointing to '\n' or EOF at proper comment line
 	//         type 2: pointing at the closing tag (last 2 chars '*/).
 	std::cout << "\t\t...processed a comment type...\n";
-	if ( last_Char != EOF)
+	if ( last_Char != EOF){
+	    getNext();
 	    return getTok(); // re-throw when done with comment line
+	}
 	else 
 	    return tok_eof;
     }
@@ -433,11 +453,11 @@ getTok()
 	if ( ('=' == getNext()) ){
 	    getNext();
 	    std::cout << "found a '<='" << "\n";
-	    return tok_se;
+	    return tok_le;
 	}
 	else{
 	    std::cout << "found a '<'" << "\n";
-	    return '<';
+	    return tok_lt;
 	}
     }
     if ( ('>' == last_Char) ){
@@ -448,7 +468,7 @@ getTok()
 	}
 	else{
 	    std::cout << "found a '>'" << "\n";
-	    return '>';
+	    return tok_gt;
 	}
     }
     if ( ('=' == last_Char) ){
@@ -459,7 +479,7 @@ getTok()
 	}
 	else{
 	    std::cout << "found a '='" << "\n";
-	    return '=';
+	    return tok_eq;
 	}
     }
     if ( ('!' == last_Char) ){
@@ -468,8 +488,10 @@ getTok()
 	    std::cout << "found a '!='" << "\n";
 	    return tok_log_ne;
 	}
-	else
-	    throw(Lexer_Error("!", ""));
+	else{
+	    std::cout << "found a '!'" << "\n";
+	    return tok_log_not;
+	}
     }
     if ( ('&' == last_Char) ){
 	if ( ('&' == getNext()) ){
@@ -493,11 +515,11 @@ getTok()
 	if ( (']' == getNext()) ){
 	    getNext();
 	    std::cout << "found a '[]'" << "\n";
-	    return tok_sqbrack_closed;
+	    return tok_sqopenclosed;
 	}
 	else{
 	    std::cout << "found a '['" << "\n";
-	    return '[';
+	    return tok_sqopen;
 	}
     }
 
@@ -505,13 +527,14 @@ getTok()
     // punctuation symbols, and illegal characters. 
     // for legal characters, we return their ascii value
     // note that we also need to ready the next last_Char
-    if ( (-1 == checkValidOpPunct(last_Char)) ){
+    int token;
+    if ( (-1 == (token = retOpPunct(last_Char)) ) ){
 	std::string tmp;
 	tmp += static_cast<char> (last_Char);
 	throw(Lexer_Error(tmp, ""));
     }
-    int tmp_Char = last_Char;
+    int tmp_char = last_Char;
     getNext();
-    std::cout << "Found character: " << static_cast<char> (tmp_Char) << "\n";
-    return tmp_Char;
+    std::cout << "Found 1-ch OpPunc: " << static_cast<char> (tmp_char) << "\n";
+    return token;
 }

@@ -23,8 +23,12 @@ enum token{
     // allocation/declaration
     tok_new = -50, tok_NewArray = -51,
     // 2 character operators
-    tok_se = -60, tok_ge = -61, tok_log_eq = -62, tok_log_ne = -63, 
-    tok_log_and = -64, tok_log_or = -65, tok_sqbrack_closed = -66,
+    tok_le = -60, tok_ge = -61, tok_log_eq = -62, tok_log_ne = -63, 
+    tok_log_and = -64, tok_log_or = -65, tok_sqopenclosed = -66,
+    // 1 character operators
+    tok_plus = -80, tok_minus = -81, tok_mult = -82, tok_div = -83,
+    tok_mod = -84, tok_lt = -85, tok_gt = -86, tok_eq = -87,
+    tok_log_not = -88, tok_sqopen = -89, tok_dot = -90, 
     // AST types
     tok_ID = -100, tok_Int = -101, tok_flt = -102, tok_expr = -103,
 };
