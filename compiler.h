@@ -1,3 +1,8 @@
+/******************************************************
+* compiler.h -   basic libs and definitions           *
+*                                                     *
+******************************************************/
+
 #ifndef COMPILER_H_
 #define COMPILER_H_
 
@@ -10,7 +15,6 @@
 #include <map>
 //#include <string>
 
-#include "error.h"
 
 #define MAX_ID 31
 #define MAX_LIT 32

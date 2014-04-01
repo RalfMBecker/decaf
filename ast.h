@@ -19,11 +19,11 @@
 // *********************************
 class opAST{
 public:
-    opAST(token which, std::string which_Str)
+    opAST(tokenType which, std::string which_Str)
 	: type(which), rep(which_Str) {}
 
 private:
-    int type;
+    tokenType type;
     std::string rep;
 };
 
@@ -38,21 +38,21 @@ private:
 
 class intLitAST{
 public:
-    intLitAST(token which, long Value)
+    intLitAST(tokenType which, long Value)
 	: type(which), value(Value) {}
 
 private:
-    token type;
+    tokenType type;
     long value;
 };
 
 class floatLitAST{
 public:
-    floatLitAST(token which, double Value)
+    floatLitAST(tokenType which, double Value)
 	: type(which), value(Value) {}
 
 private:
-    token type;
+    tokenType type;
     double value;
 };
 

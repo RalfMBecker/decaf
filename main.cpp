@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "lexer.h"
 #include "driver.h"
+#include "error.h"
 
 #include "ast.h"
 
@@ -36,7 +37,7 @@ main(int argc, char* argv[])
     while (*input){
 
 	try{
-	    while ( (EOF != getTok() ) )
+	    while ( (EOF != getTok().Name() ) )
 		;
 	}
 
