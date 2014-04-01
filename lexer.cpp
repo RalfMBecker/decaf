@@ -287,6 +287,7 @@ getNext(void)
 // gettok - return the next token from 'input'-stream
 // invariant: upon return (other than from EOF), last_Char has the next
 //            unprocessed char
+// Note: mem leaks on its own. Relies on caller to delete pointer. 
 token*
 getTok()
 {
@@ -527,8 +528,7 @@ getTok()
     // punctuation symbols, and illegal characters. 
     // 'tok_eof' signals: no valid 1-char token; not actually EOF
     // note that we also need to ready the next last_Char
-    token* tmpT = new token;
-    tmpT = retOpPunct(last_Char);
+    token* tmpT = retOpPunct(last_Char);
     if ( (tok_eof == tmpT->Name()) )
 	throw(Lexer_Error(std::string(1, last_Char), "invalid token"));
     std::cout << "Found 1-ch OpP: " << static_cast<char>(tmpT->Name()) << "\n";
