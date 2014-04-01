@@ -44,14 +44,11 @@ enum tokenType{
 
 class token{
 public:
-    token(tokenType t)
+    token(tokenType t = tok_eof)
 	: name(t) {}
 
-    tokenType Name(void) const { return name; }
-    void print(void) const // used for, e.g., '+' 
-    { 
-	std::cout << static_cast<char>(name); 
-    }
+    virtual tokenType Name(void) const { return name; }
+
 private:
     tokenType name;
 };
@@ -59,7 +56,7 @@ private:
 // for all but tok_ID, hand on lex=""
 class word: public token{
 public:
-    word(tokenType t, std::string lex)
+    word(tokenType t = tok_eof, std::string lex = "")
 	: token(t)
     {
 	switch(t){ 
@@ -109,7 +106,6 @@ public:
     }
 
     std::string Lexeme(void) const { return lexeme; }
-    void print(void) const { std::cout << lexeme; } 
 
 private:
     std::string lexeme;
@@ -121,7 +117,6 @@ public:
 	: token(t), value(v) {}
 
     long Value(void) const { return value; }
-    void print(void) const { std::cout << value; }
 
 private:
     long value;
@@ -133,7 +128,6 @@ public:
 	: token(t), value(v) {}
 
     double Value(void) const { return value; }
-    void print(void) const { std::cout << value; }
 
 private:
     double value;
@@ -149,7 +143,7 @@ extern int lineNo;
 extern int colNo;
 extern int last_Char; // not ideal, but nice to be able to access elsewhere
 
-token getTok(void);
+token* getTok(void);
 int getNext(void);
 
 #endif

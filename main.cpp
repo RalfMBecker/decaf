@@ -34,10 +34,18 @@ main(int argc, char* argv[])
 	std::cout << "ready> ";
     getNext();
 
+/*
+    token* t = getTok();
+    word* w = dynamic_cast<word*>(t);
+    std::cout << w->Lexeme() << "\n";
+*/
+
+    std::cout << "NOTE:\n as currently used, prgm has massive mem leak\n";
+    // will be addressed when getTok is incorporated into parser
     while (*input){
 
 	try{
-	    while ( (EOF != getTok().Name() ) )
+	    while ( (EOF != getTok()->Name() ) )
 		;
 	}
 
