@@ -9,7 +9,6 @@
 #include <iostream>
 #include <string>
 
-// REVISIT 'class' FOR EOF AS NEEDED
 enum tokenType{
     // misc
     tok_eof = -1, tok_return = -2, tok_memString = -3,
@@ -36,7 +35,7 @@ enum tokenType{
     tok_mod = '%', tok_lt = '<', tok_gt = '>', tok_eq = '=',
     tok_log_not = '!', tok_sqopen = '[', tok_dot = '.',
     // 1 character non-semantic operators
-    tok_semi = ';', tok_comma = ',', tok_sqclosed = '}', tok_rdopen = '(',
+    tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types
     tok_ID = -100, tok_Int = -101, tok_flt = -102, // tok_expr = -103,
@@ -99,6 +98,19 @@ public:
 
 	case tok_ID: 
 	case tok_memString: lexeme = lex; break;
+
+	    // ideally, all that follows would be a base class object
+	    // preserving the polymorphism at this point, however, is
+	    // more work than it's worth.
+	    // 1-char semantic ops
+	case tok_plus: case tok_minus: case tok_mult: case tok_div:
+	case tok_mod: case tok_lt: case tok_gt: case tok_eq:
+	case tok_log_not: case tok_dot: case tok_sqopen:
+	    // 1-char others
+	case tok_semi: case tok_comma: case tok_sqclosed: case tok_rdopen:
+	case tok_rdclosed: case tok_paropen: case tok_parclosed:
+	    lexeme = std::string(1, static_cast<char>(t));
+	    break;
 
 	default:
 	    break;

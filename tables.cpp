@@ -10,7 +10,6 @@
 #include <string>
 #include "lexer.h"
 
-/*
 std::map<tokenType, int> bin_OpTable;
 
 void
@@ -36,4 +35,3 @@ makeBinOpTable(void)
     bin_OpTable[tok_dot] = 900;
 }
 
-*/

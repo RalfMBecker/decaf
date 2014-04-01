@@ -104,26 +104,27 @@ retOpPunct(int test)
 {
     switch(test){
 	//1 char operators
-    case '+': return new token(tok_plus); 
-    case '-': return new token(tok_minus);
-    case '*': return new token(tok_mult);
+    case '+': return new word(tok_plus, ""); 
+    case '-': return new word(tok_minus, "");
+    case '*': return new word(tok_mult, "");
+    case '%': return new word(tok_mod, "");
+    case '.': return new word(tok_dot, ""); 
+	/*
     case '/': return new token(tok_div); // handled as part of comments
-    case '%': return new token(tok_mod);
     case '<': return new token(tok_lt); // handled as part of 2-char operators
     case '>': return new token(tok_gt); // handled as part of 2-char operators
     case '=': return new token(tok_eq); // handled as part of 2-char operators
     case '!': return new token(tok_log_not); // handled as part of 2-char...
-    case '.': return new token(tok_dot); 
     case '[': return new token(tok_sqopen); // handled as part of 2-char...
-
+	*/
 	// other punctuation
-    case ';': return new token(tok_semi);
-    case ',': return new token(tok_comma);
-    case ']': return new token(tok_sqclosed);
-    case '(': return new token(tok_rdopen);
-    case ')': return new token(tok_rdclosed);
-    case '{': return new token(tok_paropen);
-    case '}': return new token(tok_parclosed);
+    case ';': return new word(tok_semi, "");
+    case ',': return new word(tok_comma, "");
+    case ']': return new word(tok_sqclosed, "");
+    case '(': return new word(tok_rdopen, "");
+    case ')': return new word(tok_rdclosed, "");
+    case '{': return new word(tok_paropen, "");
+    case '}': return new word(tok_parclosed, "");
 
     default: return new token(tok_eof); // signals: no valid token
     }
