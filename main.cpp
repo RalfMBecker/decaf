@@ -5,6 +5,8 @@
 
 #include "ast.h"
 
+#include "tables.h" // REMOVE - just to keep an eye on it
+
 //void MainLoop();
 
 std::istream* input;
@@ -12,7 +14,6 @@ std::istream* input;
 int
 main(int argc, char* argv[])
 {
-
     switch(argc){
     case 1:
 	input = &std::cin;
@@ -34,13 +35,6 @@ main(int argc, char* argv[])
 	std::cout << "ready> ";
     getNext();
 
-/*
-    token* t = getTok();
-    word* w = dynamic_cast<word*>(t);
-    std::cout << w->Lexeme() << "\n";
-*/
-
-    std::cout << "NOTE:\n as currently used, prgm has massive mem leak\n";
     // will be addressed when getTok is incorporated into parser
     while (*input){
 
