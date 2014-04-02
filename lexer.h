@@ -38,15 +38,17 @@ enum tokenType{
     tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types
-    tok_ID = -100, tok_Int = -101, tok_flt = -102, // tok_expr = -103,
+    tok_ID = -100, tok_tmp = -101, 
 };
 
 class token{
 public:
     token(tokenType t = tok_eof)
 	: name(t) {}
+    ~token() {}
 
-    virtual tokenType Name(void) const { return name; }
+    virtual tokenType Name(void) const { return name; } // provide 
+                         // encapsulated access to derived classes
 
 private:
     tokenType name;
@@ -96,12 +98,14 @@ public:
 	case tok_log_or: lexeme = "||"; break;
 	case tok_sqopenclosed: lexeme = "[]"; break;
 
+	case tok_tmp: lexeme = "t"; break;
+
 	case tok_ID: 
 	case tok_memString: lexeme = lex; break;
 
 	    // ideally, all that follows would be a base class object
-	    // preserving the polymorphism at this point, however, is
-	    // more work than it's worth.
+	    // preserving the polymorphism at this point, however, this 
+	    // would be more work than it's worth.
 	    // 1-char semantic ops
 	case tok_plus: case tok_minus: case tok_mult: case tok_div:
 	case tok_mod: case tok_lt: case tok_gt: case tok_eq:

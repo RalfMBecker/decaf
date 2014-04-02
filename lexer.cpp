@@ -36,7 +36,7 @@ int last_Char = ' ';
 token*
 checkReserved(std::string str)
 {
-    // misc 
+    // misc
     if ( ("eof" == str) )
 	return new token(tok_eof);
     if ( ("return" == str) )

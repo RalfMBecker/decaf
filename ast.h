@@ -14,6 +14,60 @@
 #include <string>
 #include "lexer.h"
 
+/***************************************
+* Base classes
+***************************************/
+
+class Node{
+public:
+    Node(void)
+	: line(lineNo), col(colNo) {}
+    ~Node() {}
+
+    virtual void printLabel(void) { std::cout << "L" << label_Count++ << ":"; }
+
+protected:
+    int line;
+    int col;
+private:
+    static int label_Count;
+};
+
+class Expression: public Node{
+public:
+    // token* will actually be a word*/intType*/fltType* object
+    // either object has been heap-allocated (in lexer.cpp)
+    Expression(token* Type, token* WhichE)
+	: Node()
+    {
+	type = Type;
+	whichE = WhichE;
+    }
+    ~Expression()
+    {
+	delete type;
+	delete whichE;
+    }
+
+
+
+private:
+    token* type;
+    token* whichE;
+};
+
+
+/***************************************
+* Expression terminals
+***************************************/
+
+
+/***************************************
+* Arithmetic expression classes
+***************************************/
+
+
+/*
 // *********************************
 // Terminals
 // *********************************
@@ -76,7 +130,7 @@ private:
     expressionAST LHS;
     expressionAST RHS;
 };
-
+*/
 
 
 #endif
