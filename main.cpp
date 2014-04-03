@@ -35,6 +35,11 @@ main(int argc, char* argv[])
 	std::cout << "ready> ";
     getNext();
 
+    // relocate to driver
+    makeBinOpTable();
+    makeTypePrecTable();
+    makeEnvRoot();
+
     // will be addressed when getTok is incorporated into parser
     while (*input){
 

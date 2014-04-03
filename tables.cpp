@@ -6,16 +6,24 @@
 *
 ********************************************************************/
 
-// **********MUST CREATE TYPE OBJECT (as user-declared types (classes)
-//           are legal, only way to check) **************************
-// (void is not a legal type for var declaration)
-
 #include <map>
 #include <string>
 #include "lexer.h"
+#include "tables.h"
 
+// compile-time globals
 std::map<tokenType, int> bin_OpTable;
-std::map<std::string, std::string> type_Table;
+std::map<std::string, int> type_PrecTable;
+std::map<std::string, int> type_WidthTable;
+Env* root_Env;
+
+// run-time globals
+extern std::map<std::string, symbolTable> STs;
+
+// static int used in Symbol Table maintenance in file tables.h
+int Env::count_ = 0;
+int offsetHeap_ = 0;
+int offsetStack_ = 0;
 
 void
 makeBinOpTable(void)
@@ -40,14 +48,51 @@ makeBinOpTable(void)
     bin_OpTable[tok_dot] = 900;
 }
 
-// prepare type_Table with basic types. User-defined types might be added.
+// Prepare type_Table with basic types and their coercion priority
+// (void is not a legal type for var declaration).
+// As we'll also use the table for a 'valid type' check, we added string
+// (which cannot be converted to any other type)
 void
-makeTypeTable()
+makeTypePrecTable(void)
 {
-    type_Table["integer"] = "basic";
-    type_Table["double"] = "basic";
-    type_Table["bool"] = "basic";
-    type_Table["string"] = "basic";
+    type_PrecTable["string"] = 0;
+    type_PrecTable["bool"] = 10;
+    type_PrecTable["integer"] = 20;
+    type_PrecTable["double"] = 30;
+}
+
+// relocate as method of IDs & Arrays
+int
+typePriority(std::string type)
+{
+    if ( (type_PrecTable.end() != type_PrecTable.find(type)) )
+	return type_PrecTable[type];
+    else
+	return -1;
+}
+
+// type width in bytes
+void
+makeWidthTable(void)
+{
+    type_PrecTable["bool"] = 4;
+    type_PrecTable["integer"] = 4;
+    type_PrecTable["double"] = 8;
+}
+
+// relocate as method of IDs & Arrays & classes
+int
+typeWidth(std::string type)
+{
+    if ( (type_WidthTable.end() != type_WidthTable.find(type)) )
+	return type_WidthTable[type];
+    else
+	return -1;
 }
 
 
+Env* 
+makeEnvRoot(void)
+{
+    return (root_Env = new Env(0));
+}
