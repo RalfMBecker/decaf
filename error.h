@@ -19,8 +19,15 @@ extern int no_lex_Errors;
 
 class Error{
 public:
+    Error(int Line = lineNo, int Col = colNo)
+	: line_(Line), col_(Col) {}
+    ~Error() {}
+
     virtual void print() const 
-    { std::cerr << "Error near " <<  lineNo << ":" << colNo << ": "; };
+    { std::cerr << "Error near " <<  line_ << ":" << col_ << ": "; };
+private:
+    int line_;
+    int col_;
 };
 
 // *********** update when better understood how used ********

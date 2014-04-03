@@ -15,7 +15,7 @@ extern Env* root_Env;
 
 // runtime global
 class symbolTable;
-extern std::map<std::string, symbolTable> STs;
+extern std::map<std::string, symbolTable> ST;
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
@@ -32,7 +32,7 @@ public:
 	: prior_(P) { count_++; name_ = "Env"; name_ += count_; }
 
     Env* getPrior() const { return prior_; }
-    std::string getName() const { return name_; }
+    std::string getTableName() const { return name_; }
 
     int findName(std::string entry_Name)
     {
@@ -94,11 +94,23 @@ private:
 //         heap and stack area
 class symbolTable{
 public:
-    symbolTable(std::string Name)
-	: name_(Name) {}
-    
+    symbolTable(std::string Name = "")
+	: name_(Name) { offsetHeap_ = offsetStack_ = 0; }
+
+    symbolTable(const symbolTable& s)
+    {
+	offsetHeap_ = s.getOffsetHeap();
+	offsetStack_ = s.getOffsetStack();
+	name_ = s.getName();
+	info_ = s.getInfo();
+    }
+
+    int getOffsetHeap(void) const { return offsetHeap_; }
+    int getOffsetStack(void) const { return offsetStack_; }
+    std::string getName(void) const { return name_; }
+    std::map<std::string, envInfo> getInfo(void) const { return info_; }
+
     // consider making next 3 private
-    // manipulating envInfo
     int findName(std::string search_Name)
     {
 	if ( (info_.end() == info_.find(search_Name)) )
@@ -107,7 +119,7 @@ public:
 	    return 0;
     }
 
-    // Note: method overloaded
+    // Note: function overloaded
     symbolTable& insertName(std::string new_Name, envInfo i)
     {
 	if ( (-1 == findName(new_Name)) )
@@ -127,10 +139,8 @@ public:
 	    offsetStack_ += Width;
 	    tmp = offsetStack_;
 	}
-	else
-	    ;
-	    // little point singling out this as the only validity check
-	    // as function only used by compiler write
+	else  // little point singling out this as the only validity check
+	    ; // as function only used by compiler write
 	envInfo tmpInfo(Type, Mem, tmp, Width);
 	insertName(new_Name, tmpInfo);
 	return *this;
@@ -145,34 +155,34 @@ public:
     }
 
     // retrieving envInfo fields ("" == 'not defined')
-    std::string const getType(std::string read_Name)
+    std::string const getType(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(read_Name));
+	envInfo tmp(readNameInfo(elem_Name));
 	return tmp.Type();
     }
 
-    std::string const getMemType(std::string read_Name)
+    std::string const getMemType(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(read_Name));
+	envInfo tmp(readNameInfo(elem_Name));
 	return tmp.MemType();
     }
 
-    int const getOffset(std::string read_Name)
+    int const getOffset(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(read_Name));
+	envInfo tmp(readNameInfo(elem_Name));
 	return tmp.Offset();
     }
 
-    int const getWidth(std::string read_Name)
+    int const getWidth(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(read_Name));
+	envInfo tmp(readNameInfo(elem_Name));
 	return tmp.Width();
     }
 
 
 private:
-    static int offsetHeap_;
-    static int offsetStack_;
+    int offsetHeap_;
+    int offsetStack_;
     std::string name_;
     std::map<std::string, envInfo> info_;    
 };

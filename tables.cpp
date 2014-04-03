@@ -1,8 +1,13 @@
 /********************************************************************
 * tables.cpp - Tables for Decaf
 *
-*             bin_OpTable: table for Operator Precedence parsing of
-*                         binary operator infix expressions
+*      bin_OpTable: table for Operator Precedence parsing of binary
+*                   operator infix expressions
+*      type_PrecTable: (basic) type precedence in coercions
+*      type_WidthTable: width of types (bytes) on this machine
+*      root_Env: root of a (one-sided) linked list of compile-time
+*                symbol tables (linking back, to enclosing scope)
+*      ST: run-time symbol table (for use of backend)
 *
 ********************************************************************/
 
@@ -18,12 +23,10 @@ std::map<std::string, int> type_WidthTable;
 Env* root_Env;
 
 // run-time globals
-extern std::map<std::string, symbolTable> STs;
+std::map<std::string, symbolTable> ST;
 
 // static int used in Symbol Table maintenance in file tables.h
 int Env::count_ = 0;
-int offsetHeap_ = 0;
-int offsetStack_ = 0;
 
 void
 makeBinOpTable(void)
@@ -90,9 +93,46 @@ typeWidth(std::string type)
 	return -1;
 }
 
-
 Env* 
 makeEnvRoot(void)
 {
     return (root_Env = new Env(0));
 }
+
+// Builder to maintain parallel compile-time and run-time info about 
+// variables in a scope.
+Env*
+addEnv(Env* Prior)
+{
+    Env* pNew_Env = new Env(Prior);
+    std::string new_Name = pNew_Env->getTableName();
+    symbolTable newST = symbolTable(new_Name);
+    ST[new_Name] = newST;
+
+    return pNew_Env;
+}
+
+
+// pEnv will be used during compile-time, so go via this ll
+int
+addEnvName(Env* pEnv, std::string new_Name, std::string Type, 
+	   std::string Mem, int Offset, int Width)
+{
+    // add to Env* entry of Env ll rooted at root_Env
+    if ( (0 == pEnv->findName(new_Name) ) ) // already in tables
+	return -1;
+    pEnv->insertName(new_Name, Type);
+
+    // add into rt table ST, in the sub-table determined through 
+    // the matching Env* pointer into the corresponding ct ll above
+    std::string table_Name = pEnv->getTableName();
+    std::map<std::string, symbolTable>::iterator iter;
+    if ( (ST.end() == (iter = ST.find(table_Name))) )
+	return -1;
+    symbolTable s(iter->second);
+    s.insertName(new_Name, Type, Mem, Offset, Width);
+
+    return 0;
+}
+
+
