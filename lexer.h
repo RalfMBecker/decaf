@@ -44,14 +44,14 @@ enum tokenType{
 class token{
 public:
     token(tokenType t = tok_eof)
-	: name(t) {}
+	: name_(t) {}
     ~token() {}
 
-    virtual tokenType Name(void) const { return name; } // provide 
+    virtual tokenType Name(void) const { return name_; } // provide 
                          // encapsulated access to derived classes
 
 private:
-    tokenType name;
+    tokenType name_;
 };
 
 // for all but tok_ID, hand on lex=""
@@ -61,47 +61,47 @@ public:
 	: token(t)
     {
 	switch(t){ 
-	case tok_void: lexeme = "void"; break;
-	case tok_int: lexeme = "int"; break;
-	case tok_double: lexeme = "double"; break;
-	case tok_bool: lexeme = "bool"; break;
-	case tok_string: lexeme = "string"; break;
+	case tok_void: lexeme_ = "void"; break;
+	case tok_int: lexeme_ = "int"; break;
+	case tok_double: lexeme_ = "double"; break;
+	case tok_bool: lexeme_ = "bool"; break;
+	case tok_string: lexeme_ = "string"; break;
 
-	case tok_return: lexeme = "return"; break;
-	case tok_true: lexeme = "true"; break;
-	case tok_false: lexeme = "false"; break;
-	case tok_null: lexeme = "null"; break;
-	case tok_for: lexeme = "for"; break;
-	case tok_while: lexeme = "while"; break;
-	case tok_if: lexeme = "if"; break;
-	case tok_else: lexeme = "else"; break;
-	case tok_break: lexeme = "break"; break;
+	case tok_return: lexeme_ = "return"; break;
+	case tok_true: lexeme_ = "true"; break;
+	case tok_false: lexeme_ = "false"; break;
+	case tok_null: lexeme_ = "null"; break;
+	case tok_for: lexeme_ = "for"; break;
+	case tok_while: lexeme_ = "while"; break;
+	case tok_if: lexeme_ = "if"; break;
+	case tok_else: lexeme_ = "else"; break;
+	case tok_break: lexeme_ = "break"; break;
 
-	case tok_class: lexeme = "class"; break;
-	case tok_interface: lexeme = "interface"; break;
-	case tok_this: lexeme = "this"; break;
-	case tok_extends: lexeme = "extends"; break;
-	case tok_implements: lexeme = "implements"; break;
+	case tok_class: lexeme_ = "class"; break;
+	case tok_interface: lexeme_ = "interface"; break;
+	case tok_this: lexeme_ = "this"; break;
+	case tok_extends: lexeme_ = "extends"; break;
+	case tok_implements: lexeme_ = "implements"; break;
 
-	case tok_new: lexeme = "new"; break;
-	case tok_NewArray: lexeme = "newArray"; break;
+	case tok_new: lexeme_ = "new"; break;
+	case tok_NewArray: lexeme_ = "newArray"; break;
 
-	case tok_Print: lexeme = "Print"; break;
-	case tok_ReadInteger: lexeme = "ReadInteger"; break;
-	case tok_ReadLine: lexeme = "ReadLine"; break;
+	case tok_Print: lexeme_ = "Print"; break;
+	case tok_ReadInteger: lexeme_ = "ReadInteger"; break;
+	case tok_ReadLine: lexeme_ = "ReadLine"; break;
 
-	case tok_le: lexeme = "<="; break;
-	case tok_ge: lexeme = ">="; break;
-	case tok_log_eq: lexeme = "=="; break;
-	case tok_log_ne: lexeme = "!="; break;
-	case tok_log_and: lexeme = "&&"; break;
-	case tok_log_or: lexeme = "||"; break;
-	case tok_sqopenclosed: lexeme = "[]"; break;
+	case tok_le: lexeme_ = "<="; break;
+	case tok_ge: lexeme_ = ">="; break;
+	case tok_log_eq: lexeme_ = "=="; break;
+	case tok_log_ne: lexeme_ = "!="; break;
+	case tok_log_and: lexeme_ = "&&"; break;
+	case tok_log_or: lexeme_ = "||"; break;
+	case tok_sqopenclosed: lexeme_ = "[]"; break;
 
-	case tok_tmp: lexeme = "t"; break;
+	case tok_tmp: lexeme_ = "t"; break;
 
 	case tok_ID: 
-	case tok_memString: lexeme = lex; break;
+	case tok_memString: lexeme_ = lex; break;
 
 	    // ideally, all that follows would be a base class object
 	    // preserving the polymorphism at this point, however, this 
@@ -113,7 +113,7 @@ public:
 	    // 1-char others
 	case tok_semi: case tok_comma: case tok_sqclosed: case tok_rdopen:
 	case tok_rdclosed: case tok_paropen: case tok_parclosed:
-	    lexeme = std::string(1, static_cast<char>(t));
+	    lexeme_ = std::string(1, static_cast<char>(t));
 	    break;
 
 	default:
@@ -121,32 +121,32 @@ public:
 	}
     }
 
-    std::string Lexeme(void) const { return lexeme; }
+    std::string Lexeme_(void) const { return lexeme_; }
 
 private:
-    std::string lexeme;
+    std::string lexeme_;
 };
 
 class intType: public token{
 public:
     intType(tokenType t, long v)
-	: token(t), value(v) {}
+	: token(t), value_(v) {}
 
-    long Value(void) const { return value; }
+    long Value(void) const { return value_; }
 
 private:
-    long value;
+    long value_;
 }; 
 
 class fltType: public token{
 public:
     fltType(tokenType t, double v)
-	: token(t), value(v) {}
+	: token(t), value_(v) {}
 
-    double Value(void) const { return value; }
+    double Value(void) const { return value_; }
 
 private:
-    double value;
+    double value_;
 }; 
 
 // it is more logical to make them extern here: they are defined in 

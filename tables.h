@@ -3,6 +3,9 @@
 *
 ********************************************************************/
 
+#ifndef TABLES_H_
+#define TABLES_H_
+
 #include <map>
 #include <string>
 #include <sstream>
@@ -22,7 +25,7 @@ void printEnvAncestorInfo(Env*);
 // runtime global
 class symbolTable;
 extern std::map<std::string, symbolTable> ST;
-void printfSTInfo(void);
+void printSTInfo(void);
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
@@ -79,9 +82,9 @@ private:
 };
 
 // Run-time symbol table information
-class envInfo{
+class memInfo{
 public:
-    envInfo(std::string Type = "", std::string memT = "", int Offset = 0, 
+    memInfo(std::string Type = "", std::string memT = "", int Offset = 0, 
 	    int Width = 0)
 	: type_(Type), memType_(memT), offset_(Offset), width_(Width) {}
 
@@ -120,9 +123,8 @@ public:
     int getOffsetHeap(void) const { return offsetHeap_; }
     int getOffsetStack(void) const { return offsetStack_; }
     std::string getName(void) const { return name_; }
-    std::map<std::string, envInfo> getInfo(void) const { return info_; }
+    std::map<std::string, memInfo> getInfo(void) const { return info_; }
 
-    // consider making next 3 private
     int findName(std::string search_Name)
     {
 	if ( (info_.end() == info_.find(search_Name)) )
@@ -132,7 +134,7 @@ public:
     }
 
     // Note: function overloaded
-    symbolTable& insertName(std::string new_Name, envInfo i)
+    symbolTable& insertName(std::string new_Name, memInfo i)
     {
 	if ( (-1 == findName(new_Name)) )
 	    info_[new_Name] = i;
@@ -144,53 +146,50 @@ public:
     {
 	int tmp;
 	if ( ("heap" == Mem) ){
-	    offsetHeap_ += Width;
 	    tmp = offsetHeap_;
-	    std::cout << "increased heap to " << offsetHeap_ << "\n";
+	    offsetHeap_ += Width;
 	}
 	else if ( ("stack" == Mem) ){
-	    offsetStack_ += Width;
 	    tmp = offsetStack_;
+	    offsetStack_ += Width;
 	}
 	else  // little point singling out this as the only validity check
 	    ; // as function only used by compiler writer
-	envInfo tmpInfo(Type, Mem, tmp, Width);
+	memInfo tmpInfo(Type, Mem, tmp, Width);
 	insertName(new_Name, tmpInfo);
 	return *this;
     }
 
-    envInfo readNameInfo(std::string read_Name)
+    memInfo readNameInfo(std::string read_Name)
     {
-	if ( (-1 == findName(read_Name)) ){
-	    std::cout << "can't find it...\n";;
-	    return envInfo(0);
-	}
+	if ( (-1 == findName(read_Name)) )
+	    return memInfo(0);
 	else
 	    return info_[read_Name];
     }
 
-    // retrieving envInfo fields ("" == 'not defined')
+    // retrieving memInfo fields ("" == 'not defined')
     std::string const getType(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(elem_Name));
+	memInfo tmp(readNameInfo(elem_Name));
 	return tmp.Type();
     }
 
     std::string const getMemType(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(elem_Name));
+	memInfo tmp(readNameInfo(elem_Name));
 	return tmp.MemType();
     }
 
     int const getOffset(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(elem_Name));
+	memInfo tmp(readNameInfo(elem_Name));
 	return tmp.Offset();
     }
 
     int const getWidth(std::string elem_Name)
     {
-	envInfo tmp(readNameInfo(elem_Name));
+	memInfo tmp(readNameInfo(elem_Name));
 	return tmp.Width();
     }
 
@@ -199,8 +198,9 @@ private:
     int offsetHeap_;
     int offsetStack_;
     std::string name_;
-    std::map<std::string, envInfo> info_;    
+    std::map<std::string, memInfo> info_;    
 };
 
+#endif
 
 

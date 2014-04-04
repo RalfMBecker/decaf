@@ -1,5 +1,6 @@
 /******************************************************
-* compiler.h -   basic libs and definitions           *
+* compiler.h -   libs for 'input' strean, and         *
+*                compiler-wide definitions            *
 *                                                     *
 ******************************************************/
 
@@ -8,30 +9,9 @@
 
 #include <fstream>     // file streams and operations
 #include <iostream>    // cin, cout, cerr, etc.
-#include <cstdlib>     // exit(), etc.
-#include <errno.h>      // errno()
-
-#include <vector>
-#include <map>
-//#include <string>
-
 
 #define MAX_ID 31
 #define MAX_LIT 32
 #define MAX_STR 32
-
-/*
-extern std::map<char, int> BinopPrecedence;
-
-void BinopPrecedenceCreate();
-// make available to driver
-int getNextToken();
-ExprAST* ParseExpression();
-FunctionAST* ParseDefinition(void);
-PrototypeAST* ParseExtern(void);
-FunctionAST* ParseTopLevelExpr(void);
-
-extern int CurTok;
-*/
 
 #endif
