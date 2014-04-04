@@ -26,7 +26,9 @@ Env* root_Env;
 std::map<std::string, symbolTable> ST;
 
 // static int used in Symbol Table maintenance in file tables.h
-int Env::count_ = 0;
+int Env::count_ = -1; // associate 0 with never-used root_Env pointer
+//int symbolTable::offsetHeap_ = 0;
+//int symbolTable::offsetStack_ = 0;
 
 void
 makeBinOpTable(void)
@@ -100,7 +102,8 @@ makeEnvRoot(void)
 }
 
 // Builder to maintain parallel compile-time and run-time info about 
-// variables in a scope.
+// variables in a scope (new link in ct ll rooted at root_Env; new entry
+// into rt map ST)
 Env*
 addEnv(Env* Prior)
 {
@@ -116,7 +119,7 @@ addEnv(Env* Prior)
 // pEnv will be used during compile-time, so go via this ll
 int
 addEnvName(Env* pEnv, std::string new_Name, std::string Type, 
-	   std::string Mem, int Offset, int Width)
+	   std::string MemType, int Width)
 {
     // add to Env* entry of Env ll rooted at root_Env
     if ( (0 == pEnv->findName(new_Name) ) ) // already in tables
@@ -130,9 +133,57 @@ addEnvName(Env* pEnv, std::string new_Name, std::string Type,
     if ( (ST.end() == (iter = ST.find(table_Name))) )
 	return -1;
     symbolTable s(iter->second);
-    s.insertName(new_Name, Type, Mem, Offset, Width);
+    s.insertName(new_Name, Type, MemType, Width);
 
     return 0;
 }
 
+// debugging functions
+void
+printEnvAncestorInfo(Env* p)
+{
+    while ( (root_Env != p) ){
+	std::cout << "Info for table " << p->getTableName() << "\n";
+	std::cout << "-----------------------------------\n";
+	std::map<std::string, std::string>::const_iterator iter; 
+	std::map<std::string, std::string> tmpType = p->getType();
+	for (iter = tmpType.begin(); iter != tmpType.end(); iter++)
+	    std::cout << iter->first << "\t= " << iter->second << "\n";
 
+	std::cout << "\n";
+	p = p->getPrior();
+    }
+}
+
+void
+printfSTInfo()
+{
+    std::map<std::string, symbolTable>::const_iterator iterOuter;
+    for (iterOuter = ST.begin(); iterOuter != ST.end(); iterOuter++){
+	std::cout << "Info for table " << iterOuter->first << "\n";
+	std::cout << "---------------------------------------------------\n";
+	std::map<std::string, envInfo> tmpI = (iterOuter->second).getInfo();
+	std::map<std::string, envInfo>::const_iterator iterInner;
+	std::cout << " - going via envInfo functions directly - \n";
+	for (iterInner = tmpI.begin(); iterInner != tmpI.end(); iterInner++){
+	    std::cout << iterInner->first;
+	    envInfo tmpInfo(iterInner->second);
+	    std::cout << "\tType: " << tmpInfo.Type() << "\n";
+	    std::cout << "\tMemType: " << tmpInfo.Type() << "\n";
+	    std::cout << "\tOffset: " << tmpInfo.Type() << "\n";
+	    std::cout << "\tWidth: " << tmpInfo.Type() << "\n";
+	}
+/*
+	std::cout << " - using member functions of symbolTable - \n";
+	for (iterInner = tmpI.begin(); iterInner != tmpI.end(); iterInner++){
+	    std::cout << iterInner->first;
+	    std::cout << "\tType: " << tmp.Type() << "\n";
+	    std::cout << "\tMemType: " << tmpInfo.Type() << "\n";
+	    std::cout << "\tOffset: " << tmpInfo.Type() << "\n";
+	    std::cout << "\tWidth: " << tmpInfo.Type() << "\n";
+	}
+*/
+	std::cout << "\n";
+    } 
+
+}

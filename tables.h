@@ -5,6 +5,7 @@
 
 #include <map>
 #include <string>
+#include <sstream>
 
 // compile type globals
 extern std::map<tokenType, int> bin_OpTable;
@@ -12,10 +13,16 @@ extern std::map<std::string, std::string> type_Table;
 extern std::map<std::string, int> type_WidthTable;
 class Env;
 extern Env* root_Env;
+Env* makeEnvRoot(void);
+Env* addEnv(Env*);
+int addEnvName(Env* pEnv, std::string new_Name, std::string Type, 
+	       std::string MemType, int Width);
+void printEnvAncestorInfo(Env*);
 
 // runtime global
 class symbolTable;
 extern std::map<std::string, symbolTable> ST;
+void printfSTInfo(void);
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
@@ -29,10 +36,17 @@ int typeWidth(std::string); // relocate as method of IDs & Arrays & Classes
 class Env{
 public:
     Env(Env* P = 0)
-	: prior_(P) { count_++; name_ = "Env"; name_ += count_; }
+	: prior_(P)
+    { 
+	count_++; 
+	std::stringstream tmp;
+	tmp << "Env" << count_;
+	name_ = tmp.str();
+    }
 
-    Env* getPrior() const { return prior_; }
-    std::string getTableName() const { return name_; }
+    Env* getPrior(void) const { return prior_; }
+    std::string getTableName(void) const { return name_; }
+    std::map<std::string, std::string> getType(void) const { return type_; } 
 
     int findName(std::string entry_Name)
     {
@@ -63,8 +77,6 @@ private:
     Env* prior_;
     std::map<std::string, std::string> type_; // <basic type>/class    
 };
-
-Env* makeEnvRoot(void);
 
 // Run-time symbol table information
 class envInfo{
@@ -128,19 +140,20 @@ public:
     }
 
     symbolTable& insertName(std::string new_Name, std::string Type, 
-			    std::string Mem, int Offset, int Width)
+			    std::string Mem, int Width)
     {
 	int tmp;
 	if ( ("heap" == Mem) ){
 	    offsetHeap_ += Width;
 	    tmp = offsetHeap_;
+	    std::cout << "increased heap to " << offsetHeap_ << "\n";
 	}
 	else if ( ("stack" == Mem) ){
 	    offsetStack_ += Width;
 	    tmp = offsetStack_;
 	}
 	else  // little point singling out this as the only validity check
-	    ; // as function only used by compiler write
+	    ; // as function only used by compiler writer
 	envInfo tmpInfo(Type, Mem, tmp, Width);
 	insertName(new_Name, tmpInfo);
 	return *this;
@@ -148,8 +161,10 @@ public:
 
     envInfo readNameInfo(std::string read_Name)
     {
-	if ( (-1 == findName(read_Name)) )
+	if ( (-1 == findName(read_Name)) ){
+	    std::cout << "can't find it...\n";;
 	    return envInfo(0);
+	}
 	else
 	    return info_[read_Name];
     }
@@ -186,4 +201,6 @@ private:
     std::string name_;
     std::map<std::string, envInfo> info_;    
 };
+
+
 
