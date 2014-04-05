@@ -107,9 +107,13 @@ public:
 	    // preserving the polymorphism at this point, however, this 
 	    // would be more work than it's worth.
 	    // 1-char semantic ops
-	case tok_plus: case tok_minus: case tok_mult: case tok_div:
-	case tok_mod: case tok_lt: case tok_gt: case tok_eq:
-	case tok_log_not: case tok_dot: case tok_sqopen:
+	case tok_plus: lexeme_ = "Add:"; break;
+	case tok_minus: lexeme_ = "Sub:"; break;
+	case tok_mult: lexeme_ = "Mul:"; break;
+	case tok_div:lexeme_ = "Div:"; break;
+	case tok_mod: lexeme_ = "Mod:"; break;
+	case tok_lt: case tok_gt: case tok_eq: case tok_log_not: 
+	case tok_dot: case tok_sqopen:
 	    // 1-char others
 	case tok_semi: case tok_comma: case tok_sqclosed: case tok_rdopen:
 	case tok_rdclosed: case tok_paropen: case tok_parclosed:
@@ -121,7 +125,7 @@ public:
 	}
     }
 
-    std::string Lexeme_(void) const { return lexeme_; }
+    std::string Lexeme(void) const { return lexeme_; }
 
 private:
     std::string lexeme_;

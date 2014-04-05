@@ -7,5 +7,5 @@
 #include "lexer.h"
 
 // implement static non-const class variables
-int Node::label_Count = 0;
-
+int NodeAST::label_Count_ = 0;
+int TempAST::count_ = 0;

@@ -12,47 +12,65 @@
 #define AST_H_
 
 #include <string>
+#include <sstream>
 #include "lexer.h"
+
+int typePriority(std::string);
+int typeWidth(std::string);
 
 /***************************************
 * Base classes
 ***************************************/
 
-class Node{
+class NodeAST{
 public:
-    Node(void)
+    NodeAST(void)
 	: line_(lineNo), col_(colNo) {}
-    ~Node() {}
+    ~NodeAST() {}
 
-    virtual void printLabel(void) { std::cout << "L" << label_Count++ << ":"; }
+    virtual void printLabel(void) { std::cout << "L" << label_Count_++ << ":"; }
 
-protected:
+private:
     int line_;
     int col_;
-private:
-    static int label_Count;
+    static int label_Count_;
 };
 
-class Expression: public Node{
+class ExprAST: public NodeAST{
 public:
-    // token* will actually be a word*/intType*/fltType* object
+    // token* will actually be word*/intType*/fltType* objects
     // either object has been heap-allocated (in lexer.cpp)
-    Expression(token* Type, token* WhichE)
-	: Node()
+    ExprAST(token* Type, token* WhichE)
+	: NodeAST()
     {
-	type_ = Type;
+	type_ = (dynamic_cast<word*>(Type))->Lexeme();
+	delete Type;
 	whichE_ = WhichE;
+	typeW_ = typeWidth(type_);
+	typeP_ = typePriority(type_);
     }
-    ~Expression()
+    ~ExprAST() { delete whichE_; }
+
+    friend int typePriority(std::string);
+    friend int typeWidth(std::string);
+
+    int typeW(void) const { return typeW_; }
+    int typeP(void) const { return typeP_; }
+
+    virtual ExprAST& get(void) { return *this; } // object/rvalue
+    virtual ExprAST& reduce(void) { return *this; } // address
+    // TO ADD: jumping code
+
+    virtual void toString(void) const
     {
-	delete type_;
-	delete whichE_;
+	std::string tmp = (dynamic_cast<word*>(whichE_))->Lexeme();
+	std::cout << tmp;
     }
-
-
 
 private:
-    token* type_;
+    std::string type_;
+    int typeW_;
+    int typeP_;
     token* whichE_;
 };
 
@@ -60,5 +78,78 @@ private:
 * Expression terminals
 ***************************************/
 
+class TempAST: public ExprAST{
+public:
+    TempAST(token* Type, token* WhichE)
+	: ExprAST(Type, WhichE) { number_ = ++count_; }
+
+    void toString(void) const
+    {
+	std::stringstream tmp;
+	tmp << "t" << number_;
+	std::cout << tmp;
+    }
+
+private:
+    static int count_;
+    int number_;
+};
+
+// ******************TO DO: methods gen(), reduce(), toSTring()
+
+class IdAST: public ExprAST{
+public:
+    IdAST(token* Type, token* WhichE)
+	: ExprAST(Type, WhichE) 
+    { 
+	name_ = (dynamic_cast<word*>(WhichE))->Lexeme();
+    }
+
+    std::string Name(void) const { return name_;}
+
+private: // extract info for easier access
+    std::string name_;
+};
+
+class intLitAST: public ExprAST{
+public:
+    intLitAST(token* Type, token* WhichE)
+	: ExprAST(Type, WhichE)
+    { 
+	value_ = (dynamic_cast<intType*>(WhichE))->Value();
+    }
+
+    int Value(void) const { return value_;}
+
+private: // extract info for easier access
+    int value_;
+};
+
+class fltLitAST: public ExprAST{
+public:
+    fltLitAST(token* Type, token* WhichE)
+	: ExprAST(Type, WhichE)
+    { 
+	value_ = (dynamic_cast<fltType*>(WhichE))->Value();
+    }
+
+    double Value(void) const { return value_;}
+
+private: // extract info for easier access
+    double value_;
+};
+
+class stringAST{
+public:
+    stringAST(token* WhichE)
+    {
+	std::string memString_ = (dynamic_cast<word*>(WhichE))->Lexeme();
+    }
+
+    std::string Value(void) const { return memString_;}
+
+private:
+    std::string memString_;  
+};
 
 #endif
