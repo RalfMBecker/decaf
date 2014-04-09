@@ -9,6 +9,8 @@
 #include <iostream>
 #include <string>
 
+// ********CHECK BOOK KEEPING FOR tok_intV ETC ***********
+
 enum tokenType{
     // misc
     tok_eof = -1, tok_return = -2, 
@@ -17,7 +19,7 @@ enum tokenType{
     tok_string = -16,
     // type values
     tok_true = -20, tok_false = -21, tok_null = -22, tok_intV = -23, 
-    tok_fltV = -24, tok_stringV = -25,
+    tok_doubleV = -24, tok_stringV = -25,
     // looping
     tok_for = -30, tok_while = -31, tok_if = -32, tok_else = -33, 
     tok_break = -34,
@@ -60,7 +62,7 @@ public:
 	case tok_false: lexeme_ = "false"; break;
 	case tok_null: lexeme_ = "null"; break;
 	case tok_intV:
-	case tok_fltV:
+	case tok_doubleV:
 	case tok_stringV: lexeme_ = lex; break;
 
 	case tok_return: lexeme_ = "return"; break;
@@ -91,7 +93,9 @@ public:
 	case tok_log_or: lexeme_ = "||"; break;
 	case tok_sqopenclosed: lexeme_ = "[]"; break;
 
-	case tok_tmp: lexeme_ = "t"; break;
+	case tok_tmp: 
+	    lexeme_ = ("" == lex)?"t":lex;
+	    break;
 
 	case tok_ID: lexeme_ = lex; break;
 
@@ -116,6 +120,8 @@ public:
     tokenType Tok(void) const { return token_; }
     std::string Lex(void) const { return lexeme_; }
 
+    void SetTokenLex(std::string s) { lexeme_ = s; }
+
 private:
     tokenType token_;
     std::string lexeme_;
@@ -125,7 +131,7 @@ extern int lineNo;
 extern int colNo;
 extern int last_Char; // not ideal, but nice to be able to access elsewhere
 
-token* getTok(void);
+token getTok(void);
 int getNext(void);
 
 #endif

@@ -11,18 +11,21 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>     // exit(), etc.
+#include <cstdio>      // perror()
 #include <errno.h>     // errno()
 #include "lexer.h"
 #include "driver.h"
+#include "ast.h"
 
 #define MAX_TEXT 32
 
 extern int no_lex_Errors;
+extern int no_par_Errors;
 
 class Error{
 public:
-    Error(int Line = lineNo, int Col = colNo)
-	: line_(Line), col_(Col) {}
+Error(int Line = lineNo, int Col = colNo)
+    : line_(Line), col_(Col) {}
     ~Error() {}
 
     virtual void print() const 
@@ -30,6 +33,25 @@ public:
 private:
     int line_;
     int col_;
+};
+
+class Primary_Error: public Error{
+public: // in current setting, have no AST object to throw
+Primary_Error(std::string Text) 
+    : Error(), text_(Text)
+    {
+	no_par_Errors++;
+    }
+
+    virtual void print() const
+    {
+	std::ostringstream tmp_Str;
+	tmp_Str << "Syntax error - " << text_ << " illegal in context\n";
+	std::cerr << tmp_Str;
+    }
+
+private:
+    std::string text_;
 };
 
 // *********** update when better understood how used ********
@@ -70,8 +92,8 @@ private:
 // strtod has arcane error repoting; c./ man page
 class strtoNumError: public Lexer_Error{
 public:
-    strtoNumError(const std::string& name,const std::string& type, char c)
-	: Lexer_Error(name, ""), typeName(type), offending(c) {}
+strtoNumError(const std::string& name,const std::string& type, char c)
+    : Lexer_Error(name, ""), typeName(type), offending(c) {}
 
     void print() const{
 	Lexer_Error::print();

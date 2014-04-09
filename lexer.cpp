@@ -25,108 +25,103 @@
 
 extern std::istream* input;
 
-// std::string id_Str;      // for tok_identifier
-//long val_Int;            // for tok_Int (int type, not just int)
-//double val_Flt;          // for tok_Flt (type)
-
 int lineNo = 1;
 int colNo = 0;
 int last_Char = ' ';
 
-token*
+token
 checkReserved(std::string str)
 {
     // misc
     if ( ("eof" == str) )
-	return new token();
+	return token();
     if ( ("return" == str) )
-	return new token(tok_return);
+	return token(tok_return);
     // types / pre-defined type values
     if ( ("void" == str) )
-	return new token(tok_void);
+	return token(tok_void);
     if ( ("int" == str) )
-	return new token(tok_int);
+	return token(tok_int);
     if ( ("double" == str) )
-	return new token(tok_double);
+	return token(tok_double);
     if ( ("bool" == str) )
-	return new token(tok_bool);
+	return token(tok_bool);
     if ( ("true" == str) )
-	return new token(tok_true);
+	return token(tok_true);
     if ( ("false" == str) )
-	return new token(tok_false);
+	return token(tok_false);
     if ( ("string" == str) )
-	return new token(tok_string);
+	return token(tok_string);
     if ( ("null" == str) )
-	return new token(tok_null);
+	return token(tok_null);
     // looping
     if ( ("for" == str) )
-	return new token(tok_for);
+	return token(tok_for);
     if ( ("while" == str) )
-	return new token(tok_while);
+	return token(tok_while);
     if ( ("if" == str) )
-	return new token(tok_if);
+	return token(tok_if);
     if ( ("else" == str) )
-	return new token(tok_else);
+	return token(tok_else);
     if ( ("break" == str) )
-	return new token(tok_break);
+	return token(tok_break);
     // i/o
     if ( ("Print" == str) )
-	return new token(tok_Print);
+	return token(tok_Print);
     if ( ("ReadInteger" == str) )
-	return new token(tok_ReadInteger);
+	return token(tok_ReadInteger);
     if ( ("ReadLine" == str) )
-	return new token(tok_ReadLine);
+	return token(tok_ReadLine);
     // classes
     if ( ("class" == str) )
-	return new token(tok_class);
+	return token(tok_class);
     if ( ("interface" == str) )
-	return new token(tok_interface);
+	return token(tok_interface);
     if ( ("this" == str) )
-	return new token(tok_this);
+	return token(tok_this);
     if ( ("extends" == str) )
-	return new token(tok_extends);
+	return token(tok_extends);
     if ( ("implements" == str) )
-	return new token(tok_implements);
+	return token(tok_implements);
     // heap mgmt
     if ( ("new" == str) )
-	return new token(tok_new);
+	return token(tok_new);
     if ( ("NewArray" == str) )
-	return new token(tok_NewArray);
+	return token(tok_NewArray);
 
-    std::cout << "\t--not a keyword--\n";
-    return new token(tok_ID, str);
+    return token(tok_ID, str);
 }
 
 // Some operators are also the first character of a two-char operator - 
 // e.g., "<" and "<=". They are checked elsewhere.
-token*
+token
 retOpPunct(int test)
 {
     switch(test){
 	//1 char operators
-    case '+': return new token(tok_plus); 
-    case '-': return new token(tok_minus);
-    case '*': return new token(tok_mult);
-    case '%': return new token(tok_mod);
-    case '.': return new token(tok_dot); 
+    case '+': return token(tok_plus); 
+    case '-': return token(tok_minus);
+    case '*': return token(tok_mult);
+    case '%': return token(tok_mod);
+    case '.': return token(tok_dot); 
 	/*
-    case '/': return new token(tok_div); // handled as part of comments
-    case '<': return new token(tok_lt); // handled as part of 2-char operators
-    case '>': return new token(tok_gt); // handled as part of 2-char operators
-    case '=': return new token(tok_eq); // handled as part of 2-char operators
-    case '!': return new token(tok_log_not); // handled as part of 2-char...
-    case '[': return new token(tok_sqopen); // handled as part of 2-char...
+    case '/': return token(tok_div); // handled as part of comments
+    case '<': return token(tok_lt); // handled as part of 2-char operators
+    case '>': return token(tok_gt); // handled as part of 2-char operators
+    case '=': return token(tok_eq); // handled as part of 2-char operators
+    case '!': return token(tok_log_not); // handled as part of 2-char...
+    case '[': return token(tok_sqopen); // handled as part of 2-char...
 	*/
 	// other punctuation
-    case ';': return new token(tok_semi);
-    case ',': return new token(tok_comma);
-    case ']': return new token(tok_sqclosed);
-    case '(': return new token(tok_rdopen);
-    case ')': return new token(tok_rdclosed);
-    case '{': return new token(tok_paropen);
-    case '}': return new token(tok_parclosed);
+    case ';': return token(tok_semi);
+    case ',': return token(tok_comma);
+    case ']': return token(tok_sqclosed);
+    case '(': return token(tok_rdopen);
+    case ')': return token(tok_rdclosed);
+    case '{': return token(tok_paropen);
+    case '}': return token(tok_parclosed);
 
-    default: return new token(tok_eof); // signals: no valid token
+    default: return token(tok_eof); // signals: no valid token
     }
 }
 
@@ -256,8 +251,7 @@ readIntValue(int* last, int* pbase, int* count, long* iV, std::string& tmp_Str){
 		tmp_Str.insert(0, "0x");
 	    throw(strtoNumError(tmp_Str, "integer", end_Ptr[0]));
 	}
-	std::cout << "Found an octal/hex integer literal: " << *iV << "\n";
-	return tok_int;
+	return tok_intV;
     }
 
     // dealing with decimal input
@@ -288,7 +282,7 @@ getNext(void)
 // invariant: upon return (other than from EOF), last_Char has the next
 //            unprocessed char
 // Note: mem leaks on its own. Relies on caller to delete pointer. 
-token*
+token
 getTok()
 {
     std::string id_Str;      // for tokens with variable values
@@ -308,7 +302,6 @@ getTok()
 	    id_Str += last_Char;
 	}
 
-	std::cout << "Found identifier: " << id_Str << "\n";
 	return checkReserved(id_Str);
     }
  
@@ -331,10 +324,10 @@ getTok()
 
 	// calculate number as check for valid numer/possible future use
 	ret = readIntValue(&last_Char, &base, &i, &iV, id_Str);
-	if ( (tok_int == ret) ){  // if we found an oct/hex int, we are done
+	if ( (tok_intV == ret) ){  // if we found an oct/hex int, we are done
 	    tmp_Str << iV; // but return as string
 	    id_Str = tmp_Str.str();
-	    return new token(tok_int, id_Str);	
+	    return token(tok_intV, id_Str);	
 	}
 
 	if ( ('.' == last_Char) ){ 
@@ -355,8 +348,7 @@ getTok()
 	    }
 	    tmp_Str << iV;
 	    id_Str = tmp_Str.str();
-	    std::cout << "Found a decimal integer literal: " << id_Str << "\n";
-	    return new token(tok_int, id_Str);	
+	    return token(tok_intV, id_Str);	
 	}
 
 	// integer after '.'
@@ -390,8 +382,7 @@ getTok()
 	    throw(strtoNumError(id_Str, "float", end_Ptr[0]));
 	tmp_Str << fV;
 	id_Str = tmp_Str.str();
-	std::cout << "Found float literal: " << id_Str << "\n";
-	return new token(tok_double, id_Str);
+	return token(tok_doubleV, id_Str);
     } // end 'if number' scope
 
     // process strings
@@ -412,9 +403,8 @@ getTok()
 	    else
 		id_Str += last_Char;
 	}
-	std::cout << "Found string const: " << id_Str.c_str() << "\n";
 	getNext();
-	return new token(tok_stringV, id_Str);
+	return token(tok_stringV, id_Str);
     }
 
     // eat comments
@@ -440,77 +430,62 @@ getTok()
 	    }
 	} // end loop for type 2 comments
 	else{ // found a '/' char
-	    std::cout << "found a /\n";
 	    id_Str = last_Char;
-	    return new token(tok_div);
+	    return token(tok_div);
 	}
 
 	// If we come here, we are at in one of two situations:
 	// Comment type 1: pointing to '\n' or EOF at proper comment line
 	//         type 2: pointing at the closing tag (last 2 chars '*/).
-	std::cout << "\t\t...processed a comment type...\n";
 	if ( last_Char != EOF){
 	    getNext();
 	    return getTok(); // re-throw when done with comment line
 	}
 	else 
-	    return new token(tok_eof);
+	    return token(tok_eof);
     }
 
     // did we hit EOF?
     if ( (EOF == last_Char) )
-	return new token(tok_eof);
+	return token(tok_eof);
 
     // 2 character operator tokens
     if ( ('<' == last_Char) ){
 	if ( ('=' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '<='" << "\n";
-	    return new token(tok_le);
+	    return token(tok_le);
 	}
-	else{
-	    std::cout << "found a '<'" << "\n";
-	    return new token(tok_lt);
-	}
+	else
+	    return token(tok_lt);
     }
     if ( ('>' == last_Char) ){
 	if ( ('=' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '>='" << "\n";
-	    return new token(tok_ge);
+	    return token(tok_ge);
 	}
-	else{
-	    std::cout << "found a '>'" << "\n";
-	    return new token(tok_gt);
-	}
+	else
+	    return token(tok_gt);
     }
     if ( ('=' == last_Char) ){
 	if ( ('=' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '=='" << "\n";
-	    return new token(tok_log_eq);
+	    return token(tok_log_eq);
 	}
-	else{
-	    std::cout << "found a '='" << "\n";
-	    return new token(tok_eq);
-	}
+	else
+	    return token(tok_eq);
     }
     if ( ('!' == last_Char) ){
 	if ( ('=' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '!='" << "\n";
-	    return new token(tok_log_ne);
+	    return token(tok_log_ne);
 	}
-	else{
-	    std::cout << "found a '!'" << "\n";
-	    return new token(tok_log_not);
-	}
+	else
+	    return token(tok_log_not);
     }
     if ( ('&' == last_Char) ){
 	if ( ('&' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '&&'" << "\n";
-	    return new token(tok_log_and);
+	    return token(tok_log_and);
 	}
 	else
 	    throw(Lexer_Error("&", ""));
@@ -518,8 +493,7 @@ getTok()
     if ( ('|' == last_Char) ){
 	if ( ('|' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '||'" << "\n";
-	    return new token(tok_log_or);
+	    return token(tok_log_or);
 	}
 	else
 	    throw(Lexer_Error("|", ""));
@@ -527,23 +501,19 @@ getTok()
     if ( ('[' == last_Char) ){
 	if ( (']' == getNext()) ){
 	    getNext();
-	    std::cout << "found a '[]'" << "\n";
-	    return new token(tok_sqopenclosed);
+	    return token(tok_sqopenclosed);
 	}
-	else{
-	    std::cout << "found a '['" << "\n";
-	    return new token(tok_sqopen);
-	}
+	else
+	    return token(tok_sqopen);
     }
 
     // if we come here, we are down to single character operators and 
     // punctuation symbols, and illegal characters. 
     // 'tok_eof' signals: no valid 1-char token; not actually EOF
     // note that we also need to ready the next last_Char
-    token* tmpT = retOpPunct(last_Char);
-    if ( (tok_eof == tmpT->Tok()) )
+    token tmpT = retOpPunct(last_Char);
+    if ( (tok_eof == tmpT.Tok()) )
 	throw(Lexer_Error(std::string(1, last_Char), "invalid token"));
-    std::cout << "Found 1-ch OpP: " << tmpT->Lex() << "\n";
     getNext();
     return tmpT;
 }

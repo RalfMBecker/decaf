@@ -10,6 +10,7 @@
 extern std::istream* input;
 
 int no_lex_Errors = 0;
+int no_par_Errors = 0;
 
 void
 panicModeFwd(void)

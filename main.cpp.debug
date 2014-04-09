@@ -97,15 +97,15 @@ main(int argc, char* argv[])
     getNext();
 
     // relocate to driver
-    makeBinOpTable();
-    makeTypePrecTable();
-    makeEnvRoot();
+//    makeBinOpTable();
+//    makeTypePrecTable();
+//    makeEnvRoot();
 
     // will be addressed when getTok is incorporated into parser
     while (*input){
 
 	try{
-	    while ( (EOF != getTok()->Name() ) )
+	    while ( (EOF != getTok().Tok() ) )
 		;
 	}
 

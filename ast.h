@@ -21,57 +21,74 @@ int typeWidth(std::string);
 /***************************************
 * Base classes
 ***************************************/
-
+// parents manage their children: once they are created, add a pointer
+// to parent in any child
 class NodeAST{
 public:
-    NodeAST(void)
-	: line_(lineNo), col_(colNo) {}
+NodeAST(NodeAST* lC=0, NodeAST* rC=0)
+    : parent_(0), lChild_(lC), rChild_(rC), line_(lineNo), col_(colNo)
+    {
+	if ( (0 != lChild_) )
+	    lChild_->setParent(this);
+	if ( (0 != rChild_) )
+	    rChild_->setParent(this);
+    }
+
     ~NodeAST() {}
 
     virtual void printLabel(void) { std::cout << "L" << label_Count_++ << ":"; }
 
+    virtual int Line(void) const { return line_; }
+    virtual int Col(void) const { return col_; }
+
+    virtual NodeAST* Parent(void) const { return parent_; }
+    virtual NodeAST* LChild(void) const { return lChild_; }
+    virtual NodeAST* RChild(void) const { return rChild_; }
+    void setParent(NodeAST* Par) { parent_ = Par; }
+
 private:
+    NodeAST* parent_;
+    NodeAST* lChild_;
+    NodeAST* rChild_;
     int line_;
     int col_;
     static int label_Count_;
 };
 
+// arithmetic, logical, and basic types
 class ExprAST: public NodeAST{
 public:
-    // token* will actually be word*/intType*/fltType* objects
-    // either object has been heap-allocated (in lexer.cpp)
-    ExprAST(token* Type, token* WhichE)
-	: NodeAST()
+ExprAST(token Type, token OpTor, NodeAST* lc=0, NodeAST* rc=0)
+    : NodeAST(lc, rc), type_(Type.Lex()), op_(OpTor)
     {
-	type_ = (dynamic_cast<word*>(Type))->Lexeme();
-	delete Type;
-	whichE_ = WhichE;
 	typeW_ = typeWidth(type_);
 	typeP_ = typePriority(type_);
     }
-    ~ExprAST() { delete whichE_; }
+    ~ExprAST() {}
 
     friend int typePriority(std::string);
     friend int typeWidth(std::string);
 
-    int typeW(void) const { return typeW_; }
-    int typeP(void) const { return typeP_; }
-
-    virtual ExprAST& get(void) { return *this; } // object/rvalue
-    virtual ExprAST& reduce(void) { return *this; } // address
-    // TO ADD: jumping code
-
-    virtual void toString(void) const
-    {
-	std::string tmp = (dynamic_cast<word*>(whichE_))->Lexeme();
-	std::cout << tmp;
-    }
+    std::string Type(void) const { return type_;}
+    token Op(void) const { return op_; }
+    int TypeW(void) const { return typeW_; }
+    int TypeP(void) const { return typeP_; }
 
 private:
     std::string type_;
+    token op_;
     int typeW_;
     int typeP_;
-    token* whichE_;
+};
+
+// Serves to handle unified code generation (children: logical/arithm.):
+// Handles creation and assignment to a temp variable (SSA style)
+class OpAST: public ExprAST{
+public:
+OpAST(token Type, token Op, NodeAST* lc=0, NodeAST* rc=0)
+    : ExprAST(Type, Op, lc, rc) {}
+// methods differ from those for Expr, hence separate. TO DO
+
 };
 
 /***************************************
@@ -80,76 +97,66 @@ private:
 
 class TempAST: public ExprAST{
 public:
-    TempAST(token* Type, token* WhichE)
-	: ExprAST(Type, WhichE) { number_ = ++count_; }
-
-    void toString(void) const
+TempAST(token Type, token Op)
+    : ExprAST(Type, Op, 0, 0)
     {
 	std::stringstream tmp;
-	tmp << "t" << number_;
-	std::cout << tmp;
+	tmp << "t" << ++count_;
+	name_ = tmp.str();
+	Op.SetTokenLex(name_);
     }
 
+    std::string Name(void) const { return name_; }
+
 private:
+    std::string name_; // for easier access
     static int count_;
-    int number_;
 };
 
-// ******************TO DO: methods gen(), reduce(), toSTring()
-
-class IdAST: public ExprAST{
+class IdExprAST: public ExprAST{
 public:
-    IdAST(token* Type, token* WhichE)
-	: ExprAST(Type, WhichE) 
-    { 
-	name_ = (dynamic_cast<word*>(WhichE))->Lexeme();
-    }
+IdExprAST(token Type, token Op)
+    : ExprAST(Type, Op, 0, 0) { name_ = Op.Lex(); }
 
-    std::string Name(void) const { return name_;}
+    std::string Name(void) const { return name_; }
 
-private: // extract info for easier access
-    std::string name_;
+private: 
+    std::string name_; // for easier access
 };
 
-class intLitAST: public ExprAST{
+class IntExprAST: public ExprAST{
 public:
-    intLitAST(token* Type, token* WhichE)
-	: ExprAST(Type, WhichE)
-    { 
-	value_ = (dynamic_cast<intType*>(WhichE))->Value();
-    }
+IntExprAST(token Op)
+    : ExprAST(token(tok_int), Op, 0, 0) { value_ = Op.Lex(); }
 
-    int Value(void) const { return value_;}
-
-private: // extract info for easier access
-    int value_;
-};
-
-class fltLitAST: public ExprAST{
-public:
-    fltLitAST(token* Type, token* WhichE)
-	: ExprAST(Type, WhichE)
-    { 
-	value_ = (dynamic_cast<fltType*>(WhichE))->Value();
-    }
-
-    double Value(void) const { return value_;}
-
-private: // extract info for easier access
-    double value_;
-};
-
-class stringAST{
-public:
-    stringAST(token* WhichE)
-    {
-	std::string memString_ = (dynamic_cast<word*>(WhichE))->Lexeme();
-    }
-
-    std::string Value(void) const { return memString_;}
+    std::string Value(void) const { return value_;}
 
 private:
-    std::string memString_;  
+    std::string value_; // for easier access
+};
+
+class FltExprAST: public ExprAST{
+public:
+FltExprAST(token Op)
+    : ExprAST(token(tok_double), Op, 0, 0) { value_ = Op.Lex(); }
+
+    std::string Value(void) const { return value_; }
+
+private:
+    std::string value_; // for easier access
+};
+
+// ******TO DO: STRING (etc.)********************
+
+/***************************************
+* Arithmetic expressions
+***************************************/
+
+class ArithmExprAST: public OpAST{
+public:
+    ArithmExprAST(token Op, ExprAST* LHS, ExprAST* RHS)
+	: OpAST(token(), Op, LHS, RHS) {}
+
 };
 
 #endif
