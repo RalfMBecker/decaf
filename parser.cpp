@@ -4,6 +4,8 @@
 * Notes: Operator Precedence parsing for expressions to flatten the
 *        the CFG
 *
+* - will address mem leaks later - 
+*
 ********************************************************************/
 
 #include "ast.h"
