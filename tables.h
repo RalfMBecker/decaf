@@ -11,8 +11,6 @@
 #include <string>
 #include <sstream>
 
-#include <cstdarg> 
-
 void errExit(int, const char* format, ...);
 
 // forward declarations
@@ -29,6 +27,7 @@ void makeTypePrecTable(void);
 void makeWidthTable(void);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
+int opPriority(token t);
 
 // compile time static declaration check
 class Env;
@@ -207,7 +206,6 @@ public:
 	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Width();
     }
-
 
 private:
     int offsetHeap_;

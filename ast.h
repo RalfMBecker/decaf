@@ -171,28 +171,33 @@ private:
     std::string value_; // for easier access
 };
 
+class BoolExpr_AST: public Expr_AST{
+public:
+BoolExpr_AST(token Op) // Op = "false" "true" (tok_true tok_false)
+    : Expr_AST(token(tok_bool), Op, 0, 0) { value_ = Op.Lex(); }
+
+    std::string Value(void) const { return value_; }
+
+private:
+    std::string value_; // for easier access
+};
+
 // ******TO DO: STRING (etc.)********************
 
 /***************************************
-* TmpForExpr and its children
+* Expression Arithmetic children
 ***************************************/
 
-// Serves to handle unified code generation:
-// Handles creation and assignment to a temp variable (SSA style)
-class TmpForExpr_AST: public Expr_AST{
-public:
-TmpForExpr_AST(token Type, token Op, Node_AST* lc=0, Node_AST* rc=0)
-    : Expr_AST(Type, Op, lc, rc) {}
-// methods differ from those for Expr, hence separate. TO DO
-
-};
-
-class ArithmExpr_AST: public TmpForExpr_AST{
+class ArithmExpr_AST: public Expr_AST{
 public:
     ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
-	: TmpForExpr_AST(token(), Op, LHS, RHS) {}
+	: Expr_AST(token(), Op, LHS, RHS) {}
 
 };
+
+/***************************************
+* Expression Logical children
+***************************************/
 
 /*
 class UnaryArithmExpr_AST: public ArithmExpr_AST{
@@ -207,5 +212,21 @@ private:
 
 };
 */
+
+/***************************************
+* TmpForExpr and its children - TO DO: likely will be removed
+***************************************/
+
+// Serves to handle unified code generation:
+// Handles creation and assignment to a temp variable (SSA style)
+class TmpForExpr_AST: public Expr_AST{
+public:
+TmpForExpr_AST(token Type, token Op, Node_AST* lc=0, Node_AST* rc=0)
+    : Expr_AST(Type, Op, lc, rc) {}
+// methods differ from those for Expr, hence separate. TO DO
+
+    ~TmpForExpr_AST() {};
+
+};
 
 #endif

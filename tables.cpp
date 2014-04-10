@@ -58,6 +58,15 @@ makeBinOpTable(void)
     bin_OpTable[tok_dot] = 900;
 }
 
+int
+opPriority(token t)
+{
+    if ( (bin_OpTable.end() != bin_OpTable.find(t.Tok())) )
+	return bin_OpTable[t.Tok()];
+    else
+	throw(Primary_Error(t.Lex(), "illegal in infix expression"));
+}
+
 // Prepare type_Table with basic types and their coercion priority
 // (void is not a legal type for var declaration).
 // As we'll also use the table for a 'valid type' check, we added string
@@ -147,21 +156,6 @@ addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
 }
 
 Expr_AST*
-findIdInHierarchy(Env* p, IdExpr_AST* Id)
-{
-    std::string name_Str(Id->Name());
-    while ( (root_Env != p) ){
-	std::map<std::string, Expr_AST*>::const_iterator iter; 
-	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
-	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
-	    if ( (name_Str == iter->first) )
-		return iter->second;
-	p = p->getPrior();
-    }
-    return 0;
-}
-
-Expr_AST*
 findNameInHierarchy(Env* p, std::string Name)
 {
     while ( (root_Env != p) ){
@@ -173,6 +167,13 @@ findNameInHierarchy(Env* p, std::string Name)
 	p = p->getPrior();
     }
     return 0;
+}
+
+Expr_AST*
+findIdInHierarchy(Env* p, IdExpr_AST* Id)
+{
+    std::string name_Str(Id->Name());
+    return findNameInHierarchy(p, name_Str);
 }
 
 // debugging functions
