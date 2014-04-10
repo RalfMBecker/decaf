@@ -19,7 +19,8 @@
 #include <string>
 #include <sstream>
 #include <cctype>
-#include "compiler.h"
+
+#include "compiler.h" // words directly with stream input
 #include "lexer.h"
 #include "error.h"
 
@@ -233,7 +234,7 @@ readIntValue(int* last, int* pbase, int* count, long* iV, std::string& tmp_Str){
     if ( (8 == base) || (16 == base) ){
 	do{
 	    if ( (MAX_LIT == ++(*count)) )
-		throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
+		throw(TooLong_Error(tmp_Str, "MAX_LIT", MAX_LIT));
 	    tmp_Str += (*last);
 	    (*last) = input->get();
 	} while ( ((8==base) && isdigit(*last)) || 
@@ -249,7 +250,7 @@ readIntValue(int* last, int* pbase, int* count, long* iV, std::string& tmp_Str){
 		tmp_Str.insert(0, "0");
 	    else if (16 == base)
 		tmp_Str.insert(0, "0x");
-	    throw(strtoNumError(tmp_Str, "integer", end_Ptr[0]));
+	    throw(StrToNum_Error(tmp_Str, "integer", end_Ptr[0]));
 	}
 	return tok_intV;
     }
@@ -257,7 +258,7 @@ readIntValue(int* last, int* pbase, int* count, long* iV, std::string& tmp_Str){
     // dealing with decimal input
     do{
 	if ( (MAX_LIT == ++(*count)) )
-	    throw(tooLongError(tmp_Str, "MAX_LIT", MAX_LIT));
+	    throw(TooLong_Error(tmp_Str, "MAX_LIT", MAX_LIT));
 	tmp_Str += (*last);
 	(*last) = input->get();
     } while (isdigit(*last) );
@@ -298,7 +299,7 @@ getTok()
 	while ( (std::isalnum(getNext())) || 
 		('_' == last_Char) ){
 	    if ( (MAX_ID == ++i) )
-		throw(tooLongError(id_Str, "MAX_ID", MAX_ID));
+		throw(TooLong_Error(id_Str, "MAX_ID", MAX_ID));
 	    id_Str += last_Char;
 	}
 
@@ -332,7 +333,7 @@ getTok()
 
 	if ( ('.' == last_Char) ){ 
 	    if ( (MAX_LIT == ++i) )
-		throw(tooLongError(id_Str, "MAX_LIT", MAX_LIT));
+		throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
 	    id_Str += last_Char;
 	    getNext();
 	}
@@ -344,7 +345,7 @@ getTok()
 		    id_Str.insert(0, "0");
 		else if (16 == base)
 		    id_Str.insert(0, "0x");
-		throw(strtoNumError(id_Str, "integer", end_Ptr[0]));
+		throw(StrToNum_Error(id_Str, "integer", end_Ptr[0]));
 	    }
 	    tmp_Str << iV;
 	    id_Str = tmp_Str.str();
@@ -354,7 +355,7 @@ getTok()
 	// integer after '.'
 	while ( isdigit(last_Char) ){
 	    if ( (MAX_LIT == ++i) )
-		throw(tooLongError(id_Str, "MAX_LIT", MAX_LIT));
+		throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
 	    id_Str += last_Char;
 	    getNext();
 	}
@@ -362,7 +363,7 @@ getTok()
 	// deal with scientific notation
 	if ( ('e' == last_Char) || ('E' == last_Char) ){
 	    if ( (MAX_LIT == ++i) )
-		throw(tooLongError(id_Str, "MAX_LIT", MAX_LIT));
+		throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
 	    id_Str += last_Char;
 	    getNext();
 	    id_Str += last_Char;
@@ -372,14 +373,14 @@ getTok()
 
 	    while ( isdigit(getNext())  ){
 		if ( (MAX_LIT == ++i) )
-		    throw(tooLongError(id_Str, "MAX_LIT", MAX_LIT));
+		    throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
 		id_Str += last_Char;
 	   }
 	}
 
 	fV = strtod(id_Str.c_str(), &end_Ptr);
 	if ((id_Str.c_str() == end_Ptr)||('\0' != end_Ptr[0])|| ( 0 != errno) )
-	    throw(strtoNumError(id_Str, "float", end_Ptr[0]));
+	    throw(StrToNum_Error(id_Str, "float", end_Ptr[0]));
 	tmp_Str << fV;
 	id_Str = tmp_Str.str();
 	return token(tok_doubleV, id_Str);
@@ -391,14 +392,14 @@ getTok()
 	id_Str.clear();
 	while ( ('\"' != getNext()) && (EOF != last_Char)){
 	    if ( (MAX_STR == ++i) )
-		throw(tooLongError(id_Str, "MAX_STR", MAX_STR));
+		throw(TooLong_Error(id_Str, "MAX_STR", MAX_STR));
 	    else if ( ('\n' == last_Char) || (EOF == last_Char) )
 		throw(Lexer_Error(id_Str, "string missing closing \""));
 	    else if ( ('\\' == last_Char) ){
 		id_Str += '\\';
 		i += validEscape(&last_Char, id_Str);
 		if ( (MAX_STR < i) )
-		    throw(tooLongError(id_Str, "MAX_STR", MAX_STR));
+		    throw(TooLong_Error(id_Str, "MAX_STR", MAX_STR));
 	    }
 	    else
 		id_Str += last_Char;

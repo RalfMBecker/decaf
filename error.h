@@ -10,13 +10,13 @@
 #include <sstream>
 #include <string>
 
-#include <cstdlib>     // exit(), etc.
+#include <cstdlib>     // exit(), strtol(), etc.
 #include <cstdio>      // perror()
 #include <errno.h>     // errno()
 
 #include "lexer.h"
-#include "driver.h"
 #include "ast.h"
+#include "driver.h"
 
 const int MAX_TEXT = 32;
 
@@ -85,13 +85,11 @@ private:
     int what_; // 0: missing; 1: spare
 };
 
-// *********** update when better understood how used ********
-// (eg, ternary private variables: lhs op rhs?
 // basic lexer error class
 class Lexer_Error: public Error{
 public:
-Lexer_Error(const std::string& name, const std::string& second)
-    : Error(), Name(name), Second(second)
+Lexer_Error(const std::string& Name, const std::string& Second)
+    : Error(), name_(Name), second_(Second)
     {
 	no_lex_Errors++;
     }
@@ -99,52 +97,50 @@ Lexer_Error(const std::string& name, const std::string& second)
     virtual void print() const; // we rely on coercion of a reference, so must
                         // make this function const
 private: 
-    std::string Name; 
-    std::string Second;
+    std::string name_; 
+    std::string second_;
 };
 
 // Enforcing max lengths of identifiers, etc. Sample usage:
 //            name=<identifier>, type_Str="MAX_ID", type=MAX_ID
-class tooLongError: public Lexer_Error{
+class TooLong_Error: public Lexer_Error{
 public:
-tooLongError(const std::string& name, const std::string& type_Str, int type)
-    : Lexer_Error(name, ""), typeName(type_Str), typeValue(type) {}
+TooLong_Error(const std::string& Name, const std::string& type_Str, int Type)
+    : Lexer_Error(Name, ""), typeName_(type_Str), typeValue_(Type) {}
 
     void print() const
     {
 	Lexer_Error::print();
-	std::cerr << "longer than " << typeName << " (" << typeValue << ")\n";
+	std::cerr << "longer than " << typeName_ << " (" << typeValue_ << ")\n";
     }
 private:
-    std::string typeName;
-    int typeValue;
+    std::string typeName_;
+    int typeValue_;
 };
 
 // strtod has arcane error repoting; c./ man page
-class strtoNumError: public Lexer_Error{
+class StrToNum_Error: public Lexer_Error{
 public:
-strtoNumError(const std::string& name,const std::string& type, char c)
-    : Lexer_Error(name, ""), typeName(type), offending(c) {}
+StrToNum_Error(const std::string& Name,const std::string& Type, char c)
+    : Lexer_Error(Name, ""), typeName_(Type), offending_(c) {}
 
     void print() const{
 	Lexer_Error::print();
 	if ( 0 != errno){ // overflow/underflow
-	    std::cerr << typeName << " - ";
-	    if ( ("float" == typeName) )
+	    std::cerr << typeName_ << " - ";
+	    if ( ("float" == typeName_) )
 		perror("strtod");
-	    else if ( ("integer" == typeName) )
+	    else if ( ("integer" == typeName_) )
 		perror("strtol");
-	    else{
-		std::cerr << "invalid use of function strtoNumError\n";
-		exit(EXIT_FAILURE);
-	    }
+	    else
+		errExit(0, "invalid use of function StrToNum_Error\n");
 	}
-	else if ( ('\0' != offending) )
-	    std::cerr << " - offending character: " << offending << "\n";
+	else if ( ('\0' != offending_) )
+	    std::cerr << " - offending character: " << offending_ << "\n";
     }
 private:
-    std::string typeName;
-    char offending;
+    std::string typeName_;
+    char offending_;
 };
 
 // If called for a Lexer_Error object with Second == "", we want to print
@@ -155,7 +151,7 @@ private:
 // probably not ideal, but we need the function to be const (see class
 // declaration above).
 //
-// If we don't define this inline after tooLongError, we have an incomplete
+// If we don't define this inline after TooLong_Error, we have an incomplete
 // type reference
 inline void Lexer_Error::print() const
 {
@@ -163,16 +159,16 @@ inline void Lexer_Error::print() const
     std::ostringstream tmp_Str;
 
     Error::print();
-    tmp_Str << "token (" << Name << ")";
-    if ( Second.empty() ){
-	if ( !(dynamic_cast<tooLongError*>(pThis)) &&
-	     !(dynamic_cast<strtoNumError*>(pThis)) )
+    tmp_Str << "token (" << name_ << ")";
+    if ( second_.empty() ){
+	if ( !(dynamic_cast<TooLong_Error*>(pThis)) &&
+	     !(dynamic_cast<StrToNum_Error*>(pThis)) )
 	    tmp_Str << "\n";
 	else
 	    tmp_Str << " ";
     }
     else
-	tmp_Str << " - " << Second << "\n";
+	tmp_Str << " - " << second_ << "\n";
     std::cerr << tmp_Str.str();
 }
 

@@ -1,10 +1,28 @@
+/********************************************************************
+* main.cpp - program entry point
+*
+* Conventions:
+*
+* Include order: lexer.h, ast.h, error.h, tables.h, driver.h
+*                We favor selective forward declaration instead of
+*                including the entire header where possible (e.g.,
+*                we only use 'pointer to type')
+*
+* Object names: class - Foo_Name
+*               class var - foo_
+*               class member returning foo_ - Foo() or getFoo()
+*               var/array/container - foo/foo_Name
+*               function - foo/fooName
+*               function args - Foo (preferred)/regular var convention
+*
+********************************************************************/
+
 #include "compiler.h"
 #include "lexer.h"
-#include "driver.h"
-#include "error.h"
-
 #include "ast.h" // REMOVE - just to keep an eye on it
+#include "error.h"
 #include "tables.h" // REMOVE - just to keep an eye on it
+#include "driver.h"
 
 std::istream* input;
 
@@ -33,9 +51,9 @@ main(int argc, char* argv[])
     getNext();
 
     // relocate to driver
-//    makeBinOpTable();
-//    makeTypePrecTable();
-//    makeEnvRoot();
+    makeBinOpTable();
+    makeTypePrecTable();
+    makeEnvRootTop();
 
     // will be addressed when getTok is incorporated into parser
     while (*input){

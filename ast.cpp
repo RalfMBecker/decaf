@@ -1,12 +1,11 @@
 /********************************************************************
-* ast.h - implementation file for ast of decaf
+* ast.cpp - implementation file for ast.h
 *
 ********************************************************************/
 
 #include "ast.h"
-#include "lexer.h"
 
 // implement static non-const class variables
-int NodeAST::label_Count_ = 0;
-int TempAST::count_ = 0;
+int Node_AST::label_Count_ = 0;
+int Temp_AST::count_ = 0;
 

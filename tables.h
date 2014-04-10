@@ -1,5 +1,6 @@
 /********************************************************************
 * tables.h - header file for tables.cpp
+*            Also defines tables and type classes
 *
 ********************************************************************/
 
@@ -10,54 +11,60 @@
 #include <string>
 #include <sstream>
 
-#include "ast.h"
+#include <cstdarg> 
+
+void errExit(int, const char* format, ...);
+
+// forward declarations
+class Expr_AST;
+class IdExpr_AST;
 
 // compile time globals
 extern std::map<tokenType, int> bin_OpTable;
 extern std::map<std::string, int> type_PrecTable;
 extern std::map<std::string, int> type_WidthTable;
 
-class Env;
-extern Env* root_Env;
-extern Env* top_Env;
-
-Env* makeEnvRootTop(void);
-Env* addEnv(Env*);
-int addIdToEnv(Env* pEnv, IdExprAST* new_Object, std::string MemType);
-ExprAST* findIdInHierarchy(Env* p, IdExprAST* Id);
-ExprAST* findNameInHierarchy(Env* p, std::string Name);
-void printEnvAncestorInfo(Env*);
-
-// runtime global
-class symbolTable;
-extern std::map<std::string, symbolTable> ST;
-void printSTInfo(void);
-
-// other table helpers
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
 
+// compile time static declaration check
+class Env;
+extern Env* root_Env;
+extern Env* top_Env;
+
+Env* makeEnvRootTop(void);
+Env* addEnv(Env*);
+int addIdToEnv(Env* pEnv, IdExpr_AST* new_Object, std::string MemType);
+Expr_AST* findIdInHierarchy(Env* p, IdExpr_AST* Id);
+Expr_AST* findNameInHierarchy(Env* p, std::string Name);
+void printEnvAncestorInfo(Env*);
+
+// runtime globals
+class Symbol_Table;
+extern std::map<std::string, Symbol_Table> ST;
+void printSTInfo(void);
+
 // Compile-time object, part of a linked list of (ct) Symbol Tables, each
 // a (name, <basic type>/class) pair
 // Handling 'name' here isn't the most logical, but will do (name=table name).
 // Name is needed to maintain the run-time version of the STs.
+// ****TO DO (track): can type_ instead use a IdExpr_AST* second object?*****
 class Env{
 public:
     Env(Env* P = 0)
 	: prior_(P)
     { 
-	count_++; 
 	std::stringstream tmp;
-	tmp << "Env" << count_;
+	tmp << "Env" << ++count_;
 	name_ = tmp.str();
     }
 
     Env* getPrior(void) const { return prior_; }
     std::string getTableName(void) const { return name_; }
-    std::map<std::string, ExprAST*> getType(void) const { return type_; } 
+    std::map<std::string, Expr_AST*> getType(void) const { return type_; } 
 
     int findName(std::string entry_Name)
     {
@@ -67,14 +74,14 @@ public:
 	    return 0;
     }
 
-    Env& insertName(std::string new_Name, ExprAST* t)
+    Env& insertName(std::string new_Name, Expr_AST* t)
     {
 	if ( (-1 == findName(new_Name)) )
 	    type_[new_Name] = t;
 	return *this;
     }
 
-    ExprAST* readName(std::string search_Name)
+    Expr_AST* readName(std::string search_Name)
     {
 	if ( (-1 == findName(search_Name)) )
 	    return 0;
@@ -86,13 +93,13 @@ private:
     static int count_;
     std::string name_;
     Env* prior_;
-    std::map<std::string, ExprAST*> type_; // <basic type>/class    
+    std::map<std::string, Expr_AST*> type_;
 };
 
 // Run-time symbol table information
-class memInfo{
+class Mem_Info{
 public:
-    memInfo(std::string Type = "", std::string memT = "", int Offset = 0, 
+    Mem_Info(std::string Type = "", std::string memT = "", int Offset = 0, 
 	    int Width = 0)
 	: type_(Type), memType_(memT), offset_(Offset), width_(Width) {}
 
@@ -113,14 +120,14 @@ private:
 // Name created by the corresponding compile-time object, and fed
 // from builder function ************ENTER NAME***************
 // Offset: rel offset to beginning of mem area that will be reserved 
-//         for objects in the scope managed by this symbolTable, by
+//         for objects in the scope managed by this Symbol_Table, by
 //         heap and stack area
-class symbolTable{
+class Symbol_Table{
 public:
-    symbolTable(std::string Name = "")
+    Symbol_Table(std::string Name = "")
 	: name_(Name) { offsetHeap_ = offsetStack_ = 0; }
 
-    symbolTable(const symbolTable& s)
+    Symbol_Table(const Symbol_Table& s)
     {
 	offsetHeap_ = s.getOffsetHeap();
 	offsetStack_ = s.getOffsetStack();
@@ -131,7 +138,7 @@ public:
     int getOffsetHeap(void) const { return offsetHeap_; }
     int getOffsetStack(void) const { return offsetStack_; }
     std::string getName(void) const { return name_; }
-    std::map<std::string, memInfo> getInfo(void) const { return info_; }
+    std::map<std::string, Mem_Info> getInfo(void) const { return info_; }
 
     int findName(std::string search_Name)
     {
@@ -142,14 +149,14 @@ public:
     }
 
     // Note: function overloaded
-    symbolTable& insertName(std::string new_Name, memInfo i)
+    Symbol_Table& insertName(std::string new_Name, Mem_Info i)
     {
 	if ( (-1 == findName(new_Name)) )
 	    info_[new_Name] = i;
 	return *this;
     }
 
-    symbolTable& insertName(std::string new_Name, std::string Type, 
+    Symbol_Table& insertName(std::string new_Name, std::string Type, 
 			    std::string Mem, int Width)
     {
 	int tmp;
@@ -161,43 +168,43 @@ public:
 	    tmp = offsetStack_;
 	    offsetStack_ += Width;
 	}
-	else  // little point singling out this as the only validity check
-	    ; // as function only used by compiler writer
-	memInfo tmpInfo(Type, Mem, tmp, Width);
+	else  
+	    errExit(0, "invalid use of Symbol_Table (abort)\n");
+	Mem_Info tmpInfo(Type, Mem, tmp, Width);
 	insertName(new_Name, tmpInfo);
 	return *this;
     }
 
-    memInfo readNameInfo(std::string read_Name)
+    Mem_Info readNameInfo(std::string read_Name)
     {
 	if ( (-1 == findName(read_Name)) )
-	    return memInfo(0);
+	    return Mem_Info(0);
 	else
 	    return info_[read_Name];
     }
 
-    // retrieving memInfo fields ("" == 'not defined')
+    // retrieving Mem_Info fields ("" == 'not defined')
     std::string const getType(std::string elem_Name)
     {
-	memInfo tmp(readNameInfo(elem_Name));
+	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Type();
     }
 
     std::string const getMemType(std::string elem_Name)
     {
-	memInfo tmp(readNameInfo(elem_Name));
+	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.MemType();
     }
 
     int const getOffset(std::string elem_Name)
     {
-	memInfo tmp(readNameInfo(elem_Name));
+	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Offset();
     }
 
     int const getWidth(std::string elem_Name)
     {
-	memInfo tmp(readNameInfo(elem_Name));
+	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Width();
     }
 
@@ -206,7 +213,7 @@ private:
     int offsetHeap_;
     int offsetStack_;
     std::string name_;
-    std::map<std::string, memInfo> info_;    
+    std::map<std::string, Mem_Info> info_;    
 };
 
 #endif
