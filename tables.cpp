@@ -15,12 +15,15 @@
 #include <string>
 #include "lexer.h"
 #include "tables.h"
+#include "ast.h"
+#include "error.h"
 
 // compile-time globals
 std::map<tokenType, int> bin_OpTable;
 std::map<std::string, int> type_PrecTable;
 std::map<std::string, int> type_WidthTable;
 Env* root_Env;
+Env* top_Env; // currently active environment table
 
 // run-time globals
 std::map<std::string, symbolTable> ST;
@@ -60,16 +63,16 @@ makeTypePrecTable(void)
 {
     type_PrecTable["string"] = 0;
     type_PrecTable["bool"] = 10;
-    type_PrecTable["integer"] = 20;
+    type_PrecTable["int"] = 20;
     type_PrecTable["double"] = 30;
 }
 
 // relocate as method of IDs & Arrays
 int
-typePriority(std::string type)
+typePriority(std::string const& Type)
 {
-    if ( (type_PrecTable.end() != type_PrecTable.find(type)) )
-	return type_PrecTable[type];
+    if ( (type_PrecTable.end() != type_PrecTable.find(Type)) )
+	return type_PrecTable[Type];
     else
 	return -1;
 }
@@ -78,15 +81,16 @@ typePriority(std::string type)
 void
 makeWidthTable(void)
 {
-    type_PrecTable["bool"] = 4;
-    type_PrecTable["integer"] = 4;
-    type_PrecTable["double"] = 8;
+    type_WidthTable["bool"] = 4;
+    type_WidthTable["int"] = 4;
+    type_WidthTable["double"] = 8;
 }
 
 // relocate as method of IDs & Arrays & classes
 int
-typeWidth(std::string type)
+typeWidth(std::string const& type)
 {
+    //   return type_WidthTable[type];
     if ( (type_WidthTable.end() != type_WidthTable.find(type)) )
 	return type_WidthTable[type];
     else
@@ -94,9 +98,9 @@ typeWidth(std::string type)
 }
 
 Env* 
-makeEnvRoot(void)
+makeEnvRootTop(void)
 {
-    return (root_Env = new Env(0));
+    return ( (top_Env = root_Env = new Env(0)) );
 }
 
 // Builder to maintain parallel compile-time and run-time info about 
@@ -110,27 +114,60 @@ addEnv(Env* Prior)
     symbolTable newST = symbolTable(new_Name);
     ST[new_Name] = newST;
 
-    return pNew_Env;
+    return ( (top_Env = pNew_Env) );
 }
 
 // pEnv will be used during compile-time, so go via this ll
+// ***** TO DO: ADJUST TO DIFFERENT TYPE WHEN CLASSES/FUNCTIONS ADDED *****
 int
-addEnvName(Env* pEnv, std::string new_Name, std::string Type, 
-	   std::string MemType, int Width)
+addIdToEnv(Env* pEnv, IdExprAST* new_Id, std::string MemType)
 {
+    std::string Name = new_Id->Name();
     // add to Env* entry of Env ll rooted at root_Env
-    if ( (0 == pEnv->findName(new_Name) ) ) // already in tables
+    if ( (0 == pEnv->findName(Name) ) ) // already in tables
 	return -1;
-    pEnv->insertName(new_Name, Type);
+    pEnv->insertName(Name, new_Id);
 
     // add into rt table ST, in the sub-table determined through 
     // the matching Env* pointer into the corresponding ct ll above
     std::string table_Name = pEnv->getTableName();
     std::map<std::string, symbolTable>::iterator iter;
-    if ( (ST.end() == (iter = ST.find(table_Name))) )
-	return -1;
-    (iter->second).insertName(new_Name, Type, MemType, Width);
+    std::string Type(new_Id->Type());
+    int Width(new_Id->TypeW());
 
+    if ( (ST.end() == (iter = ST.find(table_Name))) )
+	return -2;
+    (iter->second).insertName(Name, Type, MemType, Width);
+
+    return 0;
+}
+
+ExprAST*
+findIdInHierarchy(Env* p, IdExprAST* Id)
+{
+    std::string name_Str(Id->Name());
+    while ( (root_Env != p) ){
+	std::map<std::string, ExprAST*>::const_iterator iter; 
+	std::map<std::string, ExprAST*> tmp_Type = p->getType();
+	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
+	    if ( (name_Str == iter->first) )
+		return iter->second;
+	p = p->getPrior();
+    }
+    return 0;
+}
+
+ExprAST*
+findNameInHierarchy(Env* p, std::string Name)
+{
+    while ( (root_Env != p) ){
+	std::map<std::string, ExprAST*>::const_iterator iter; 
+	std::map<std::string, ExprAST*> tmp_Type = p->getType();
+	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
+	    if ( (Name == iter->first) )
+		return iter->second;
+	p = p->getPrior();
+    }
     return 0;
 }
 
@@ -141,10 +178,10 @@ printEnvAncestorInfo(Env* p)
     while ( (root_Env != p) ){
 	std::cout << "Info for table " << p->getTableName() << "\n";
 	std::cout << "-----------------------------------\n";
-	std::map<std::string, std::string>::const_iterator iter; 
-	std::map<std::string, std::string> tmpType = p->getType();
-	for (iter = tmpType.begin(); iter != tmpType.end(); iter++)
-	    std::cout << iter->first << "\t= " << iter->second << "\n";
+	std::map<std::string, ExprAST*>::const_iterator iter; 
+	std::map<std::string, ExprAST*> tmp_Type = p->getType();
+	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
+	    std::cout << iter->first << "\t= " << (iter->second)->Type() << "\n";
 
 	std::cout << "\n";
 	p = p->getPrior();

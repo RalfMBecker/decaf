@@ -9,18 +9,21 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <cstring>
+
 #include <cstdlib>     // exit(), etc.
 #include <cstdio>      // perror()
 #include <errno.h>     // errno()
+
 #include "lexer.h"
 #include "driver.h"
 #include "ast.h"
 
-#define MAX_TEXT 32
+const int MAX_TEXT = 32;
 
 extern int no_lex_Errors;
 extern int no_par_Errors;
+
+void errExit(int pError, const char* msg, ...);
 
 class Error{
 public:
@@ -37,21 +40,49 @@ private:
 
 class Primary_Error: public Error{
 public: // in current setting, have no AST object to throw
-Primary_Error(std::string Text) 
-    : Error(), text_(Text)
+Primary_Error(std::string token_Str, std::string comment_Str) 
+    : Error(), str1_(token_Str), str2_(comment_Str)
     {
 	no_par_Errors++;
     }
 
     virtual void print() const
     {
+	Error::print();
 	std::ostringstream tmp_Str;
-	tmp_Str << "Syntax error - " << text_ << " illegal in context\n";
+	tmp_Str << "Syntax error (" << str1_ << ") - " << str2_;
 	std::cerr << tmp_Str;
     }
 
 private:
-    std::string text_;
+    std::string str1_;
+    std::string str2_;
+};
+
+class Punct_Error: public Error{
+public:
+Punct_Error(char c, int What)
+    : punct_(c), what_(What)
+    {
+	if ( (0!= what_) && (1!= what_) )
+	    errExit(0, "invalid arg of Punct_Error (%d)\n", what_); 
+	no_par_Errors++;
+    }
+
+    virtual void print() const
+    {
+	Error::print();
+	std::ostringstream tmp_Str;
+	tmp_Str << "Syntax error - ";
+	if ( (0 == what_) ) tmp_Str << "missing ";
+	else tmp_Str << "stray ";
+	tmp_Str << "token (" << punct_ << ")\n";
+	std::cerr << tmp_Str;
+    }
+
+private:
+    char punct_;
+    int what_; // 0: missing; 1: spare
 };
 
 // *********** update when better understood how used ********

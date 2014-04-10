@@ -11,9 +11,13 @@ std::istream* input;
 int
 main(int argc, char* argv[])
 {
+    makeBinOpTable();
+    makeTypePrecTable();
+    makeWidthTable();
+    makeEnvRootTop();
+
     // testing symbol table mgm 
-    Env* root_Env = makeEnvRoot();
-    Env* e1 = addEnv(root_Env);
+    Env* e1 = addEnv(top_Env);
     Env* e2 = addEnv(e1);
     Env* e3 = addEnv(e2);
 
@@ -44,19 +48,25 @@ main(int argc, char* argv[])
 
     std::cout << "\nTable entry info\n";
     std::cout << "---------------------------------\n";
-    if ( (-1 == addEnvName(e1, "ralf", "int", "heap", 8)) )
+    IdExprAST* idObj1 = new IdExprAST(token(tok_int), token(tok_ID, "ralf")); 
+    IdExprAST* idObj2= new IdExprAST(token(tok_double),token(tok_ID, "fluff")); 
+    IdExprAST* idObj3 = new IdExprAST(token(tok_double),token(tok_ID, "octo")); 
+    IdExprAST* idObj4 = new IdExprAST(token(tok_int), token(tok_ID, "JL")); 
+    IdExprAST* idObj5 = new IdExprAST(token(tok_int), token(tok_ID, "ralf")); 
+
+    if ( (-1 == addIdToEnv(e1, idObj1, "stack")) )
 	std::cout << "error entering ralf into " << tabName1 << "\n";
-    std::cout << "e1: added ralf (int) to heap\n";
-    if ( (-1 == addEnvName(e2, "fluff", "int", "heap", 8)) )
+    std::cout << "e1: added ralf (int) to stack\n";
+    if ( (-1 == addIdToEnv(e2, idObj2, "stack")) )
 	std::cout << "error entering fluff into " << tabName2 << "\n";
-    std::cout << "e2: added fluff (int) to heap\n";
-    if ( (-1 == addEnvName(e2, "octo", "float", "stack", 16)) )
+    std::cout << "e2: added fluff (double) to stack\n";
+    if ( (-1 == addIdToEnv(e2, idObj3, "stack")) )
 	std::cout << "error entering octo into " << tabName2 << "\n";
-    std::cout << "e2: added octo (float) to stack\n";
-    if ( (-1 == addEnvName(e3, "JL", "class", "heap", 64)) )
+    std::cout << "e2: added octo (double) to stack\n";
+    if ( (-1 == addIdToEnv(e3, idObj4, "heap")) )
 	std::cout << "error entering JL into " << tabName3 << "\n";
-    std::cout << "e3: added JL (class - 64) to heap\n";
-    if ( (-1 == addEnvName(e3, "ralf", "int", "heap", 8)) )
+    std::cout << "e3: added JL (int) to heap\n";
+    if ( (-1 == addIdToEnv(e3, idObj5, "heap")) )
 	std::cout << "error entering ralf into " << tabName3 << "\n";
     std::cout << "e3: added ralf (int) to heap\n";
 
@@ -72,6 +82,8 @@ main(int argc, char* argv[])
     printEnvAncestorInfo(e3);
     std::cout << "Printing entries in ST:\n";
     printSTInfo();
+
+    delete idObj1, delete idObj2, delete idObj3, delete idObj4, delete idObj5;
 
     return 0;
 

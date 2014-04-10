@@ -9,8 +9,6 @@
 #include <iostream>
 #include <string>
 
-// ********CHECK BOOK KEEPING FOR tok_intV ETC ***********
-
 enum tokenType{
     // misc
     tok_eof = -1, tok_return = -2, 
@@ -99,16 +97,17 @@ public:
 
 	case tok_ID: lexeme_ = lex; break;
 
-	case tok_plus: lexeme_ = "+"; break;
-	case tok_minus: lexeme_ = "-"; break;
-	case tok_mult: lexeme_ = "*"; break;
-	case tok_div:lexeme_ = "/"; break;
-	case tok_mod: lexeme_ = "%"; break;
+	case tok_plus:
+	case tok_minus: 
+	case tok_mult: 
+	case tok_div:
+	case tok_mod:
 	case tok_lt: case tok_gt: case tok_eq: case tok_log_not: 
 	case tok_dot: case tok_sqopen:
 	    // 1-char others
-	case tok_semi: case tok_comma: case tok_sqclosed: case tok_rdopen:
-	case tok_rdclosed: case tok_paropen: case tok_parclosed:
+	case tok_semi: case tok_comma: case tok_sqclosed: 
+	case tok_rdopen: case tok_rdclosed: case tok_paropen: 
+	case tok_parclosed:
 	    lexeme_ = std::string(1, static_cast<char>(t));
 	    break;
 

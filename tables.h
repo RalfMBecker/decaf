@@ -10,16 +10,22 @@
 #include <string>
 #include <sstream>
 
-// compile type globals
+#include "ast.h"
+
+// compile time globals
 extern std::map<tokenType, int> bin_OpTable;
-extern std::map<std::string, std::string> type_Table;
+extern std::map<std::string, int> type_PrecTable;
 extern std::map<std::string, int> type_WidthTable;
+
 class Env;
 extern Env* root_Env;
-Env* makeEnvRoot(void);
+extern Env* top_Env;
+
+Env* makeEnvRootTop(void);
 Env* addEnv(Env*);
-int addEnvName(Env* pEnv, std::string new_Name, std::string Type, 
-	       std::string MemType, int Width);
+int addIdToEnv(Env* pEnv, IdExprAST* new_Object, std::string MemType);
+ExprAST* findIdInHierarchy(Env* p, IdExprAST* Id);
+ExprAST* findNameInHierarchy(Env* p, std::string Name);
 void printEnvAncestorInfo(Env*);
 
 // runtime global
@@ -27,10 +33,12 @@ class symbolTable;
 extern std::map<std::string, symbolTable> ST;
 void printSTInfo(void);
 
+// other table helpers
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
-int typePriority(std::string); // relocate as method of IDs & Arrays
-int typeWidth(std::string); // relocate as method of IDs & Arrays & Classes
+void makeWidthTable(void);
+int typePriority(std::string const&);
+int typeWidth(std::string const&);
 
 // Compile-time object, part of a linked list of (ct) Symbol Tables, each
 // a (name, <basic type>/class) pair
@@ -49,7 +57,7 @@ public:
 
     Env* getPrior(void) const { return prior_; }
     std::string getTableName(void) const { return name_; }
-    std::map<std::string, std::string> getType(void) const { return type_; } 
+    std::map<std::string, ExprAST*> getType(void) const { return type_; } 
 
     int findName(std::string entry_Name)
     {
@@ -59,17 +67,17 @@ public:
 	    return 0;
     }
 
-    Env& insertName(std::string new_Name, std::string t)
+    Env& insertName(std::string new_Name, ExprAST* t)
     {
 	if ( (-1 == findName(new_Name)) )
 	    type_[new_Name] = t;
 	return *this;
     }
 
-    std::string readName(std::string search_Name)
+    ExprAST* readName(std::string search_Name)
     {
 	if ( (-1 == findName(search_Name)) )
-	    return "";
+	    return 0;
 	else
 	    return type_[search_Name];
     }
@@ -78,7 +86,7 @@ private:
     static int count_;
     std::string name_;
     Env* prior_;
-    std::map<std::string, std::string> type_; // <basic type>/class    
+    std::map<std::string, ExprAST*> type_; // <basic type>/class    
 };
 
 // Run-time symbol table information
