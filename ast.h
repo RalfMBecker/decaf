@@ -87,12 +87,14 @@ Expr_AST(token Type=token(), token OpTor=token(),
     // for use in its array grand-child
     virtual void forceWidth(int w) { typeW_ = w; }
 	
+    tokenType TokenT(void) const { return tokent_; }
     std::string Type(void) const { return type_;}
     token Op(void) const { return op_; }
     int TypeW(void) const { return typeW_; }
     int TypeP(void) const { return typeP_; }
 
 protected:
+    tokenType tokent_;
     std::string type_;
     token op_;
     int typeW_;
@@ -171,33 +173,34 @@ private:
     std::string value_; // for easier access
 };
 
-class BoolExpr_AST: public Expr_AST{
-public:
-BoolExpr_AST(token Op) // Op = "false" "true" (tok_true tok_false)
-    : Expr_AST(token(tok_bool), Op, 0, 0) { value_ = Op.Lex(); }
-
-    std::string Value(void) const { return value_; }
-
-private:
-    std::string value_; // for easier access
-};
-
 // ******TO DO: STRING (etc.)********************
 
 /***************************************
 * Expression Arithmetic children
 ***************************************/
 
+// we prepare for coercion but don't perform it. revisit after 'visitor'
+// written.
 class ArithmExpr_AST: public Expr_AST{
 public:
     ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
-	: Expr_AST(token(), Op, LHS, RHS) {}
+    {
+	token tmp;
+	if ( (RHS->TypeP() > LHS->TypeP()) )
+	    tmp = token(RHS->TokenT());
+	else
+	    tmp = token(LHS->TokenT());
+	Expr_AST(tmp, Op, LHS, RHS);
 
+	// would allow to also handle promotion flt -> double, say
+	coerce_ = (LHS->Type() == RHS->Type())?0:1;
+    }
+
+    int Coerce() const { return coerce_; };
+
+private:
+    int coerce_; // 1: needs coercion; 0: doesn't
 };
-
-/***************************************
-* Expression Logical children
-***************************************/
 
 /*
 class UnaryArithmExpr_AST: public ArithmExpr_AST{
@@ -212,6 +215,11 @@ private:
 
 };
 */
+
+/***************************************
+* Expression Logical children
+***************************************/
+
 
 /***************************************
 * TmpForExpr and its children - TO DO: likely will be removed

@@ -21,13 +21,16 @@ class IdExpr_AST;
 extern std::map<tokenType, int> bin_OpTable;
 extern std::map<std::string, int> type_PrecTable;
 extern std::map<std::string, int> type_WidthTable;
+extern std::map<tokenType, int> logArithm_Table;
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);
+void makeLogArithmTable(void);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
 int opPriority(token t);
+int isLogicalAdd(token t);
 
 // compile time static declaration check
 class Env;

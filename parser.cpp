@@ -53,14 +53,6 @@ parseFltExpr(void)
     return res;
 }
 
-Expr_AST*
-parseBoolExpr(void)
-{
-    Expr_AST* res = new BoolExpr_AST(next_Token);
-    getNextToken();
-    return res;
-}
-
 // ******NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // *******************************************************
 // Used for *reading an ID*, not its definition
@@ -105,27 +97,48 @@ extern std::map<tokenType, int> bin_OpTable;
 Expr_AST*
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
-    std::string const errMsg = "Expected primary expression";
+    static int logOp_Tot = 0;
+    std::string const err_Msg = "Expected primary expression";
+    std::string const err_Msg2 = "illegal chaining of logical operators";
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
+	logOp_Tot += isLogicalAdd(next_Token.Tok());
+	if ( (1 < logOp_Tot) )
+	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
+
 	if ( (prec_2 < prec_1) )
 	    return LHS;
-	token binOp1 = next_Token; // store it as we for later op creation
+	token binOp1 = next_Token; // store it for later op creation
 
 	getNextToken();
 	Expr_AST* RHS = parsePrimaryExpr();
 	if (!RHS)
-	    throw(Primary_Error(next_Token.Lex(), errMsg));
+	    throw(Primary_Error(next_Token.Lex(), err_Msg));
 
 	int prec_3 = opPriority(next_Token.Tok());
+	logOp_Tot += isLogicalAdd(next_Token.Tok());
+	if ( (1 < logOp_Tot) )
+	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
+
 	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
 	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
 	    if (!RHS)
-		throw(Primary_Error(next_Token.Lex(), errMsg));
+		throw(Primary_Error(next_Token.Lex(), err_Msg));
 	}
-// TO DO: coercion; NOT ONLY ARITHM; bin var to track # of relational
-//        careful!
-	LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
+
+	// Note: coercion best handled by a visitor - keep as is
+	switch(binOp1.Tok()){
+	case tok_plus: case tok_minus: case tok_div: case tok_mult:
+	case tok_mod: 
+	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
+	    break;
+	case tok_log_or: case tok_log_and: case tok_log_eq: case tok_lt:
+	case tok_log_ne: case tok_le: case tok_gt: case tok_ge:
+	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS); // TO DO: REPLACE***
+	    break;
+	default:
+	    errExit(0, "illegal use of function parseInfixRHS (abort}");
+	}
     }
 }
 
@@ -148,9 +161,9 @@ parsePrimaryExpr(void)
     switch(next_Token.Tok()){
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
-    case tok_true:
-    case tok_false: return parseBoolExpr();
     case '(': return parseParensExpr();
+    case '!': // return parseNotLogExpr();
+    case '-': // return parserPrefixExpr();
     case tok_ID: // note: coming here, ID has already been entered into
 	         //       the symbol table
 	return parseIdExpr(next_Token.Lex());
