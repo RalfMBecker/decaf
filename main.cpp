@@ -3,7 +3,7 @@
 *
 * Conventions:
 *
-* Include order: lexer.h, ast.h, error.h, tables.h, driver.h
+* Include order: lexer.h, ast.h, error.h, tables.h, parser.h, driver.h
 *                We favor selective forward declaration instead of
 *                including the entire header where possible (e.g.,
 *                we only use 'pointer to type')
@@ -17,28 +17,31 @@
 *
 ********************************************************************/
 
+#include <string>
+#include <cstdarg>
+
 #include "compiler.h"
-#include "lexer.h"
-#include "ast.h" // REMOVE - just to keep an eye on it
-#include "error.h"
-#include "tables.h" // REMOVE - just to keep an eye on it
 #include "driver.h"
+
+// forward declaration
+void errExit(int pError, const char* msg, ...);
 
 std::istream* input;
 
 int
 main(int argc, char* argv[])
 {
+    std::string name_Str;
     switch(argc){
     case 1:
 	input = &std::cin;
+	name_Str = "std::cin";
 	break;
     case 2: 
 	input = new std::ifstream(argv[1]);
-	if (!input){  // WHY DOES ERROR NOT GET TRIGGERED??????? *********
-	    std::cerr << argv[0] << ": can't open file " << argv[1];
-	    exit(EXIT_FAILURE);
-	}
+	if ( !(input->good()) )
+	    errExit(0, "can't open file <%s>", argv[1]);
+	name_Str = argv[1];
 	break;
     default:
 	std::cerr << "Error: # of args\n"; // add basic error fct.  
@@ -46,31 +49,16 @@ main(int argc, char* argv[])
     }
 
     // create ready-state
-    if ( (&std::cin == input) )
+/* 
+   if ( (&std::cin == input) )
 	std::cout << "ready> ";
     getNext();
-
-    // relocate to driver
-    makeBinOpTable();
-    makeTypePrecTable();
-    makeEnvRootTop();
+*/
 
     // will be addressed when getTok is incorporated into parser
-    while (*input){
-
-	try{
-	    while ( (EOF != getTok().Tok() ) )
-		;
-	}
-
-	catch(Error& m){
-	    m.print();
-	    panicModeFwd();
-	}
-    }
-
-    if (no_lex_Errors)
-	std::cerr << "found " << no_lex_Errors << " lexical errors\n";
+    initFrontEnd(name_Str);
+    collectParts();
+    startParse();
 
     if ( !(&std::cin == input) )
 	delete input;

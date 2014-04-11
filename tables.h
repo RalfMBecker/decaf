@@ -11,6 +11,8 @@
 #include <string>
 #include <sstream>
 
+#include "lexer.h"
+
 void errExit(int, const char* format, ...);
 
 // forward declarations

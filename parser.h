@@ -9,12 +9,14 @@
 class Expr_AST;
 
 extern token next_Token;
+token getNextToken(void);
 
-Expr_AST* ParseIntExpr(void);
-Expr_AST* ParseFltExpr(void);
-Expr_AST* ParseIdExpr(std::string name);
-Expr_AST* ParsePrimaryExpr(void);
-Expr_AST* ParseParensExpr(void);
-Expr_AST* ParseExpr(void);
+Expr_AST* parseIntExpr(void);
+Expr_AST* parseFltExpr(void);
+Expr_AST* parseIdExpr(std::string name);
+Expr_AST* parsePrimaryExpr(void);
+Expr_AST* parseParensExpr(void);
+Expr_AST* parseExpr(void);
+Expr_AST* parseBlock(void);
 
 #endif

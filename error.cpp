@@ -11,7 +11,7 @@
 
 #include "ename.h"
 
-extern const int MAX_TEXT = 32;
+const int MAX_MSG = 96;
 
 // error class for compiler-usage errors (never prompted by user of
 // compiler). Hence, terminate() compiling (influenced by Kerrisk)
@@ -23,11 +23,11 @@ void
 errExit(int pError, const char* format, ...)
 {
     va_list arglist;
-    char usrMsg[MAX_TEXT+1], errMsg[MAX_TEXT+1], str[MAX_TEXT+1];
-    char err[MAX_TEXT];
+    char usrMsg[MAX_MSG+1], errMsg[MAX_MSG+1], str[MAX_MSG+1];
+    char err[MAX_MSG];
 
     va_start(arglist, format);
-    vsnprintf(usrMsg, MAX_TEXT, format, arglist);
+    vsnprintf(usrMsg, MAX_MSG, format, arglist);
     va_end(arglist);
 
     if (pError){
@@ -35,13 +35,13 @@ errExit(int pError, const char* format, ...)
             strcpy(err, ename[errno]);
         else
             strcpy(err, "???");
-        snprintf(errMsg, MAX_TEXT, "%s %s", err, strerror(errno));
+        snprintf(errMsg, MAX_MSG, "%s %s", err, strerror(errno));
     }
     else
         strcpy(errMsg, " ");
 
     // could be too long for str; ignored
-    snprintf(str, MAX_TEXT, "ERROR: %s %s\n", usrMsg, errMsg);
+    snprintf(str, MAX_MSG, "ERROR: %s %s\n", usrMsg, errMsg);
 
     fflush(stdout);
     fputs(str, stderr);

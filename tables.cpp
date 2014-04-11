@@ -62,7 +62,8 @@ isLogicalAdd(token t)
     if ( (logArithm_Table.end() != logArithm_Table.find(t.Tok())) )
 	return logArithm_Table[t.Tok()];
     else
-	throw(Primary_Error(t.Lex(), "illegal in infix expression"));
+	return 0;
+//	throw(Primary_Error(t.Lex(), "illegal in infix expression"));
 }
 
 // the following tokens have a precedence priority, but are not tracked
@@ -92,8 +93,8 @@ opPriority(token t)
 {
     if ( (bin_OpTable.end() != bin_OpTable.find(t.Tok())) )
 	return bin_OpTable[t.Tok()];
-    else
-	throw(Primary_Error(t.Lex(), "illegal in infix expression"));
+    else // this will stop OpPrecedence parsing once we hit a
+	return -1;  // non-op while evaluating InfixEpxr
 }
 
 // Prepare type_Table with basic types and their coercion priority
@@ -120,7 +121,6 @@ typePriority(std::string const& Type)
 void
 makeWidthTable(void)
 {
-    type_WidthTable["bool"] = 4;
     type_WidthTable["int"] = 4;
     type_WidthTable["double"] = 8;
 }
@@ -128,7 +128,6 @@ makeWidthTable(void)
 int
 typeWidth(std::string const& type)
 {
-    //   return type_WidthTable[type];
     if ( (type_WidthTable.end() != type_WidthTable.find(type)) )
 	return type_WidthTable[type];
     else

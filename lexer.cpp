@@ -313,7 +313,6 @@ getTok()
     //                  - we allow d., but not .d style of doubles
     //                    (as also specified in Decaf grammar)
     if ( std::isdigit(last_Char) ){
-
 	char *end_Ptr;
 	int i = 0, base, ret;
 	long iV; // int values get calculated, but returned as string rep

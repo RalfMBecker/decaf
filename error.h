@@ -50,8 +50,8 @@ Primary_Error(std::string token_Str, std::string comment_Str)
     {
 	Error::print();
 	std::ostringstream tmp_Str;
-	tmp_Str << "Syntax error (" << str1_ << ") - " << str2_;
-	std::cerr << tmp_Str;
+	tmp_Str << "Syntax error (" << str1_ << ") - " << str2_ << "\n";
+	std::cerr << tmp_Str.str();
     }
 
 private:
@@ -77,7 +77,7 @@ Punct_Error(char c, int What)
 	if ( (0 == what_) ) tmp_Str << "missing ";
 	else tmp_Str << "stray ";
 	tmp_Str << "token (" << punct_ << ")\n";
-	std::cerr << tmp_Str;
+	std::cerr << tmp_Str.str();
     }
 
 private:

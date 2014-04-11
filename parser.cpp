@@ -28,18 +28,22 @@ getNextToken(void) { return (next_Token = getTok()); }
 int
 match(int updatePrior, tokenType t, int updatePost)
 {
+    std::cout << "matching...\n";
     if (updatePrior) getNextToken();
     if ( (t == next_Token.Tok()) ){
 	if (updatePost) getNextToken();
 	return 0;
     }
-    else
-	return -1;
+    else{
+	token tmp(t);
+	throw(Primary_Error(tmp.Lex(), "unexpected in context"));
+    }
 }
 
 Expr_AST*
 parseIntExpr(void)
 {
+    std::cout << "parsing an int...\n";
     Expr_AST* res = new IntExpr_AST(next_Token);
     getNextToken();
     return res;
@@ -48,6 +52,7 @@ parseIntExpr(void)
 Expr_AST*
 parseFltExpr(void)
 {
+    std::cout << "parsing a flt...\n";
     Expr_AST* res = new FltExpr_AST(next_Token);
     getNextToken();
     return res;
@@ -60,10 +65,11 @@ parseFltExpr(void)
 Expr_AST*
 parseIdExpr(std::string Name)
 {
+    std::cout << "parsing an Id...\n";
     // TO DO: once we also catch arrays/fcts, might need change
     Expr_AST* Id;
     if ( (0 == (Id = findNameInHierarchy(top_Env, Name))) )
-	throw(Primary_Error(Name, "not defined"));
+	throw(Primary_Error(Name, "not declared"));
 
     if ( (0 == match(1, tok_rdopen, 0)) )
 	; // TO DO: this can catch function definitions
@@ -80,6 +86,7 @@ Expr_AST* parseInfixRHS(int, Expr_AST*);
 Expr_AST*
 parseExpr(void)
 {
+    std::cout << "parsing an expr...\n";
     Expr_AST* LHS = parsePrimaryExpr();
     if ( !LHS )
 	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
@@ -90,18 +97,23 @@ parseExpr(void)
 extern std::map<tokenType, int> bin_OpTable;
 
 // Dijkstra shunting algorithm
-// Example used in comments below: LHS + b * c
-//         prec_1: precedence of LHS
-//         prec_2: precedence of '+'
-//         prec_3: precedence of '*'
+// Example used in comments below: LHS + b * c - d
+//         First time through:            After recursing when prec_2 < prec_3
+//         prec_1: precedence of LHS      prec_2 + 1
+//         prec_2: precedence of '+'      precedence of '*' (changed role)
+//         prec_3: precedence of '*'      precedence of '-'
+// The way we track recursion, could go bad for deeply recursive infix.
+// Should be added to a full description of the compiler/language.
 Expr_AST*
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
+    std::cout << "entering parseInfixRHS...\n";
     static int logOp_Tot = 0;
     std::string const err_Msg = "Expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
+	std::cout << "current token (1) = " << next_Token.Lex() << "\n";
 	logOp_Tot += isLogicalAdd(next_Token.Tok());
 	if ( (1 < logOp_Tot) )
 	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
@@ -116,6 +128,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
 
 	int prec_3 = opPriority(next_Token.Tok());
+	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
 	logOp_Tot += isLogicalAdd(next_Token.Tok());
 	if ( (1 < logOp_Tot) )
 	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
@@ -127,9 +140,12 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	}
 
 	// Note: coercion best handled by a visitor - keep as is
+	std::cout << "***should go straight here, where\n";
+	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
 	switch(binOp1.Tok()){
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
 	case tok_mod: 
+	    std::cout << "going to the right place \n";
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
 	case tok_log_or: case tok_log_and: case tok_log_eq: case tok_lt:
@@ -145,6 +161,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 Expr_AST*
 parseParensExpr(void)
 {
+    std::cout << "parsing a ParensExpr...\n";
     getNextToken(); // create ready-state
     Expr_AST* E = parseExpr();
 
@@ -158,6 +175,7 @@ parseParensExpr(void)
 Expr_AST*
 parsePrimaryExpr(void)
 {
+    std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
     switch(next_Token.Tok()){
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
@@ -174,3 +192,14 @@ parsePrimaryExpr(void)
     }
 }
 
+// block -> { [declaration]* [statement]* }
+void
+parseBlock(void)
+{
+    std::cout << "we should never be here...\n";
+//    match(1, tok_paropen, 1);
+    top_Env = addEnv(top_Env);
+// to do
+    top_Env = top_Env->getPrior();
+//    match(0, tok_parclosed, 1);
+}
