@@ -1,10 +1,12 @@
 /********************************************************************
 * tables.cpp - Tables for Decaf
 *
-*      bin_OpTable: table for Operator Precedence parsing of binary
+*      binOP_Table: table for Operator Precedence parsing of binary
 *                   operator infix expressions
-*      type_PrecTable: (basic) type precedence in coercions
-*      type_WidthTable: width of types (bytes) on this machine
+*      typePrec_Table: (basic) type precedence in coercions
+*      typeWidth_Table: width of types (bytes) on this machine
+*      logArithm_Table: helper table used to parse infix expressions
+*      Env*: linked list of compile-time frames
 *      root_Env: root of a (one-sided) linked list of compile-time
 *                symbol tables (linking back, to enclosing scope)
 *      top_Env: pointer to current Activation Block
@@ -23,9 +25,9 @@
 class IdExpr_AST;
 
 // compile-time globals
-std::map<tokenType, int> bin_OpTable;
-std::map<std::string, int> type_PrecTable;
-std::map<std::string, int> type_WidthTable;
+std::map<tokenType, int> binOP_Table;
+std::map<std::string, int> typePrec_Table;
+std::map<std::string, int> typeWidth_Table;
 std::map<tokenType, int> logArithm_Table;
 Env* root_Env;
 Env* top_Env; // currently active environment table
@@ -63,7 +65,6 @@ isLogicalAdd(token t)
 	return logArithm_Table[t.Tok()];
     else
 	return 0;
-//	throw(Primary_Error(t.Lex(), "illegal in infix expression"));
 }
 
 // the following tokens have a precedence priority, but are not tracked
@@ -73,26 +74,26 @@ isLogicalAdd(token t)
 void
 makeBinOpTable(void)
 {
-    bin_OpTable[tok_log_or] = 100;
-    bin_OpTable[tok_log_and] = 200;
-    bin_OpTable[tok_log_eq] = 300;
-    bin_OpTable[tok_log_ne] = 300;
-    bin_OpTable[tok_lt] = 400;
-    bin_OpTable[tok_le] = 400;
-    bin_OpTable[tok_gt] = 400;
-    bin_OpTable[tok_ge] = 400;
-    bin_OpTable[tok_plus] = 500;
-    bin_OpTable[tok_minus] = 500;
-    bin_OpTable[tok_mult] = 600;
-    bin_OpTable[tok_div] = 600;
-    bin_OpTable[tok_mod] = 600;
+    binOP_Table[tok_log_or] = 100;
+    binOP_Table[tok_log_and] = 200;
+    binOP_Table[tok_log_eq] = 300;
+    binOP_Table[tok_log_ne] = 300;
+    binOP_Table[tok_lt] = 400;
+    binOP_Table[tok_le] = 400;
+    binOP_Table[tok_gt] = 400;
+    binOP_Table[tok_ge] = 400;
+    binOP_Table[tok_plus] = 500;
+    binOP_Table[tok_minus] = 500;
+    binOP_Table[tok_mult] = 600;
+    binOP_Table[tok_div] = 600;
+    binOP_Table[tok_mod] = 600;
 }
 
 int
 opPriority(token t)
 {
-    if ( (bin_OpTable.end() != bin_OpTable.find(t.Tok())) )
-	return bin_OpTable[t.Tok()];
+    if ( (binOP_Table.end() != binOP_Table.find(t.Tok())) )
+	return binOP_Table[t.Tok()];
     else // this will stop OpPrecedence parsing once we hit a
 	return -1;  // non-op while evaluating InfixEpxr
 }
@@ -104,15 +105,15 @@ opPriority(token t)
 void
 makeTypePrecTable(void)
 {
-    type_PrecTable["int"] = 10;
-    type_PrecTable["double"] = 20;
+    typePrec_Table["int"] = 10;
+    typePrec_Table["double"] = 20;
 }
 
 int
 typePriority(std::string const& Type)
 {
-    if ( (type_PrecTable.end() != type_PrecTable.find(Type)) )
-	return type_PrecTable[Type];
+    if ( (typePrec_Table.end() != typePrec_Table.find(Type)) )
+	return typePrec_Table[Type];
     else
 	return -1;
 }
@@ -121,15 +122,25 @@ typePriority(std::string const& Type)
 void
 makeWidthTable(void)
 {
-    type_WidthTable["int"] = 4;
-    type_WidthTable["double"] = 8;
+    typeWidth_Table["int"] = 4;
+    typeWidth_Table["double"] = 8;
+}
+
+// add class width in bytes, as needed (no shadowing assumed)
+void
+addToWidthTable(std::string Name, int Width)
+{
+    if ( (typeWidth_Table.end() == typeWidth_Table.find(Name)) )
+	typeWidth_Table[Name] = Width;
+    else
+	errExit(0, "shadowing class definitions not allowed");
 }
 
 int
-typeWidth(std::string const& type)
+typeWidth(std::string const& Type)
 {
-    if ( (type_WidthTable.end() != type_WidthTable.find(type)) )
-	return type_WidthTable[type];
+    if ( (typeWidth_Table.end() != typeWidth_Table.find(Type)) )
+	return typeWidth_Table[Type];
     else
 	return -1;
 }
@@ -223,15 +234,15 @@ printEnvAncestorInfo(Env* p)
 void
 printSTInfo()
 {
-    std::map<std::string, Symbol_Table>::const_iterator iterOuter;
-    for (iterOuter = ST.begin(); iterOuter != ST.end(); iterOuter++){
-	std::cout << "Info for table " << iterOuter->first << "\n";
+    std::map<std::string, Symbol_Table>::const_iterator iter_Outer;
+    for (iter_Outer = ST.begin(); iter_Outer != ST.end(); iter_Outer++){
+	std::cout << "Info for table " << iter_Outer->first << "\n";
 	std::cout << "---------------------------------------------------\n";
-	Symbol_Table tmpST(iterOuter->second);
+	Symbol_Table tmpST(iter_Outer->second);
 	std::map<std::string, Mem_Info> info(tmpST.getInfo());
-	std::map<std::string, Mem_Info>::const_iterator iterInner;
-	for (iterInner = info.begin(); iterInner != info.end(); iterInner++){
-	    std::string name(iterInner->first);
+	std::map<std::string, Mem_Info>::const_iterator iter_Inner;
+	for (iter_Inner = info.begin(); iter_Inner != info.end(); iter_Inner++){
+	    std::string name(iter_Inner->first);
 	    std::cout << name;
 
 	    std::cout << "\tType: " << tmpST.getType(name) << "\n";

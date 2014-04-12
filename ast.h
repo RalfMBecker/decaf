@@ -12,8 +12,8 @@
 #include "lexer.h"
 
 // forward declarations
-extern std::map<std::string, int> type_PrecTable;
-extern std::map<std::string, int> type_WidthTable;
+extern std::map<std::string, int> typePrec_Table;
+extern std::map<std::string, int> typeWidth_Table;
 
 /***************************************
 * Base class
@@ -33,18 +33,15 @@ Node_AST(Node_AST* lC=0, Node_AST* rC=0)
 
     ~Node_AST() {}
 
-// probably goes to visitor
-//  virtual void printLabel(void) { std::cout << "L" << label_Count_++ << ":"; }
-
     virtual int Line(void) const { return line_; }
     virtual int Col(void) const { return col_; }
-
     virtual Node_AST* Parent(void) const { return parent_; }
     virtual Node_AST* LChild(void) const { return lChild_; }
     virtual Node_AST* RChild(void) const { return rChild_; }
+
     void setParent(Node_AST* Par) { parent_ = Par; }
 
-private:
+protected:
     Node_AST* parent_;
     Node_AST* lChild_;
     Node_AST* rChild_;
@@ -70,23 +67,24 @@ Expr_AST(token Type=token(), token OpTor=token(),
 	}
 	else
 	    typeW_ = typeP_ = -1;
-	std::cout << "created Expr with op = " << op_.Lex();
+	std::cout << "\tcreated Expr with op = " << op_.Lex();
 	std::cout << ", type = " << type_.Lex() << "\n";
     }
+
     ~Expr_AST() {}
 
     virtual int setWidth(void)
     {
-	if ( (type_WidthTable.end() != type_WidthTable.find(type_.Lex())) )
-	    return type_WidthTable[type_.Lex()];
+	if ( (typeWidth_Table.end() != typeWidth_Table.find(type_.Lex())) )
+	    return typeWidth_Table[type_.Lex()];
 	else
 	    return -1;
     }
 
     virtual int setPriority(void)
     {
-	if ( (type_PrecTable.end() != type_PrecTable.find(type_.Lex())) )
-	    return type_PrecTable[type_.Lex()];
+	if ( (typePrec_Table.end() != typePrec_Table.find(type_.Lex())) )
+	    return typePrec_Table[type_.Lex()];
 	else
 	    return -1;
     }
@@ -110,16 +108,16 @@ protected:
 * Expression terminals
 ***************************************/
 
-class Temp_AST: public Expr_AST{
+class Tmp_AST: public Expr_AST{
 public:
-Temp_AST(token Type, token Op)
-    : Expr_AST(Type, Op, 0, 0)
+Tmp_AST(token Type)
+    : Expr_AST(Type, token(tok_tmp), 0, 0)
     {
 	std::stringstream tmp;
 	tmp << "t" << ++count_;
 	name_ = tmp.str();
-	Op.SetTokenLex(name_);
-	std::cout << "created tmp = " << name_ << "\n";
+	op_.SetTokenLex(name_);
+	std::cout << "\tcreated tmp = " << name_ << "\n";
     }
 
     std::string Name(void) const { return name_; }
@@ -136,7 +134,7 @@ IdExpr_AST(token Type, token Op)
     : Expr_AST(Type, Op, 0, 0) 
     { 
 	name_ = Op.Lex();
-	std::cout << "created an Id = " << name_ << "\n";
+	std::cout << "\tcreated an Id = " << name_ << "\n";
     }
 
     virtual std::string Name(void) const { return name_; }
@@ -146,6 +144,7 @@ protected:
 };
 
 // ***TO DO: revisit when used (in progress)***
+// Cannot be coerced.
 class IdArrayExpr_AST: public IdExpr_AST{
 public:
     IdArrayExpr_AST(token Type, token Op, int Size)
@@ -153,7 +152,7 @@ public:
     {
 	if ( (-1 != typeW_) )
 	    typeW_ *= size_;
-	std::cout << "created an array with Id = " << name_  << "\n";
+	std::cout << "\tcreated an array with Id = " << name_  << "\n";
     }
 
     int Size(void) const { return size_; }
@@ -168,7 +167,7 @@ IntExpr_AST(token Op)
     : Expr_AST(token(tok_int), Op, 0, 0) 
     {
 	value_ = Op.Lex();
-	std::cout << "created IntExpr with value = " << value_ << "\n";
+	std::cout << "\tcreated IntExpr with value = " << value_ << "\n";
     }
 
     std::string Value(void) const { return value_;}
@@ -183,7 +182,7 @@ FltExpr_AST(token Op)
     : Expr_AST(token(tok_double), Op, 0, 0) 
     {
 	value_ = Op.Lex(); 
-	std::cout << "created FltExpr with value = " << value_ << "\n";
+	std::cout << "\tcreated FltExpr with value = " << value_ << "\n";
     }
 
     std::string Value(void) const { return value_; }
@@ -195,32 +194,38 @@ private:
 // ******TO DO: STRING (etc.)********************
 
 /***************************************
-* Expression Arithmetic children
+* Expression Non-logical children
 ***************************************/
 
-// we prepare for coercion but don't perform it. revisit after 'visitor'
-// written.
+// Upon creating this object, LHS->TypeP() == RHS->TypeP()
+// Pre recommendation of Effective C++, don't throw error in ctor, though.
 class ArithmExpr_AST: public Expr_AST{
 public:
 ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
-    : Expr_AST(token(tok_eof), Op, LHS, RHS)
+    : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
     {
-	token tmp;
-	if ( (RHS->TypeP() > LHS->TypeP()) )
-	    tmp = token(RHS->Type());
-	else
-	    tmp = token(LHS->Type());
-	setWidth();
-	setPriority();
-	// would allow to also handle promotion flt -> double, say
-	coerce_ = (LHS->Type().Lex() == RHS->Type().Lex())?0:1;
-	std::cout << "created ArithmExpr with op = " << op_.Lex() << "\n";
+	std::cout << "\tcreated ArithmExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+};
+
+// replaces old position of LHS, with new LC being the TMP
+class CoercedExpr_AST: public Expr_AST{
+public:
+CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
+    : Expr_AST(token(TMP->Type()), token(tok_eof), TMP, Expr),
+	from_(Expr->Type().Tok()), to_(TMP->Type().Tok())
+    {
+	std::cout << "\tcreated CoercedExpr with type = " 
+		  << type_.Lex() << "\n";
     }
 
-    int Coerce() const { return coerce_; };
+    tokenType From() const { return from_; }
+    tokenType To() const {return to_; }
 
 private:
-    int coerce_; // 1: needs coercion; 0: doesn't
+    tokenType from_; // for easier access by visitor
+    tokenType to_;
 };
 
 class UnaryArithmExpr_AST: public Expr_AST{
@@ -228,10 +233,12 @@ public:
 UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
     : Expr_AST(token(LHS->Type()), Op, LHS)
     {
-	std::cout << "created Unary ArithmExpr with op = " << op_.Lex() 
+	std::cout << "\tcreated Unary ArithmExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
 };
+
+
 
 /***************************************
 * Expression Logical children

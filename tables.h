@@ -20,14 +20,15 @@ class Expr_AST;
 class IdExpr_AST;
 
 // compile time globals
-extern std::map<tokenType, int> bin_OpTable;
-extern std::map<std::string, int> type_PrecTable;
-extern std::map<std::string, int> type_WidthTable;
+extern std::map<tokenType, int> binOp_Table;
+extern std::map<std::string, int> typePrec_Table;
+extern std::map<std::string, int> typeWidth_Table;
 extern std::map<tokenType, int> logArithm_Table;
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);
+void addToWidthTable(std::string Name, int Width);
 void makeLogArithmTable(void);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
@@ -122,7 +123,7 @@ private:
 
 // Run-time object to manage storage allocation
 // Name created by the corresponding compile-time object, and fed
-// from builder function ************ENTER NAME***************
+// from maker function addItToEnv(). 
 // Offset: rel offset to beginning of mem area that will be reserved 
 //         for objects in the scope managed by this Symbol_Table, by
 //         heap and stack area

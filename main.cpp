@@ -2,6 +2,7 @@
 * main.cpp - program entry point
 *
 * Conventions:
+#include "astVisitorFactory.h"
 *
 * Include order: lexer.h, ast.h, error.h, tables.h, parser.h, driver.h
 *                We favor selective forward declaration instead of
@@ -44,8 +45,7 @@ main(int argc, char* argv[])
 	name_Str = argv[1];
 	break;
     default:
-	std::cerr << "Error: # of args\n"; // add basic error fct.  
-	break;
+	errExit(0, "Error: # of args (%d). Usage: <program> <file>\n", argc);
     }
 
     // create ready-state
@@ -55,7 +55,7 @@ main(int argc, char* argv[])
     getNext();
 */
 
-    // will be addressed when getTok is incorporated into parser
+    // relegate execution to a driver module
     initFrontEnd(name_Str);
     collectParts();
     startParse();

@@ -2,12 +2,12 @@
 * parser.cpp - Parser for Decaf
 *
 * BinOp Parsing: using Operator Precedence parsing (bin_OpTable)
-*                (also known as Dijksta-Shunting algorithm) to flatten
+*                (also known as Dijksta shunting algorithm) to flatten
 *                the deep cfg
 *
 * Invariant: upon return, parse functions ensure to point ahead
 *
-* Mem Leaks: will add Visitor to delete AST*s and Env* later
+* Mem Leaks: will add a function to delete AST*s and Env* later
 *
 ********************************************************************/
 
@@ -26,12 +26,12 @@ getNextToken(void) { return (next_Token = getTok()); }
 ***************************************/
 
 int
-match(int updatePrior, tokenType t, int updatePost)
+match(int update_Prior, tokenType t, int update_Post)
 {
     std::cout << "matching...\n";
-    if (updatePrior) getNextToken();
+    if (update_Prior) getNextToken();
     if ( (t == next_Token.Tok()) ){
-	if (updatePost) getNextToken();
+	if (update_Post) getNextToken();
 	return 0;
     }
     else
@@ -63,10 +63,10 @@ parseFltExpr(void)
 Expr_AST*
 parseIdExpr(std::string Name)
 {
-    std::cout << "parsing an Id...\n";
+    std::cout << "\tparsing (retrieving) an Id...\n";
     // TO DO: once we also catch arrays/fcts, might need change
-    Expr_AST* Id;
-    if ( (0 == (Id = findNameInHierarchy(top_Env, Name))) )
+    Expr_AST* pId;
+    if ( (0 == (pId = findNameInHierarchy(top_Env, Name))) )
 	throw(Primary_Error(Name, "not declared"));
 
     if ( (0 == match(1, tok_rdopen, 0)) )
@@ -74,8 +74,26 @@ parseIdExpr(std::string Name)
     else if ( (0 == match(0, tok_sqopen, 0)) )
 	; // TO DO: this can catch arrays
     else
-	return Id;
+	return pId;
     return 0; // to suppress gcc warning
+}
+
+int // 0: no coercion; 1: coerced LHS; 2: coerced RHS
+checkForCoercion(Expr_AST* LHS, Expr_AST* RHS)
+{
+    if ( (LHS->TypeP() == RHS->TypeP()) )
+	return 0;
+    else if ( (LHS->TypeP() < RHS->TypeP()) )
+	return 1;
+    else
+	return 2;
+}
+
+Expr_AST*
+parseCoercion(Expr_AST* Expr, tokenType Type)
+{
+    Tmp_AST* pTmp = new Tmp_AST(token(Type));
+    return new CoercedExpr_AST(pTmp, Expr);
 }
 
 Expr_AST* parsePrimaryExpr(void);
@@ -99,8 +117,6 @@ parseExpr(int Infix) // 0 - no; 1 = yes [probably add 2 = logical prefix)
     return 0; // to suppress gcc warning
 
 }
-
-extern std::map<tokenType, int> bin_OpTable;
 
 // Dijkstra shunting algorithm
 // Example used in comments below: LHS + b * c - d
@@ -147,6 +163,15 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	// Note: coercion best handled by a visitor - keep as is
 	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
+	int tmp = checkForCoercion(LHS, RHS);
+	if ( (1 == tmp) ){
+	    std::cout << "coercing LHS...\n";
+	    LHS = parseCoercion(LHS, RHS->Type().Tok());
+	}
+	else if ( (2 == tmp) ){
+	    std::cout << "coercing RHS...\n";
+	    RHS = parseCoercion(RHS, LHS->Type().Tok());
+	} 
 	switch(binOp1.Tok()){
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
 	case tok_mod: 
@@ -185,7 +210,8 @@ parsePrimaryExpr(void)
     case tok_doubleV: return parseFltExpr();
     case ';': getNextToken(); std::cout << "\n"; return parseExpr(0);
     case '(': return parseParensExpr();
-    case '!': // return parseNotLogExpr();
+    case '!': // disallowing '!!' for now 
+	// getNextToken(); return parseNotLogExpr();
     case '-': getNextToken(); return parseExpr(1);
     case tok_ID: // note: coming here, ID has already been entered into
 	         //       the symbol table
