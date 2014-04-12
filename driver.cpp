@@ -47,10 +47,15 @@ startParse(void)
     IdExpr_AST* b = new IdExpr_AST(token(tok_int), token(tok_ID, "b"));
     addIdToEnv(top_Env, b, "stack");
 
+    std::cout << "\n";
+    printEnvAncestorInfo(top_Env);
+    printSTInfo();
+    std::cout << "\n";
+
     getNextToken();
     while (*input){
 	try{
-	    parseExpr();
+	    parseExpr(0);
 	}
 	catch(Lexer_Error& m){
 	    m.print();
@@ -58,7 +63,6 @@ startParse(void)
 	}
 
 	catch(Primary_Error& m){
-	    std::cout << "Primary_Error\n";
 	    m.print();
 	    panicModeFwd();
 	}

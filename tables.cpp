@@ -171,7 +171,7 @@ addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
     // the matching Env* pointer into the corresponding ct ll above
     std::string table_Name = pEnv->getTableName();
     std::map<std::string, Symbol_Table>::iterator iter;
-    std::string Type(new_Id->Type());
+    std::string Type(new_Id->Type().Lex());
     int Width(new_Id->TypeW());
 
     if ( (ST.end() == (iter = ST.find(table_Name))) )
@@ -212,7 +212,8 @@ printEnvAncestorInfo(Env* p)
 	std::map<std::string, Expr_AST*>::const_iterator iter; 
 	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
 	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
-	    std::cout << iter->first << "\t= " << (iter->second)->Type() << "\n";
+	    std::cout << iter->first << "\t= " << (iter->second)->Type().Lex() 
+		      << "\n";
 
 	std::cout << "\n";
 	p = p->getPrior();

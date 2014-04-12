@@ -34,10 +34,8 @@ match(int updatePrior, tokenType t, int updatePost)
 	if (updatePost) getNextToken();
 	return 0;
     }
-    else{
-	token tmp(t);
-	throw(Primary_Error(tmp.Lex(), "unexpected in context"));
-    }
+    else
+	return -1;
 }
 
 Expr_AST*
@@ -84,14 +82,22 @@ Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseInfixRHS(int, Expr_AST*);
 
 Expr_AST*
-parseExpr(void)
+parseExpr(int Infix) // 0 - no; 1 = yes [probably add 2 = logical prefix)
 {
     std::cout << "parsing an expr...\n";
     Expr_AST* LHS = parsePrimaryExpr();
     if ( !LHS )
 	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
 
-    return parseInfixRHS(0, LHS); // don't impose any precedence on LHS
+    Expr_AST* ptmp_AST = 0;
+    if (Infix) // TO DO: adjust for logical
+	ptmp_AST = new UnaryArithmExpr_AST(token(tok_minus), LHS);
+    if ( (0 == ptmp_AST) )
+	return parseInfixRHS(0, LHS); // don't impose any precedence on LHS
+    else
+	return parseInfixRHS(0, ptmp_AST);
+    return 0; // to suppress gcc warning
+
 }
 
 extern std::map<tokenType, int> bin_OpTable;
@@ -140,12 +146,10 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	}
 
 	// Note: coercion best handled by a visitor - keep as is
-	std::cout << "***should go straight here, where\n";
 	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
 	switch(binOp1.Tok()){
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
 	case tok_mod: 
-	    std::cout << "going to the right place \n";
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
 	case tok_log_or: case tok_log_and: case tok_log_eq: case tok_lt:
@@ -163,7 +167,7 @@ parseParensExpr(void)
 {
     std::cout << "parsing a ParensExpr...\n";
     getNextToken(); // create ready-state
-    Expr_AST* E = parseExpr();
+    Expr_AST* E = parseExpr(0);
 
     if ( (-1 == match(0, tok_rdclosed, 1)) )
 	throw(Punct_Error(')', 0));
@@ -179,9 +183,10 @@ parsePrimaryExpr(void)
     switch(next_Token.Tok()){
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
+    case ';': getNextToken(); std::cout << "\n"; return parseExpr(0);
     case '(': return parseParensExpr();
     case '!': // return parseNotLogExpr();
-    case '-': // return parserPrefixExpr();
+    case '-': getNextToken(); return parseExpr(1);
     case tok_ID: // note: coming here, ID has already been entered into
 	         //       the symbol table
 	return parseIdExpr(next_Token.Lex());

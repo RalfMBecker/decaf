@@ -31,10 +31,12 @@ enum tokenType{
     // 2 character operators
     tok_le = -70, tok_ge = -71, tok_log_eq = -72, tok_log_ne = -73, 
     tok_log_and = -74, tok_log_or = -75, tok_sqopenclosed = -76,
-    // 1 character semantic operators
+    // 1 character semantic infix operators
     tok_plus = '+', tok_minus = '-', tok_mult = '*', tok_div = '/',
     tok_mod = '%', tok_lt = '<', tok_gt = '>', tok_eq = '=',
-    tok_log_not = '!', tok_sqopen = '[', tok_dot = '.',
+    tok_sqopen = '[', tok_dot = '.',
+    // 1 character semantic prefix operators
+    tok_log_not = '!', 
     // 1 character non-semantic operators
     tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
@@ -97,13 +99,10 @@ public:
 
 	case tok_ID: lexeme_ = lex; break;
 
-	case tok_plus:
-	case tok_minus: 
-	case tok_mult: 
-	case tok_div:
-	case tok_mod:
-	case tok_lt: case tok_gt: case tok_eq: case tok_log_not: 
-	case tok_dot: case tok_sqopen:
+	case tok_plus: case tok_minus: case tok_mult: 
+	case tok_div: case tok_mod:
+	case tok_lt: case tok_gt: case tok_eq: 
+	case tok_log_not: case tok_dot: case tok_sqopen:
 	    // 1-char others
 	case tok_semi: case tok_comma: case tok_sqclosed: 
 	case tok_rdopen: case tok_rdclosed: case tok_paropen: 

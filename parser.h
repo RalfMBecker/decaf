@@ -16,7 +16,7 @@ Expr_AST* parseFltExpr(void);
 Expr_AST* parseIdExpr(std::string name);
 Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseParensExpr(void);
-Expr_AST* parseExpr(void);
+Expr_AST* parseExpr(int Infix);
 Expr_AST* parseBlock(void);
 
 #endif

@@ -62,32 +62,31 @@ class Expr_AST: public Node_AST{ // ***TO DO: link properly when ready
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
-    : Node_AST(lc, rc), type_(Type.Lex()), op_(OpTor)
+    : Node_AST(lc, rc), type_(Type), op_(OpTor)
     {
-	std::cout << "[debug expr] received op_.Lex() as " << op_.Lex() << "\n";
-	if ( ( "" != type_ ) ){ // in case of default constructor
+	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
 	    typeP_ = setPriority();
 	}
 	else
 	    typeW_ = typeP_ = -1;
 	std::cout << "created Expr with op = " << op_.Lex();
-	std::cout << ", type = " << type_ << "\n";
+	std::cout << ", type = " << type_.Lex() << "\n";
     }
     ~Expr_AST() {}
 
     virtual int setWidth(void)
     {
-	if ( (type_WidthTable.end() != type_WidthTable.find(type_)) )
-	    return type_WidthTable[type_];
+	if ( (type_WidthTable.end() != type_WidthTable.find(type_.Lex())) )
+	    return type_WidthTable[type_.Lex()];
 	else
 	    return -1;
     }
 
-    int setPriority(void)
+    virtual int setPriority(void)
     {
-	if ( (type_PrecTable.end() != type_PrecTable.find(type_)) )
-	    return type_PrecTable[type_];
+	if ( (type_PrecTable.end() != type_PrecTable.find(type_.Lex())) )
+	    return type_PrecTable[type_.Lex()];
 	else
 	    return -1;
     }
@@ -95,16 +94,14 @@ Expr_AST(token Type=token(), token OpTor=token(),
     // for use in its array grand-child
     virtual void forceWidth(int w) { typeW_ = w; }
 	
-    tokenType TypeToken(void) const { return type_Tok_; }
-    std::string Type(void) const { return type_;}
+    token Type(void) const { return type_; }
     token Op(void) const { return op_; }
     int TypeW(void) const { return typeW_; }
     int TypeP(void) const { return typeP_; }
 
 protected:
-    tokenType type_Tok_;
-    std::string type_;
-    token op_;
+    token type_; // (tok_int, "int")
+    token op_;   // (tok_plus, "+")
     int typeW_;
     int typeP_;
 };
@@ -205,18 +202,18 @@ private:
 // written.
 class ArithmExpr_AST: public Expr_AST{
 public:
-    ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
+ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
+    : Expr_AST(token(tok_eof), Op, LHS, RHS)
     {
-	std::cout << "[debug arithm] Op.Lex() = " << Op.Lex() << "\n";
 	token tmp;
 	if ( (RHS->TypeP() > LHS->TypeP()) )
-	    tmp = token(RHS->TypeToken());
+	    tmp = token(RHS->Type());
 	else
-	    tmp = token(LHS->TypeToken());
-	Expr_AST(tmp, Op, LHS, RHS);
-
+	    tmp = token(LHS->Type());
+	setWidth();
+	setPriority();
 	// would allow to also handle promotion flt -> double, say
-	coerce_ = (LHS->Type() == RHS->Type())?0:1;
+	coerce_ = (LHS->Type().Lex() == RHS->Type().Lex())?0:1;
 	std::cout << "created ArithmExpr with op = " << op_.Lex() << "\n";
     }
 
@@ -226,39 +223,18 @@ private:
     int coerce_; // 1: needs coercion; 0: doesn't
 };
 
-/*
-class UnaryArithmExpr_AST: public ArithmExpr_AST{
+class UnaryArithmExpr_AST: public Expr_AST{
 public:
-    UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
+UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
+    : Expr_AST(token(LHS->Type()), Op, LHS)
     {
-
+	std::cout << "created Unary ArithmExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
     }
-
-
-private:
-
 };
-*/
 
 /***************************************
 * Expression Logical children
 ***************************************/
-
-
-/***************************************
-* TmpForExpr and its children - TO DO: likely will be removed
-***************************************/
-
-// Serves to handle unified code generation:
-// Handles creation and assignment to a temp variable (SSA style)
-class TmpForExpr_AST: public Expr_AST{
-public:
-TmpForExpr_AST(token Type, token Op, Node_AST* lc=0, Node_AST* rc=0)
-    : Expr_AST(Type, Op, lc, rc) {}
-// methods differ from those for Expr, hence separate. TO DO
-
-    ~TmpForExpr_AST() {};
-
-};
 
 #endif
