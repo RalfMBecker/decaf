@@ -4,7 +4,8 @@
 * Conventions:
 #include "astVisitorFactory.h"
 *
-* Include order: lexer.h, ast.h, error.h, tables.h, parser.h, driver.h
+* Include order: lexer.h, ast.h, error.h, tables.h, parser.h, 
+*                IR.h, Visitor.h, driver.h
 *                We favor selective forward declaration instead of
 *                including the entire header where possible (e.g.,
 *                we only use 'pointer to type')

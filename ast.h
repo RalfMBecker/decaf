@@ -209,7 +209,7 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     }
 };
 
-// replaces old position of LHS, with new LC being the TMP
+// replaces old position of LHS in AST, with new LC being the TMP
 class CoercedExpr_AST: public Expr_AST{
 public:
 CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
@@ -239,9 +239,64 @@ UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
 };
 
 
-
 /***************************************
 * Expression Logical children
 ***************************************/
+
+class LogicalExpr_AST: public Expr_AST{
+public:
+LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
+    : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
+    {
+	std::cout << "\tcreated LogicalExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+
+    ~LogicalExpr_AST() {}
+};
+
+// implement ||
+class OrExpr_AST: public LogicalExpr_AST{
+public:
+OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
+    : LogicalExpr_AST(token(tok_log_or), LHS, RHS) 
+    {
+	std::cout << "\tcreated OrExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+};
+
+// implement &&
+class AndExpr_AST: public LogicalExpr_AST{
+public:
+AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
+    : LogicalExpr_AST(token(tok_log_and), LHS, RHS) 
+    {
+	std::cout << "\tcreated AndExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+};
+
+// implement <, <=, >, >=, ==, !=
+class RelExpr_AST: public LogicalExpr_AST{
+public:
+RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
+    : LogicalExpr_AST(Op, LHS, RHS) 
+    {
+	std::cout << "\tcreated RelExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+};
+
+// implement (logical) ! (chaining not allowed)
+class NotExpr_AST: public LogicalExpr_AST{
+public:
+NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
+    : LogicalExpr_AST(token(tok_log_not), LHS, 0)
+    {
+	std::cout << "\tcreated NotExpr with op = " << op_.Lex() 
+		  << ", type = " << type_.Lex() << "\n";
+    }
+};
 
 #endif

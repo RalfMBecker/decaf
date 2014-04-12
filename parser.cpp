@@ -98,9 +98,10 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 
 Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseInfixRHS(int, Expr_AST*);
+int logOp_Tot = 0;
 
-Expr_AST*
-parseExpr(int Infix) // 0 - no; 1 = yes [probably add 2 = logical prefix)
+Expr_AST* // 0 - infix; 1 - arithm prefix (-); 2 - logical prefix (!)
+parseExpr(int Infix)
 {
     std::cout << "parsing an expr...\n";
     Expr_AST* LHS = parsePrimaryExpr();
@@ -108,8 +109,10 @@ parseExpr(int Infix) // 0 - no; 1 = yes [probably add 2 = logical prefix)
 	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
 
     Expr_AST* ptmp_AST = 0;
-    if (Infix) // TO DO: adjust for logical
+    if ( (1 == Infix) )
 	ptmp_AST = new UnaryArithmExpr_AST(token(tok_minus), LHS);
+    else if ( (2 == Infix) )
+	ptmp_AST = new NotExpr_AST(token(tok_log_not), LHS);
     if ( (0 == ptmp_AST) )
 	return parseInfixRHS(0, LHS); // don't impose any precedence on LHS
     else
@@ -130,13 +133,11 @@ Expr_AST*
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
     std::cout << "entering parseInfixRHS...\n";
-    static int logOp_Tot = 0;
     std::string const err_Msg = "Expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
 	std::cout << "current token (1) = " << next_Token.Lex() << "\n";
-	logOp_Tot += isLogicalAdd(next_Token.Tok());
 	if ( (1 < logOp_Tot) )
 	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
 
@@ -151,7 +152,6 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	int prec_3 = opPriority(next_Token.Tok());
 	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
-	logOp_Tot += isLogicalAdd(next_Token.Tok());
 	if ( (1 < logOp_Tot) )
 	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
 
@@ -161,7 +161,6 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 		throw(Primary_Error(next_Token.Lex(), err_Msg));
 	}
 
-	// Note: coercion best handled by a visitor - keep as is
 	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
 	int tmp = checkForCoercion(LHS, RHS);
 	if ( (1 == tmp) ){
@@ -177,9 +176,17 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	case tok_mod: 
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
-	case tok_log_or: case tok_log_and: case tok_log_eq: case tok_lt:
-	case tok_log_ne: case tok_le: case tok_gt: case tok_ge:
-	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS); // TO DO: REPLACE***
+	case tok_log_or: 
+	    LHS = new OrExpr_AST(LHS, RHS);
+	    break;
+	case tok_log_and:
+	    LHS = new AndExpr_AST(LHS, RHS);
+	    break;
+	case tok_log_eq: case tok_log_ne: case tok_lt:
+	case tok_le: case tok_gt: case tok_ge:
+	    if ( (1 < ++logOp_Tot) )
+		throw(Primary_Error(next_Token.Lex(), err_Msg2));
+	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
 	default:
 	    errExit(0, "illegal use of function parseInfixRHS (abort}");
@@ -190,12 +197,16 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 Expr_AST*
 parseParensExpr(void)
 {
+    int oldLogic_Status = logOp_Tot;
+    logOp_Tot = 0;
     std::cout << "parsing a ParensExpr...\n";
     getNextToken(); // create ready-state
     Expr_AST* E = parseExpr(0);
 
     if ( (-1 == match(0, tok_rdclosed, 1)) )
 	throw(Punct_Error(')', 0));
+
+    logOp_Tot = oldLogic_Status;
 
     return E;
 }
@@ -208,13 +219,19 @@ parsePrimaryExpr(void)
     switch(next_Token.Tok()){
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
-    case ';': getNextToken(); std::cout << "\n"; return parseExpr(0);
-    case '(': return parseParensExpr();
-    case '!': // disallowing '!!' for now 
-	// getNextToken(); return parseNotLogExpr();
-    case '-': getNextToken(); return parseExpr(1);
-    case tok_ID: // note: coming here, ID has already been entered into
-	         //       the symbol table
+    case ';': 
+	getNextToken();
+	std::cout << "\n";
+	logOp_Tot = 0;
+	return parseExpr(0);
+    case '(': return parseParensExpr(); 
+    case '!': 
+	getNextToken(); 
+	return parseExpr(2);
+    case '-':
+	getNextToken();
+	return parseExpr(1);
+    case tok_ID: // coming here, ID has already been entered into ST
 	return parseIdExpr(next_Token.Lex());
 
     default: 

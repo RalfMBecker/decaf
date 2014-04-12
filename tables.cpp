@@ -5,7 +5,6 @@
 *                   operator infix expressions
 *      typePrec_Table: (basic) type precedence in coercions
 *      typeWidth_Table: width of types (bytes) on this machine
-*      logArithm_Table: helper table used to parse infix expressions
 *      Env*: linked list of compile-time frames
 *      root_Env: root of a (one-sided) linked list of compile-time
 *                symbol tables (linking back, to enclosing scope)
@@ -28,7 +27,6 @@ class IdExpr_AST;
 std::map<tokenType, int> binOP_Table;
 std::map<std::string, int> typePrec_Table;
 std::map<std::string, int> typeWidth_Table;
-std::map<tokenType, int> logArithm_Table;
 Env* root_Env;
 Env* top_Env; // currently active environment table
 
@@ -37,35 +35,6 @@ std::map<std::string, Symbol_Table> ST;
 
 // static int used in Symbol Table maintenance in file tables.h
 int Env::count_ = -1; // associate 0 with never-used root_Env pointer
-
-
-// by making the values 0/1, can use simply in Op Precedence parsing
-void
-makeLogArithmTable(void)
-{
-    logArithm_Table[tok_log_or] = 0;  // is a logical operator, but not tracked
-    logArithm_Table[tok_log_and] = 0; // per logic of Op Precedence parsing
-    logArithm_Table[tok_log_eq] = 1;
-    logArithm_Table[tok_log_ne] = 1;
-    logArithm_Table[tok_lt] = 1;
-    logArithm_Table[tok_le] = 1;
-    logArithm_Table[tok_gt] = 1;
-    logArithm_Table[tok_ge] = 1;
-    logArithm_Table[tok_plus] = 0;
-    logArithm_Table[tok_minus] = 0;
-    logArithm_Table[tok_mult] = 0;
-    logArithm_Table[tok_div] = 0;
-    logArithm_Table[tok_mod] = 0;
-}
-
-int
-isLogicalAdd(token t)
-{
-    if ( (logArithm_Table.end() != logArithm_Table.find(t.Tok())) )
-	return logArithm_Table[t.Tok()];
-    else
-	return 0;
-}
 
 // the following tokens have a precedence priority, but are not tracked
 // using this table:

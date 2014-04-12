@@ -11,6 +11,8 @@
 #include "error.h"
 #include "tables.h"
 #include "parser.h"
+#include "IR.h"
+#include "Visitor.h"
 
 extern std::istream* input;
 
@@ -23,7 +25,6 @@ initFrontEnd(std::string Str)
     makeBinOpTable();
     makeTypePrecTable();
     makeWidthTable(); 
-    makeLogArithmTable();
     makeEnvRootTop();
 
     std::string tmp_Str = ("" == Str)?"std::cin":Str; 
@@ -46,6 +47,8 @@ startParse(void)
     addIdToEnv(top_Env, a, "stack");
     IdExpr_AST* b = new IdExpr_AST(token(tok_int), token(tok_ID, "b"));
     addIdToEnv(top_Env, b, "stack");
+    IdExpr_AST* c = new IdExpr_AST(token(tok_int), token(tok_ID, "c"));
+    addIdToEnv(top_Env, c, "stack");
 
     std::cout << "\n";
     printEnvAncestorInfo(top_Env);
