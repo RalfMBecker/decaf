@@ -71,11 +71,76 @@ public:
 	insertLine(new SSA_Entry(Op, target, "0", RHS, Frame));
     }
 
-    void visit(LogicalExpr_AST* V) { return; }
-    void visit(OrExpr_AST* V) { return; }
-    void visit(AndExpr_AST* V) { return; }
-    void visit(RelExpr_AST* V) { return; }
-    void visit(NotExpr_AST* V) { return; }
+    // Even if different objects have the same code, must implement
+    // separately for each. There is certainly a way around this using
+    // another indirection; but we did not pursue it.
+    void visit(LogicalExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string LHS = V->LChild()->Addr();
+	std::string RHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, RHS, Frame);
+	insertLine(line);
+    }
+
+    void visit(OrExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string LHS = V->LChild()->Addr();
+	std::string RHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, RHS, Frame);
+	insertLine(line);
+    }
+
+    void visit(AndExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string LHS = V->LChild()->Addr();
+	std::string RHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, RHS, Frame);
+	insertLine(line);
+    }
+
+    void visit(RelExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string LHS = V->LChild()->Addr();
+	std::string RHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, RHS, Frame);
+	insertLine(line);
+    }
+
+    void visit(NotExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string LHS = V->LChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	insertLine(new SSA_Entry(Op, target, LHS, "", Frame));
+    }
 
     std::string makeTmp(void)
     {

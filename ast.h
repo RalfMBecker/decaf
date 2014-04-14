@@ -344,6 +344,16 @@ LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     }
 
     ~LogicalExpr_AST() {}
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
 // implement ||
@@ -355,9 +365,20 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	std::cout << "\tcreated OrExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
-// implement &&
+// implement && (as, in ultimate code generation, we short-circuit, it 
+// makes sense to track this differently from ||)
 class AndExpr_AST: public LogicalExpr_AST{
 public:
 AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
@@ -366,6 +387,16 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	std::cout << "\tcreated AndExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
 // implement <, <=, >, >=, ==, !=
@@ -376,6 +407,15 @@ RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     {
 	std::cout << "\tcreated RelExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
     }
 };
 
@@ -388,6 +428,14 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 	std::cout << "\tcreated NotExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
 #endif
