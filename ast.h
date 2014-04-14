@@ -16,7 +16,44 @@ extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
 class Env;
 extern Env* top_Env;
-class AST_Visitor;
+
+// forward declare AST hierarchy to resolve Visitor/AST cyclicality;
+// and add Visitor abstract base class to finish untangling the pattern
+class Node_AST;
+class Expr_AST;
+class Tmp_AST;
+class IdExpr_AST;
+class IdArrayExpr_AST;
+class IntExpr_AST;
+class FltExpr_AST;
+class ArithmExpr_AST;
+class CoercedExpr_AST;
+class UnaryArithmExpr_AST;
+class LogicalExpr_AST;
+class OrExpr_AST;
+class AndExpr_AST;
+class RelExpr_AST;
+class NotExpr_AST;
+
+class AST_Visitor{
+public: 
+    virtual void visit(Node_AST*) = 0;
+    virtual void visit(Expr_AST*) = 0;
+    virtual void visit(Tmp_AST*) = 0;
+    virtual void visit(IdExpr_AST*) = 0;
+    virtual void visit(IdArrayExpr_AST*) = 0;
+    virtual void visit(IntExpr_AST*) = 0;
+    virtual void visit(FltExpr_AST*) = 0;
+    virtual void visit(ArithmExpr_AST*) = 0;
+    virtual void visit(CoercedExpr_AST*) = 0;
+    virtual void visit(UnaryArithmExpr_AST*) = 0;
+    virtual void visit(LogicalExpr_AST*) = 0;
+    virtual void visit(OrExpr_AST*) = 0;
+    virtual void visit(AndExpr_AST*) = 0;
+    virtual void visit(RelExpr_AST*) = 0;
+    virtual void visit(NotExpr_AST*) = 0;
+};
+
 
 /***************************************
 * Base class
@@ -48,17 +85,15 @@ Node_AST(Node_AST* lC=0, Node_AST* rC=0)
     void setParent(Node_AST* Par) { parent_ = Par; }
     virtual void setAddr(std::string Addr) { addr_ = Addr; }
 
-/*
     virtual void accept(AST_Visitor* Visitor)
     {
-	Node_AST* pNode;
-	while ( (0!= lChild_) )
-	    visit(Visitor);
-	while ( (0!= RChild_) )
-	    visit(Visitor);
+	while ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	while ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
-  }
-*/
+    }
+
 protected:
     Node_AST* parent_;
     Node_AST* lChild_;
@@ -135,15 +170,12 @@ Tmp_AST(token Type)
     {
 	std::stringstream tmp;
 	tmp << "t" << ++count_;
-	name_ = tmp.str();
-	op_.SetTokenLex(name_);
-	std::cout << "\tcreated tmp = " << name_ << "\n";
+	setAddr(tmp.str());
+	op_.SetTokenLex(addr_);
+	std::cout << "\tcreated tmp = " << addr_ << "\n";
     }
 
-    std::string Name(void) const { return name_; }
-
 private:
-    std::string name_; // for easier access
     static int count_;
 };
 
@@ -153,14 +185,9 @@ public:
 IdExpr_AST(token Type, token Op)
     : Expr_AST(Type, Op, 0, 0) 
     { 
-	name_ = Op.Lex();
-	std::cout << "\tcreated an Id = " << name_ << "\n";
+	setAddr(Op.Lex());
+	std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
-
-    virtual std::string Name(void) const { return name_; }
-
-protected: 
-    std::string name_; // for easier access
 };
 
 // ***TO DO: revisit when used (in progress)***
@@ -172,7 +199,7 @@ public:
     {
 	if ( (-1 != typeW_) )
 	    typeW_ *= size_;
-	std::cout << "\tcreated an array with Id = " << name_  << "\n";
+	std::cout << "\tcreated an array with Id = " << addr_  << "\n";
     }
 
     int Size(void) const { return size_; }
@@ -186,14 +213,9 @@ public:
 IntExpr_AST(token Op)
     : Expr_AST(token(tok_int), Op, 0, 0) 
     {
-	value_ = Op.Lex();
-	std::cout << "\tcreated IntExpr with value = " << value_ << "\n";
+	setAddr(Op.Lex());
+	std::cout << "\tcreated IntExpr with value = " << addr_ << "\n";
     }
-
-    std::string Value(void) const { return value_;}
-
-private:
-    std::string value_; // for easier access
 };
 
 class FltExpr_AST: public Expr_AST{
@@ -201,14 +223,9 @@ public:
 FltExpr_AST(token Op)
     : Expr_AST(token(tok_double), Op, 0, 0) 
     {
-	value_ = Op.Lex(); 
-	std::cout << "\tcreated FltExpr with value = " << value_ << "\n";
+	setAddr(Op.Lex()); 
+	std::cout << "\tcreated FltExpr with value = " << addr_ << "\n";
     }
-
-    std::string Value(void) const { return value_; }
-
-private:
-    std::string value_; // for easier access
 };
 
 // ******TO DO: STRING (etc.)********************

@@ -141,7 +141,7 @@ addEnv(Env* Prior)
 int
 addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
 {
-    std::string Name = new_Id->Name();
+    std::string Name = new_Id->Addr();
     // add to Env* entry of Env ll rooted at root_Env
     if ( (0 == pEnv->findName(Name) ) ) // already in tables
 	return -1;
@@ -178,7 +178,7 @@ findNameInHierarchy(Env* p, std::string Name)
 Expr_AST*
 findIdInHierarchy(Env* p, IdExpr_AST* Id)
 {
-    std::string name_Str(Id->Name());
+    std::string name_Str(Id->Addr());
     return findNameInHierarchy(p, name_Str);
 }
 

@@ -1,5 +1,5 @@
 /********************************************************************
-* IR.h - IR for decaf
+* ir.h - IR for decaf
 *
 ********************************************************************/
 
@@ -14,32 +14,35 @@
 #include "lexer.h"
 #include "tables.h"
 
-const int LABELS = 10;
-const int SSA = 5;
-const int ENV = 8;
-const int LINE = 5;
+#define LABELS 10
+#define SSA 5
+#define ENV 8
+#define LINE 5
 
-// forward declarations
+// forward declaration
 class Env;
-class IR_Line;
-
-void insertLine(IR_Line*);
-void printIR_List(void);
-
-extern std::map<int, IR_Line*> iR_List;
 
 class IR_Line{
 public:
     virtual void print(void) const = 0;
 };
 
+// from ir.cpp
+extern std::map<int, IR_Line*> iR_List;
+void printIR_List(void);
+void insertLine(IR_Line*);
+
 // assume for now short variable names; worry about properness later
 class SSA_Entry: public IR_Line{
 public: 
+
 SSA_Entry(token Op, std::string Target, std::string LHS, std::string RHS, 
-	  std::string Frame, std::vector<std::string> Labels)
-    : op_(Op),target_(Target),lHS_(LHS),rHS_(RHS),frame_(Frame),labels_(Labels)
-    {}
+	  std::string Frame)
+    : op_(Op),target_(Target),lHS_(LHS),rHS_(RHS),frame_(Frame)
+    {
+	std::vector<std::string> tmp;
+	labels_ = tmp;
+    }
 
     SSA_Entry(SSA_Entry const& r)
     {

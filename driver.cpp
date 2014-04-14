@@ -11,7 +11,8 @@
 #include "error.h"
 #include "tables.h"
 #include "parser.h"
-#include "IR.h"
+//#include "ir.h" // included through visitor.h (if not excluded, 
+//                   IR_LIST is twice in same file (erro)
 #include "visitor.h"
 
 extern std::istream* input;
