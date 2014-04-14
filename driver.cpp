@@ -61,12 +61,13 @@ startParse(void)
     while (*input){
 	try{
 	    pFirst_Node = parseExpr(0);
+	    pFirst_Node->accept(new MakeIR_Visitor);
+	    printIR_List();
 	}
 	catch(Lexer_Error& m){
 	    m.print();
 	    panicModeFwd();
 	}
-
 	catch(Primary_Error& m){
 	    m.print();
 	    panicModeFwd();

@@ -40,8 +40,8 @@ enum tokenType{
     // 1 character non-semantic operators
     tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
-    // AST types
-    tok_ID = -100, tok_tmp = -101, 
+    // AST types and actions
+    tok_ID = -100, tok_tmp = -101, tok_cast = -102, 
 };
 
 class token{
@@ -96,6 +96,7 @@ public:
 	case tok_tmp: 
 	    lexeme_ = ("" == lex)?"t":lex;
 	    break;
+	case tok_cast: lexeme_ = "cast"; break;
 
 	case tok_ID: lexeme_ = lex; break;
 

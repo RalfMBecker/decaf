@@ -36,16 +36,46 @@ public:
 	std::string RHS = V->RChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	insertLine(new SSA_Entry(Op, target, LHS, RHS, Frame));
+	IR_Line* line = new SSA_Entry(Op, target, LHS, RHS, Frame);
+	insertLine(line);
     }
 
-    void visit(CoercedExpr_AST* V) { }
-    void visit(UnaryArithmExpr_AST* V) { }
-    void visit(LogicalExpr_AST* V) { }
-    void visit(OrExpr_AST* V) { }
-    void visit(AndExpr_AST* V) { }
-    void visit(RelExpr_AST* V) { }
-    void visit(NotExpr_AST* V) { }
+    void visit(CoercedExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = token(tok_cast);
+	std::string LHS = V->RChild()->Addr();  // lChild has tmp assigned to
+	std::string to_Str;
+	switch (V->To()){
+	case tok_int: to_Str = "int"; break;
+	case tok_double: to_Str = "double"; break;
+	default:
+	    errExit(0, "invalid use of visit(CoercedExpr_AST*)");
+	}
+	std::string Frame = V->getEnv()->getTableName();
+
+	insertLine(new SSA_Entry(Op, target, LHS, to_Str, Frame));
+    }
+
+    void visit(UnaryArithmExpr_AST* V)
+    {
+	std::string target = makeTmp();
+	V->setAddr(target);
+
+	token Op = V->Op();
+	std::string RHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	insertLine(new SSA_Entry(Op, target, "0", RHS, Frame));
+    }
+
+    void visit(LogicalExpr_AST* V) { return; }
+    void visit(OrExpr_AST* V) { return; }
+    void visit(AndExpr_AST* V) { return; }
+    void visit(RelExpr_AST* V) { return; }
+    void visit(NotExpr_AST* V) { return; }
 
     std::string makeTmp(void)
     {
@@ -54,6 +84,7 @@ public:
 	return tmp_Stream.str();
     }
 
-    private:
-	static int count_;
+private:
+static int count_;
+static int line_;
 };

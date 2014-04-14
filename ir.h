@@ -15,7 +15,7 @@
 #include "tables.h"
 
 #define LABELS 10
-#define SSA 5
+#define SSA 7
 #define ENV 8
 #define LINE 5
 
@@ -35,7 +35,6 @@ void insertLine(IR_Line*);
 // assume for now short variable names; worry about properness later
 class SSA_Entry: public IR_Line{
 public: 
-
 SSA_Entry(token Op, std::string Target, std::string LHS, std::string RHS, 
 	  std::string Frame)
     : op_(Op),target_(Target),lHS_(LHS),rHS_(RHS),frame_(Frame)

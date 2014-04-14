@@ -1,6 +1,10 @@
 /********************************************************************
 * ast.h - AST for Decaf
 *
+* Note: I am not entirely sure why accept() members which should be
+*       default inherited from Node_AST's need to be explicitly 
+*       implemented in classes that do not change the Node_AST default
+*
 ********************************************************************/
 
 #ifndef AST_H_
@@ -52,8 +56,9 @@ public:
     virtual void visit(AndExpr_AST*) = 0;
     virtual void visit(RelExpr_AST*) = 0;
     virtual void visit(NotExpr_AST*) = 0;
-};
 
+    ~AST_Visitor();
+};
 
 /***************************************
 * Base class
@@ -87,9 +92,9 @@ Node_AST(Node_AST* lC=0, Node_AST* rC=0)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	while ( (0!= this->lChild_) )
+	if ( (0!= this->lChild_) )
 	    this->lChild_->accept(Visitor);
-	while ( (0!= this->rChild_) )
+	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
@@ -152,6 +157,15 @@ Expr_AST(token Type=token(), token OpTor=token(),
     int TypeW(void) const { return typeW_; }
     int TypeP(void) const { return typeP_; }
 
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 protected:
     token type_; // (tok_int, "int")
     token op_;   // (tok_plus, "+")
@@ -175,6 +189,8 @@ Tmp_AST(token Type)
 	std::cout << "\tcreated tmp = " << addr_ << "\n";
     }
 
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
     static int count_;
 };
@@ -188,6 +204,9 @@ IdExpr_AST(token Type, token Op)
 	setAddr(Op.Lex());
 	std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 // ***TO DO: revisit when used (in progress)***
@@ -204,6 +223,8 @@ public:
 
     int Size(void) const { return size_; }
 
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
     int size_;
 };
@@ -216,6 +237,9 @@ IntExpr_AST(token Op)
 	setAddr(Op.Lex());
 	std::cout << "\tcreated IntExpr with value = " << addr_ << "\n";
     }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 class FltExpr_AST: public Expr_AST{
@@ -226,6 +250,9 @@ FltExpr_AST(token Op)
 	setAddr(Op.Lex()); 
 	std::cout << "\tcreated FltExpr with value = " << addr_ << "\n";
     }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 // ******TO DO: STRING (etc.)********************
@@ -244,6 +271,16 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	std::cout << "\tcreated ArithmExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
 // replaces old position of LHS in AST, with new LC being the TMP
@@ -260,6 +297,15 @@ CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
     tokenType From() const { return from_; }
     tokenType To() const {return to_; }
 
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 private:
     tokenType from_; // for easier access by visitor
     tokenType to_;
@@ -267,12 +313,20 @@ private:
 
 class UnaryArithmExpr_AST: public Expr_AST{
 public:
-UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
-    : Expr_AST(token(LHS->Type()), Op, LHS)
+UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
+    : Expr_AST(token(RHS->Type()), Op, 0, RHS)
     {
 	std::cout << "\tcreated Unary ArithmExpr with op = " << op_.Lex() 
 		  << ", type = " << type_.Lex() << "\n";
     }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
 };
 
 
