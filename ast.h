@@ -14,6 +14,9 @@
 // forward declarations
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
+class Env;
+extern Env* top_Env;
+class AST_Visitor;
 
 /***************************************
 * Base class
@@ -23,7 +26,8 @@ extern std::map<std::string, int> typeWidth_Table;
 class Node_AST{
 public:
 Node_AST(Node_AST* lC=0, Node_AST* rC=0)
-    : parent_(0), lChild_(lC), rChild_(rC), line_(lineNo), col_(colNo)
+    : parent_(0), lChild_(lC), rChild_(rC), line_(lineNo), col_(colNo),
+	addr_(""), env_(top_Env)
     {
 	if ( (0 != lChild_) )
 	    lChild_->setParent(this);
@@ -38,15 +42,31 @@ Node_AST(Node_AST* lC=0, Node_AST* rC=0)
     virtual Node_AST* Parent(void) const { return parent_; }
     virtual Node_AST* LChild(void) const { return lChild_; }
     virtual Node_AST* RChild(void) const { return rChild_; }
+    virtual std::string Addr(void) const { return addr_; }
+    virtual Env* getEnv(void) const { return env_; }
 
     void setParent(Node_AST* Par) { parent_ = Par; }
+    virtual void setAddr(std::string Addr) { addr_ = Addr; }
 
+/*
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	Node_AST* pNode;
+	while ( (0!= lChild_) )
+	    visit(Visitor);
+	while ( (0!= RChild_) )
+	    visit(Visitor);
+	Visitor->visit(this);
+  }
+*/
 protected:
     Node_AST* parent_;
     Node_AST* lChild_;
     Node_AST* rChild_;
     int line_;
     int col_;
+    std::string addr_;
+    Env* env_;
     static int label_Count_;
 };
 

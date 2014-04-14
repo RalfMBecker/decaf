@@ -15,7 +15,6 @@
 #include "visitor.h"
 
 extern std::istream* input;
-extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity
 
 int no_lex_Errors = 0;
 int no_par_Errors = 0;
@@ -32,6 +31,25 @@ initFrontEnd(std::string Str)
     std::cout << "-----------------------------------------------\n";
     std::cout << "code generated for " << tmp_Str << "\n";
     std::cout << "-----------------------------------------------\n";
+
+    std::vector<std::string> labels;
+    IR_Line* line_1 = new SSA_Entry(token(tok_plus), "t1", "a", "4", "Env1", labels);
+    std::string label("L1");
+    labels.push_back(label);
+    IR_Line* line_2 = new SSA_Entry(token(tok_le), "t2", "t1", "b", "Env1", labels);
+    label = "L2";
+    labels.push_back(label);
+    IR_Line* line_3 = new SSA_Entry(token(tok_div), "t3", "t1", "t2", "Env1", labels);
+
+    insertLine(line_1);
+    insertLine(line_2);
+    insertLine(line_3);
+    printIR_List();
+
+    delete line_1;
+    delete line_2;
+    delete line_3;
+
 }
 
 void // change to a list type ***TO DO***
@@ -59,7 +77,7 @@ startParse(void)
     getNextToken();
     while (*input){
 	try{
-	    pFirst_Node = parseExpr(0);
+	    parseExpr(0);
 	}
 	catch(Lexer_Error& m){
 	    m.print();

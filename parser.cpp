@@ -17,6 +17,7 @@
 #include "tables.h"
 
 token next_Token;
+Node_AST* pFirst_Node;
 
 token
 getNextToken(void) { return (next_Token = getTok()); }
@@ -138,8 +139,6 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
 	std::cout << "current token (1) = " << next_Token.Lex() << "\n";
-	if ( (1 < logOp_Tot) )
-	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
 
 	if ( (prec_2 < prec_1) )
 	    return LHS;
@@ -152,8 +151,6 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	int prec_3 = opPriority(next_Token.Tok());
 	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
-	if ( (1 < logOp_Tot) )
-	    throw(Primary_Error(next_Token.Lex(), err_Msg2));
 
 	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
 	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
@@ -177,15 +174,19 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
 	case tok_log_or: 
+	    if ( (1 < ++logOp_Tot) )
+		throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new OrExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_and:
+	    if ( (1 < ++logOp_Tot) )
+		throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new AndExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_eq: case tok_log_ne: case tok_lt:
 	case tok_le: case tok_gt: case tok_ge:
 	    if ( (1 < ++logOp_Tot) )
-		throw(Primary_Error(next_Token.Lex(), err_Msg2));
+		throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
 	default:
