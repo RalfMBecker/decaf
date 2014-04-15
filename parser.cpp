@@ -174,13 +174,9 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
 	case tok_log_or: 
-	    if ( (1 < ++logOp_Tot) )
-		throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new OrExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_and:
-	    if ( (1 < ++logOp_Tot) )
-		throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new AndExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_eq: case tok_log_ne: case tok_lt:

@@ -2,10 +2,9 @@
 * main.cpp - program entry point
 *
 * Conventions:
-#include "astVisitorFactory.h"
 *
 * Include order: lexer.h, ast.h, error.h, tables.h, parser.h, 
-*                IR.h, Visitor.h, driver.h
+*                ir.h, visitor.h, driver.h
 *                We favor selective forward declaration instead of
 *                including the entire header where possible (e.g.,
 *                we only use 'pointer to type')
@@ -27,7 +26,7 @@
 
 // forward declaration
 void errExit(int pError, const char* msg, ...);
-
+//
 std::istream* input;
 
 int
@@ -42,7 +41,7 @@ main(int argc, char* argv[])
     case 2: 
 	input = new std::ifstream(argv[1]);
 	if ( !(input->good()) )
-	    errExit(0, "can't open file <%s>", argv[1]);
+	    errExit(1, "can't open file <%s>", argv[1]);
 	name_Str = argv[1];
 	break;
     default:

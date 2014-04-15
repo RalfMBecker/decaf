@@ -69,10 +69,14 @@ SSA_Entry(token Op, std::string Target, std::string LHS, std::string RHS,
 	tmp_Stream << ":";
 	tmp_Stream.width(SSA);
 	tmp_Stream << target_;
-	tmp_Stream << ",";
+	tmp_Stream << ":";
 	tmp_Stream.width(SSA);
 	tmp_Stream << lHS_;
-	tmp_Stream << ",";
+	if ( ("" != rHS_) )
+	    tmp_Stream << ",";
+	else
+
+	    tmp_Stream << " ";
 	tmp_Stream.width(SSA);
 	tmp_Stream << rHS_;
 

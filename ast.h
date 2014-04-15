@@ -1,10 +1,6 @@
 /********************************************************************
 * ast.h - AST for Decaf
 *
-* Note: I am not entirely sure why accept() members which should be
-*       default inherited from Node_AST's need to be explicitly 
-*       implemented in classes that do not change the Node_AST default
-*
 ********************************************************************/
 
 #ifndef AST_H_
@@ -149,7 +145,7 @@ Expr_AST(token Type=token(), token OpTor=token(),
 	    return -1;
     }
 
-    // for use in its array grand-child
+    // for use in classes
     virtual void forceWidth(int w) { typeW_ = w; }
 	
     token Type(void) const { return type_; }
