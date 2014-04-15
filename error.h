@@ -23,7 +23,7 @@ const int MAX_TEXT = 32;
 extern int no_lex_Errors;
 extern int no_par_Errors;
 
-void errExit(int pError, const char* msg, ...);
+void errExit(int pError, const char* format, ...);
 
 class Error{
 public:
@@ -38,10 +38,32 @@ private:
     int col_;
 };
 
-class Primary_Error: public Error{
+class Semantic_Error: public Error{
+public:
+    ~Semantic_Error() {}
+};
+
+class Redefine_Error: public Semantic_Error{
+public:
+    Redefine_Error(std::string Name)
+	: Semantic_Error(), name_(Name)
+    {
+	no_par_Errors++;
+    }
+
+    virtual void print() const
+    {
+	std::cerr << "attempting to redefine " << name_ << "\n";
+    }
+
+private:
+    std::string name_;
+};
+
+class Primary_Error: public Semantic_Error{
 public: // in current setting, have no AST object to throw
 Primary_Error(std::string token_Str, std::string comment_Str) 
-    : Error(), str1_(token_Str), str2_(comment_Str)
+    : Semantic_Error(), str1_(token_Str), str2_(comment_Str)
     {
 	no_par_Errors++;
     }
@@ -59,10 +81,10 @@ private:
     std::string str2_;
 };
 
-class Punct_Error: public Error{
+class Punct_Error: public Semantic_Error{
 public:
 Punct_Error(char c, int What)
-    : punct_(c), what_(What)
+    : Semantic_Error(), punct_(c), what_(What)
     {
 	if ( (0!= what_) && (1!= what_) )
 	    errExit(0, "invalid arg of Punct_Error (%d)\n", what_); 

@@ -26,7 +26,7 @@
 
 // forward declaration
 void errExit(int pError, const char* msg, ...);
-//
+
 std::istream* input;
 
 int

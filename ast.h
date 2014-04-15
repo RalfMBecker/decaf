@@ -34,10 +34,14 @@ class OrExpr_AST;
 class AndExpr_AST;
 class RelExpr_AST;
 class NotExpr_AST;
+class Stmt_AST;
+class StmtLst_AST;
+class Decl_AST;
 
 class AST_Visitor{
 public: 
     virtual void visit(Node_AST*) = 0;
+
     virtual void visit(Expr_AST*) = 0;
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
@@ -52,6 +56,9 @@ public:
     virtual void visit(AndExpr_AST*) = 0;
     virtual void visit(RelExpr_AST*) = 0;
     virtual void visit(NotExpr_AST*) = 0;
+
+    virtual void visit(Stmt_AST*) = 0;
+    virtual void visit(Decl_AST*) = 0;
 
     ~AST_Visitor();
 };
@@ -107,15 +114,59 @@ protected:
 };
 
 /***************************************
+* Statement base classes
+***************************************/
+
+class Stmt_AST: public Node_AST{
+public:
+    Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
+	: Node_AST(LC, RC) 
+    {
+	std::cout << "created a Stmt_AST\n";
+    }
+ 
+    ~Stmt_AST() {} // **TO DO: what can be meaningfully added?
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+class StmtLst_AST: public Stmt_AST{ // ******TO DO: track - needed?*****
+public:
+StmtLst_AST(Node_AST* LHS, Node_AST* RHS)
+    : Stmt_AST(LHS, RHS)
+    {
+	std::cout << "created a StmtLst_AST\n";
+    }
+
+    ~StmtLst_AST() {} 
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+/***************************************
 * Expression parent class
 ***************************************/
 
 // arithmetic, logical, basic, and access (array) types
-class Expr_AST: public Node_AST{ // ***TO DO: link properly when ready
+class Expr_AST: public Stmt_AST{ // ***TO DO: link properly when ready
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
-    : Node_AST(lc, rc), type_(Type), op_(OpTor)
+    : Stmt_AST(lc, rc), type_(Type), op_(OpTor)
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -235,7 +286,6 @@ IntExpr_AST(token Op)
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
 };
 
 class FltExpr_AST: public Expr_AST{
@@ -248,7 +298,6 @@ FltExpr_AST(token Op)
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
 };
 
 // ******TO DO: STRING (etc.)********************
@@ -322,9 +371,7 @@ UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 };
-
 
 /***************************************
 * Expression Logical children
@@ -349,7 +396,6 @@ LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 };
 
 // implement ||
@@ -392,7 +438,6 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 };
 
 // implement <, <=, >, >=, ==, !=
@@ -431,7 +476,30 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
+};
 
+/***************************************
+* Non-logical or procedural statments
+***************************************/
+
+// ***To DO:  give array declarations their own class (?)***
+class Decl_AST: public Stmt_AST{
+public:
+    Decl_AST(IdExpr_AST* Id, Expr_AST* Expr)
+	: Stmt_AST(Id, Expr)
+    {
+	setAddr(Id->Op().Lex());
+	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n"; 
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
 };
 
 #endif

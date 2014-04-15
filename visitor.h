@@ -149,6 +149,25 @@ public:
 	return tmp_Stream.str();
     }
 
+    // Statements begin
+
+    void visit(Stmt_AST* V) { return; } 
+    void visit(StmtLst_AST* V) { return; }
+    void visit(Decl_AST* V)
+    {
+	if ( (0 != V->RChild()) ){
+	    std::string target = V->LChild()->Addr();
+	    V->setAddr(target);
+
+	    token Op = token(tok_eq);
+	    std::string LHS = V->RChild()->Addr();
+	    std::string Frame = V->getEnv()->getTableName();
+
+	    IR_Line* line = new SSA_Entry(Op, target, LHS, "", Frame);
+	    insertLine(line);
+	}
+    }
+
 private:
 static int count_;
 static int line_;

@@ -161,7 +161,7 @@ addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
     return 0;
 }
 
-Expr_AST*
+Expr_AST* 
 findNameInHierarchy(Env* p, std::string Name)
 {
     while ( (root_Env != p) ){

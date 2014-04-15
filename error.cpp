@@ -18,7 +18,6 @@ const int MAX_MSG = 96;
 #ifdef __GNUC__
 __attribute__ ((__noreturn__)) // in case of being called from
 #endif                        // non-void function
-
 void
 errExit(int pError, const char* format, ...)
 {
