@@ -34,9 +34,11 @@ class OrExpr_AST;
 class AndExpr_AST;
 class RelExpr_AST;
 class NotExpr_AST;
+
 class Stmt_AST;
 class StmtLst_AST;
 class Decl_AST;
+class Assign_AST;
 
 class AST_Visitor{
 public: 
@@ -58,7 +60,9 @@ public:
     virtual void visit(NotExpr_AST*) = 0;
 
     virtual void visit(Stmt_AST*) = 0;
+    virtual void visit(StmtLst_AST*) = 0;
     virtual void visit(Decl_AST*) = 0;
+    virtual void visit(Assign_AST*) = 0;
 
     ~AST_Visitor();
 };
@@ -137,10 +141,10 @@ public:
     }
 };
 
-class StmtLst_AST: public Stmt_AST{ // ******TO DO: track - needed?*****
+class StmtLst_AST: public Node_AST{
 public:
-StmtLst_AST(Node_AST* LHS, Node_AST* RHS)
-    : Stmt_AST(LHS, RHS)
+StmtLst_AST(Stmt_AST* LHS, Stmt_AST* RHS)
+    : Node_AST(LHS, RHS)
     {
 	std::cout << "created a StmtLst_AST\n";
     }
@@ -162,7 +166,7 @@ StmtLst_AST(Node_AST* LHS, Node_AST* RHS)
 ***************************************/
 
 // arithmetic, logical, basic, and access (array) types
-class Expr_AST: public Stmt_AST{ // ***TO DO: link properly when ready
+class Expr_AST: public Stmt_AST{
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
@@ -479,7 +483,7 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 };
 
 /***************************************
-* Non-logical or procedural statments
+* Non-logical or procedural statements
 ***************************************/
 
 // ***To DO:  give array declarations their own class (?)***
@@ -490,6 +494,26 @@ public:
     {
 	setAddr(Id->Op().Lex());
 	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n"; 
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+// ***To DO:  give array declarations their own class (?)***
+class Assign_AST: public Stmt_AST{
+public:
+    Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
+	: Stmt_AST(Id, Expr)
+    {
+	setAddr(Id->Op().Lex());
+	std::cout << "\tcreated Assign_AST with addr = " << addr_ << "\n"; 
     }
 
     virtual void accept(AST_Visitor* Visitor)

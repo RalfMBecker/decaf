@@ -153,6 +153,7 @@ public:
 
     void visit(Stmt_AST* V) { return; } 
     void visit(StmtLst_AST* V) { return; }
+
     void visit(Decl_AST* V)
     {
 	if ( (0 != V->RChild()) ){
@@ -167,6 +168,8 @@ public:
 	    insertLine(line);
 	}
     }
+
+    void visit(Assign_AST* V) { return; }
 
 private:
 static int count_;

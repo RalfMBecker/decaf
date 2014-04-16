@@ -224,7 +224,6 @@ parseParensExpr(void)
     return E;
 }
 
-// ***TO DO: how to best hand off calculated value?
 // Primary -> id | intVal | fltVal | (expr) | -expr
 Expr_AST*
 parsePrimaryExpr(void)
@@ -258,12 +257,11 @@ parseVarDecl(token Type)
     // access error
     if ( !(tok_ID == next_Token.Tok()) )
 	throw (Primary_Error(next_Token.Lex(), "expected primary Identifier"));
-    if ( (0 == findNameInHierarchy(top_Env, next_Token.Lex())) )
+    if ( (0 != findNameInHierarchy(top_Env, next_Token.Lex())) )
 	throw(Redefine_Error(next_Token.Lex()));
 
     // handle arrays
     token op_Token = next_Token;
-    getNextToken();
     if ( (0 == match(1, tok_sqopen, 0)) )
 	; // ****TO DO: this can catch arrays****
 
@@ -271,7 +269,6 @@ parseVarDecl(token Type)
     Expr_AST* RHS;
     switch(next_Token.Tok()){
     case tok_eq: 
-	getNextToken();
 	new_Id = new IdExpr_AST(Type, op_Token);
 	top_Env->insertName(op_Token.Lex(), new_Id);
 	RHS = dispatchExpr(); 
@@ -279,7 +276,6 @@ parseVarDecl(token Type)
 	    throw(Primary_Error(op_Token.Lex(), "invalid initialization"));
 	break;
     case tok_semi:
-	getNextToken();
 	new_Id = new IdExpr_AST(Type, op_Token);
 	top_Env->insertName(op_Token.Lex(), new_Id);
 	RHS = 0;
@@ -288,20 +284,20 @@ parseVarDecl(token Type)
 	throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
     }
 
+    if ( (new_Id->Type().Tok() != RHS->Type().Tok()) )
+	RHS = parseCoercion(RHS, new_Id->Type().Tok());
     Decl_AST* ret = new Decl_AST(new_Id, RHS);
-    getNextToken();
     return ret;
 }
 
-
-// stmtLst -> { [varDecl | stmt]* }
-// ***TO DO: VERY preliminary (among others, needs re-thinking of errors)***
-// as set up, just to test one { ... } block
+// stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
+// stmt    -> [ varDecl | expr | if-stmt | while-stmt ]*
+// ***TO DO: VERY preliminary ***
 void
 parseStmtLst(void)
 {
     match(1, tok_paropen, 1);
-    top_Env = addEnv(top_Env); // ***TO DO: REMOVE. Better elsewhere.
+    top_Env = addEnv(top_Env);
 
     while ( (tok_eof != next_Token.Tok()) ){
 
