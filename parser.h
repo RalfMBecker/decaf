@@ -15,5 +15,6 @@ extern token next_Token;
 token getNextToken(void);
 
 Expr_AST* parseExpr(int Infix);
+Block_AST* parseBlock(void);
 
 #endif

@@ -158,7 +158,7 @@ public:
     {
 	if ( (0 != V->RChild()) ){
 	    std::string target = V->LChild()->Addr();
-	    V->setAddr(target);
+	    V->setAddr(target); // **TO DO: [debug]
 
 	    token Op = token(tok_eq);
 	    std::string LHS = V->RChild()->Addr();
@@ -169,7 +169,18 @@ public:
 	}
     }
 
-    void visit(Assign_AST* V) { return; }
+    void visit(Assign_AST* V)
+    {
+	std::string target = V->LChild()->Addr();
+	// **TO DO: [debug] monitor addr
+
+	token Op = token(tok_eq);
+	std::string LHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, "", Frame);
+	insertLine(line);
+    }
 
 private:
 static int count_;

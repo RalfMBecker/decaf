@@ -60,7 +60,8 @@ startParse(void)
     getNextToken();
     while (*input){
 	try{
-	    pFirst_Node = parseExpr(0);
+//	    pFirst_Node = parseExpr(0);
+	    pFirst_Node = parseBlock();
 	    pFirst_Node->accept(new MakeIR_Visitor);
 	    printIR_List();
 	}

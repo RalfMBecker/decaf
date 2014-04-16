@@ -238,7 +238,6 @@ parsePrimaryExpr(void)
     case ';': // **TO DO: should not find a ';' (empty expr) - error? ret 0;
 	getNextToken();  // ';' will be handled at a higher level.
 	std::cout << "\n";
-//	return 0;
 	return parseExpr(0);
     case '(': return parseParensExpr(); 
     case '!': 
@@ -299,50 +298,39 @@ parseVarDecl(token Type)
 }
 
 // assign -> idExpr = Expr;
-// invariant: - upon entry, already checked that LHS has been defined
-//            - guarantees that ';' terminates
+// invariant: - guarantees that ';' terminates
 //            - exiting, next_Token points to token after ';'
 Assign_AST* 
-parseAssign(Expr_AST* LHS)
+parseAssign(void)
 {
-    // access error
-//    if ( (0 == findNameInHierarchy(top_Env, LHS->Addr())) )
-//	throw(VarAccess_Error(next_Token.Lex(), 0));
-/*
-    // handle arrays
-    token op_Token = next_Token;
-    if ( (0 == match(1, tok_sqopen, 0)) )
-	; // ****TO DO: this can catch arrays****
-
-    IdExpr_AST* new_Id;
+    // access error (**TO DO: should handle arrays in fct call)
+    Expr_AST* LHS = parseIdExpr(next_Token.Lex());
     Expr_AST* RHS;
+
     switch(next_Token.Tok()){
-    case tok_eq: 
-	new_Id = new IdExpr_AST(Type, op_Token);
-	top_Env->insertName(op_Token.Lex(), new_Id);
-	RHS = dispatchExpr(); 
+    case ';': 
+	RHS = 0;
+	break;
+    case '=':
+	RHS = dispatchExpr();
 	if ( (0 == RHS) )
-	    throw(Primary_Error(op_Token.Lex(), "invalid initialization"));
+	    throw(Primary_Error(next_Token.Lex(), "invalid assignment"));
 	if ( (-1 == match(0, tok_semi, 0)) )
 	    throw(Punct_Error(';', 0));
 	break;
-    case tok_semi:
-	new_Id = new IdExpr_AST(Type, op_Token);
-	top_Env->insertName(op_Token.Lex(), new_Id);
-	RHS = 0;
+    default:
+	throw(Primary_Error(next_Token.Lex(), "= or ; expected"));
 	break;
-    default: 
-	throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
     }
 
-    if ( (new_Id->Type().Tok() != RHS->Type().Tok()) )
-	RHS = parseCoercion(RHS, new_Id->Type().Tok());
-    VarDecl_AST* ret = new VarDecl_AST(new_Id, RHS);
+    if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
+	RHS = parseCoercion(RHS, LHS->Type().Tok());
+    if ( !(dynamic_cast<IdExpr_AST*>(LHS)) )
+	errExit(0, "logical flaw in use of function parseAssign");
+    Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
     getNextToken();
-    return ret;
-*/
-    return 0;
 
+    return ret;
 }
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
@@ -354,21 +342,22 @@ Stmt_AST*
 parseStmt(void)
 {
     token t = next_Token;
+    Stmt_AST* ret;
     switch(t.Tok()){
-    case tok_int:
+    case tok_int: // should point after int
 	getNextToken();
-	return parseVarDecl(token(tok_int));
-    case tok_double:
+	ret = parseVarDecl(token(tok_int));
+    case tok_double: // should point after double
 	getNextToken();
-	return parseVarDecl(token(tok_double));
-    case tok_ID:
-	getNextToken();
-	return parseAssign(parseIdExpr(t.Lex()));
+	ret = parseVarDecl(token(tok_double));
+    case tok_ID: // should point AT ID
+	ret = parseAssign();
     default: // for now, disallow empty expr (like '4+5;')
 	throw(Primary_Error(t.Lex(), "not allowed in context"));
 	break; // not really a 'Primary_Error', but it's a catch-all
     }
-    return 0; // to suppress gcc warning
+
+    return ret;
 }
 
 Block_AST* parseBlockCtd(Block_AST*);
@@ -417,6 +406,7 @@ parseBlockCtd(Block_AST* LHS)
 	    RHS = parseStmt();
 	    if (!RHS) // might be off reporting ** TO DO: debug
 		throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    break;
 	default:
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
