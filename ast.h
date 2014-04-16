@@ -36,8 +36,8 @@ class RelExpr_AST;
 class NotExpr_AST;
 
 class Stmt_AST;
-class StmtLst_AST;
-class Decl_AST;
+class Block_AST;
+class VarDecl_AST;
 class Assign_AST;
 
 class AST_Visitor{
@@ -60,8 +60,8 @@ public:
     virtual void visit(NotExpr_AST*) = 0;
 
     virtual void visit(Stmt_AST*) = 0;
-    virtual void visit(StmtLst_AST*) = 0;
-    virtual void visit(Decl_AST*) = 0;
+    virtual void visit(Block_AST*) = 0;
+    virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
 
     ~AST_Visitor();
@@ -120,16 +120,15 @@ protected:
 /***************************************
 * Statement base classes
 ***************************************/
-
-class Stmt_AST: public Node_AST{
+class Block_AST: public Node_AST{
 public:
-    Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
-	: Node_AST(LC, RC) 
+Block_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
+    : Node_AST(LHS, RHS)
     {
-	std::cout << "created a Stmt_AST\n";
+	std::cout << "created a Block_AST\n";
     }
- 
-    ~Stmt_AST() {} // **TO DO: what can be meaningfully added?
+
+    ~Block_AST() {} 
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -141,15 +140,15 @@ public:
     }
 };
 
-class StmtLst_AST: public Node_AST{
+class Stmt_AST: public Block_AST{
 public:
-StmtLst_AST(Stmt_AST* LHS, Stmt_AST* RHS)
-    : Node_AST(LHS, RHS)
+    Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
+	: Block_AST(LC, RC) 
     {
-	std::cout << "created a StmtLst_AST\n";
+	std::cout << "created a Stmt_AST\n";
     }
-
-    ~StmtLst_AST() {} 
+ 
+    ~Stmt_AST() {}
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -420,7 +419,6 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 };
 
 // implement && (as, in ultimate code generation, we short-circuit, it 
@@ -487,9 +485,9 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 ***************************************/
 
 // ***To DO:  give array declarations their own class (?)***
-class Decl_AST: public Stmt_AST{
+class VarDecl_AST: public Stmt_AST{
 public:
-    Decl_AST(IdExpr_AST* Id, Expr_AST* Expr)
+    VarDecl_AST(IdExpr_AST* Id, Expr_AST* Expr)
 	: Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());

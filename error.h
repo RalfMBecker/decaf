@@ -43,21 +43,34 @@ public:
     ~Semantic_Error() {}
 };
 
-class Redefine_Error: public Semantic_Error{
+// Type: 0 - not defined; 1 - attempt to redefine
+class VarAccess_Error: public Semantic_Error{
 public:
-    Redefine_Error(std::string Name)
-	: Semantic_Error(), name_(Name)
+VarAccess_Error(std::string Name, int Type)
+    : Semantic_Error(), name_(Name), type_(Type)
     {
 	no_par_Errors++;
     }
 
     virtual void print() const
     {
-	std::cerr << "attempting to redefine " << name_ << "\n";
+	Error::print();
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "attempt to ";
+	if ( (0 == type_) )
+	    tmp_Stream << "access undefined ";
+	else if ( (1 == type_) )
+	    tmp_Stream << "redefine already defined ";
+	else
+	    errExit(0, "illegal use of VarAccess_Error");
+	tmp_Stream << "variable (" << name_ << ")\n";
+
+	std::cerr << tmp_Stream.str();
     }
 
 private:
     std::string name_;
+	int type_;
 };
 
 class Primary_Error: public Semantic_Error{

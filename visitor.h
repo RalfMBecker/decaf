@@ -152,9 +152,9 @@ public:
     // Statements begin
 
     void visit(Stmt_AST* V) { return; } 
-    void visit(StmtLst_AST* V) { return; }
+    void visit(Block_AST* V) { return; }
 
-    void visit(Decl_AST* V)
+    void visit(VarDecl_AST* V)
     {
 	if ( (0 != V->RChild()) ){
 	    std::string target = V->LChild()->Addr();

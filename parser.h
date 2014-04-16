@@ -14,12 +14,6 @@ extern Node_AST* pFirst_Node;
 extern token next_Token;
 token getNextToken(void);
 
-Expr_AST* parseIntExpr(void);
-Expr_AST* parseFltExpr(void);
-Expr_AST* parseIdExpr(std::string name);
-Expr_AST* parsePrimaryExpr(void);
-Expr_AST* parseParensExpr(void);
 Expr_AST* parseExpr(int Infix);
-Expr_AST* parseBlock(void);
 
 #endif
