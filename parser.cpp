@@ -256,16 +256,26 @@ parsePrimaryExpr(void)
 
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
-// invariant: - guarantees that ';' terminates
-//            - exiting, next_Token points to token after ';'
+// Shadowing: allowed
+// invariant: - exiting, guarantees that ';' terminates
+//            - entering, points at Id
+// Note: if we allow for objects of type 'int a;' to be entered into the
+//       AST, then it is hard to split a declaration cum assignment
+//       into a more elegant sequence 'VarDecl_AST* Assign_AST*' of objects
+//       (-> expected RVs of parse fcts). So we handle both types here.
 VarDecl_AST* 
 parseVarDecl(token Type)
 {
     std::cout << "parsing a var declaration...\n";
-    // access error
-    if ( !(tok_ID == next_Token.Tok()) )
+    // access error (allow for shadowing)
+    if ( (tok_ID != next_Token.Tok()) )
 	throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
-    if ( (0 != findNameInHierarchy(top_Env, next_Token.Lex())) )
+    Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
+
+    std::cout << "prior_Env = " << prior_Env << ", top_Env = " << top_Env << "\n";
+
+
+    if ( (prior_Env == top_Env) )
 	throw(VarAccess_Error(next_Token.Lex(), 1));
 
     // handle arrays
@@ -273,16 +283,18 @@ parseVarDecl(token Type)
     if ( (0 == match(1, tok_sqopen, 0)) )
 	; // ****TO DO: this can catch arrays****
 
+    // declare new Id object even if we later see a syntax error (this is fine)
     IdExpr_AST* new_Id;
-    Expr_AST* RHS;
+    new_Id = new IdExpr_AST(Type, op_Token);
     int err_Code;
     const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
+    // **TO DO: monitor if also for heap***
+    if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
+	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
+
+    Expr_AST* RHS;
     switch(next_Token.Tok()){
     case tok_eq: 
-	new_Id = new IdExpr_AST(Type, op_Token);
-	// **TO DO: monitor if also for heap***
-	if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
-	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 	getNextToken();
 	RHS = dispatchExpr(); 
 	if ( (0 == RHS) )
@@ -291,10 +303,6 @@ parseVarDecl(token Type)
 	    throw(Punct_Error(';', 0));
 	break;
     case tok_semi:
-	new_Id = new IdExpr_AST(Type, op_Token);
-	// **TO DO: monitor if also for heap***
-	if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
-	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 	RHS = 0;
 	break;
     default: 
@@ -312,17 +320,19 @@ parseVarDecl(token Type)
 
 // assign -> idExpr [= Expr; | ; ] 
 // invariant: - upon exit, guarantees that ';' terminates
-//            - upon entry, points at =/;
+//            - upon entry, points at id
 Assign_AST* 
 parseAssign(void)
 {
     std::cout << "parsing a assignment...\n";
-    // access error (**TO DO: should handle arrays in fct call)
+
+    // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
     if ( (0 == LHS) )
 	throw(VarAccess_Error(next_Token.Lex(), 0));
-    Expr_AST* RHS;
+    // **TO DO: allow for array access too
 
+    Expr_AST* RHS;
     switch(next_Token.Tok()){
     case ';': 
 	RHS = 0;
@@ -371,8 +381,7 @@ parseStmt(void)
 	getNextToken();
 	ret = parseVarDecl(token(tok_double));
 	break;
-    case tok_ID: // **TO DO: allow for array access too
-	getNextToken();
+    case tok_ID: 
 	ret = parseAssign();
 	break;
     default: // for now, disallow empty expr (like '4+5;')
@@ -400,6 +409,9 @@ parseBlock(void)
 	throw(Primary_Error(next_Token.Lex(), "Expected statement"));
     
     if ( (tok_parclosed == next_Token.Tok()) ){
+	if ( ('}' == next_Token.Tok()) )
+	    std::cout << "\t\t\t\tfound a closing '}' - end of Block\n";
+
 	top_Env = top_Env->getPrior();
 	getNextToken();
 	return new Block_AST(LHS, 0);
@@ -420,6 +432,7 @@ parseBlockCtd(Block_AST* LHS)
     case '{': // recall: adding new frame handled in top-level parseExpr()
 	getNextToken();
 	RHS = parseBlock();
+	top_Env = top_Env->getPrior();
 	break;
     case tok_int: // stmt cases (for safer dispatch, check here as well) 
     case tok_double:
@@ -433,17 +446,20 @@ parseBlockCtd(Block_AST* LHS)
 	break;
     }
 
+    if ( ('}' == next_Token.Tok()) )
+	std::cout << "\t\t\t\tfound a closing '}' - end of Ctd\n";
     if ( ('}' != next_Token.Tok()) ){
 	RHS = parseBlockCtd(RHS); // keep attaching as RChildren 
 	if (!RHS)
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
     }
-    else
-	;//	top_Env = top_Env->getPrior();
-
-    return (LHS = new Block_AST(LHS, RHS)); // this overwrites as follows:
+    else{
+       	top_Env = top_Env->getPrior();
+	return (LHS = new Block_AST(LHS, RHS)); 
+    } // this overwrites as follows:
     // before call of this fct                     after
     //      LHS_b                               LHS_a
     //                                       LHS_b   RHS (compound)
+    return 0;
 }
 

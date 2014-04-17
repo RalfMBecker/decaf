@@ -150,9 +150,8 @@ public:
     void visit(VarDecl_AST* V)
     {
 	std::string target = V->LChild()->Addr();
-//	V->setAddr(target); // **TO DO: [debug]
 
-	token Op = token(tok_eq);
+	token Op = token(tok_dec);
 	std::string LHS = "";
 	if ( (0 != V->RChild()) )
 	    std::string LHS = V->RChild()->Addr();

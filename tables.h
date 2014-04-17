@@ -45,6 +45,7 @@ Env* addEnv(Env*);
 int addIdToEnv(Env* pEnv, IdExpr_AST* new_Object, std::string MemType);
 Expr_AST* findIdInHierarchy(Env* p, IdExpr_AST* Id);
 Expr_AST* findNameInHierarchy(Env* p, std::string Name);
+Env* findFrameInHierarchy(Env* p, std::string Name);
 void printEnvAncestorInfo(Env*);
 
 // runtime globals

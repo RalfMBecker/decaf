@@ -94,6 +94,7 @@ private:
     std::string str2_;
 };
 
+// What - 0: missing; 1: spare
 class Punct_Error: public Semantic_Error{
 public:
 Punct_Error(char c, int What)

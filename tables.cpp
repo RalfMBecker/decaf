@@ -161,15 +161,19 @@ addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
     return 0;
 }
 
-Expr_AST* 
+Expr_AST*
 findNameInHierarchy(Env* p, std::string Name)
 {
     while ( (root_Env != p) ){
+	if ( (0 == p->findName(Name)) )
+	    return p->readName(Name);
+/*
 	std::map<std::string, Expr_AST*>::const_iterator iter; 
 	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
 	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
 	    if ( (Name == iter->first) )
 		return iter->second;
+*/
 	p = p->getPrior();
     }
     return 0;
@@ -180,6 +184,25 @@ findIdInHierarchy(Env* p, IdExpr_AST* Id)
 {
     std::string name_Str(Id->Addr());
     return findNameInHierarchy(p, name_Str);
+}
+
+Env*
+findFrameInHierarchy(Env* p, std::string Name)
+{
+    while ( (root_Env != p) ){
+	if ( (0 == p->findName(Name)) )
+	    return p;
+/*
+	std::map<std::string, Expr_AST*>::const_iterator iter; 
+	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
+	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
+	    if ( (Name == iter->first) )
+		return p;
+	p = p->getPrior();
+*/  
+	p = p->getPrior();
+    }
+    return 0;
 }
 
 // debugging functions
