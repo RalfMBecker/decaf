@@ -393,6 +393,7 @@ parseStmt(void)
 }
 
 Block_AST* parseBlockCtd(Block_AST*);
+int frame_Depth = 0;
 
 // stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
 // invariants -> entering, presence of enclosing '{' already checked
@@ -409,17 +410,62 @@ parseBlock(void)
 	throw(Primary_Error(next_Token.Lex(), "Expected statement"));
     
     if ( (tok_parclosed == next_Token.Tok()) ){
-	if ( ('}' == next_Token.Tok()) )
-	    std::cout << "\t\t\t\tfound a closing '}' - end of Block\n";
+
+	std::cout << "\t\t\t\tfound a closing '}' - end of Block\n";
 
 	top_Env = top_Env->getPrior();
 	getNextToken();
 	return new Block_AST(LHS, 0);
     }
 
+    frame_Depth++; // if we come here, it's more than 1 stmt
     return parseBlockCtd(LHS);
 }
 
+// for logic, compare parseInfixExpr() - similar, only always keep going
+// right as long as legal context on right
+// invariant: - upon entry, we point onto the first token of the next stmt
+Block_AST*
+parseBlockCtd(Block_AST* LHS)
+{
+    std::cout << "entering parseBlockCtd...\n";
+    std::string const err_Msg = "expected statement";
+    Block_AST* RHS;
+    while (frame_Depth){
+	switch(next_Token.Tok()){
+	case '{':
+	    frame_Depth++;	 
+	    top_Env = addEnv(top_Env);
+	    getNextToken();
+	    break;
+	case '}':
+	    frame_Depth--;
+	    top_Env = top_Env->getPrior();
+	    getNextToken();
+	    break;
+	case tok_int: // stmt cases (for safer dispatch, check here as well) 
+	case tok_double:
+	case tok_ID:
+	    RHS = parseStmt();
+	    if (!RHS)
+		throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    RHS = parseBlockCtd(RHS);
+	    break;
+	default:
+	    throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    break;
+	}
+
+	LHS = new Block_AST(LHS, RHS);
+	// before call of this fct                    after
+        //        LHS_b                               LHS_a
+        //                                         LHS_b   RHS (compound)
+    }
+    return 0; // to suppress gcc warning
+}
+
+
+/*
 // for logic, compare parseInfixExpr() - similar, only always keep going
 // right as long as legal context on right
 Block_AST*
@@ -457,9 +503,10 @@ parseBlockCtd(Block_AST* LHS)
        	top_Env = top_Env->getPrior();
 	return (LHS = new Block_AST(LHS, RHS)); 
     } // this overwrites as follows:
-    // before call of this fct                     after
+    // before call of this fct                  after
     //      LHS_b                               LHS_a
     //                                       LHS_b   RHS (compound)
     return 0;
 }
 
+*/
