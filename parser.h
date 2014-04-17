@@ -16,5 +16,6 @@ token getNextToken(void);
 
 Expr_AST* parseExpr(int Infix);
 Block_AST* parseBlock(void);
+int match(int, tokenType, int);
 
 #endif

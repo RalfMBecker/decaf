@@ -142,13 +142,6 @@ public:
 	insertLine(new SSA_Entry(Op, target, LHS, "", Frame));
     }
 
-    std::string makeTmp(void)
-    {
-	std::ostringstream tmp_Stream;
-	tmp_Stream << "t" << ++count_;
-	return tmp_Stream.str();
-    }
-
     // Statements begin
 
     void visit(Stmt_AST* V) { return; } 
@@ -171,6 +164,10 @@ public:
 
     void visit(Assign_AST* V)
     {
+	// empty assignment?
+	if ( (0 == V->RChild()) )
+	    return;
+
 	std::string target = V->LChild()->Addr();
 	// **TO DO: [debug] monitor addr
 
@@ -182,7 +179,21 @@ public:
 	insertLine(line);
     }
 
+    std::string makeTmp(void)
+    {
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "t" << ++count_Tmp_;
+	return tmp_Stream.str();
+    }
+
+    std::string makeLab(void)
+    {
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "L" << ++count_Lab_;
+	return tmp_Stream.str();
+    }
+
 private:
-static int count_;
-static int line_;
+static int count_Tmp_;
+static int count_Lab_;
 };

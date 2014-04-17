@@ -5,5 +5,5 @@
 
 #include "visitor.h"
 
-int MakeIR_Visitor::count_ = 0;
-int MakeIR_Visitor::line_ = 0;
+int MakeIR_Visitor::count_Tmp_ = 0;
+int MakeIR_Visitor::count_Lab_ = 0;

@@ -3,7 +3,7 @@
 *
 ********************************************************************/
 
-#include <cstdio>
+#include <cstdio> // include max. # of #include files to monitor dependencies
 #include <sstream>
 #include <cstdio>
 #include "lexer.h"
@@ -44,38 +44,41 @@ collectParts() // will collect parts (functions, classes, main,...)
 void // TO DO: update when ready
 startParse(void)
 {
-    top_Env = addEnv(top_Env);
-    IdExpr_AST* a = new IdExpr_AST(token(tok_int), token(tok_ID, "a"));
-    addIdToEnv(top_Env, a, "stack");
-    IdExpr_AST* b = new IdExpr_AST(token(tok_int), token(tok_ID, "b"));
-    addIdToEnv(top_Env, b, "stack");
-    IdExpr_AST* c = new IdExpr_AST(token(tok_int), token(tok_ID, "c"));
-    addIdToEnv(top_Env, c, "stack");
-
-    std::cout << "\n";
-    printEnvAncestorInfo(top_Env);
-    printSTInfo();
-    std::cout << "\n";
-
+    int is_Clean = 1;
     getNextToken();
     while (*input){
 	try{
-//	    pFirst_Node = parseExpr(0);
+	    if ( (1 == is_Clean) )
+		match(0, tok_paropen, 1);
+	    is_Clean = 1; // until next error
 	    pFirst_Node = parseBlock();
+
+	    std::cout << "\n";
+	    printEnvAncestorInfo(top_Env);
+	    printSTInfo();
+	    std::cout << "\n";
 	    pFirst_Node->accept(new MakeIR_Visitor);
 	    printIR_List();
 	}
-	catch(Lexer_Error& m){
-	    m.print();
+	catch(Lexer_Error& m){ // **TO DO: different error class treatment?**
+	    m.print();         // (call only Lexer/Semantic)
 	    panicModeFwd();
+	    is_Clean = 0;
 	}
 	catch(Primary_Error& m){
 	    m.print();
 	    panicModeFwd();
+	    is_Clean = 0;
 	}
 	catch(Punct_Error& m){
 	    m.print();
 	    panicModeFwd();
+	    is_Clean = 0;
+	}
+	catch(VarAccess_Error& m){
+	    m.print();
+	    panicModeFwd();
+	    is_Clean = 0;
 	}
     }
 

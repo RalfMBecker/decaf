@@ -39,6 +39,7 @@ match(int update_Prior, tokenType t, int update_Post)
 	return -1;
 }
 
+// int -> <integer value>
 Expr_AST*
 parseIntExpr(void)
 {
@@ -48,6 +49,7 @@ parseIntExpr(void)
     return res;
 }
 
+// double -> <double value>
 Expr_AST*
 parseFltExpr(void)
 {
@@ -59,6 +61,7 @@ parseFltExpr(void)
 
 // ******NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // *******************************************************
+// id -> alpha* [alphanum | _]*
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
 Expr_AST*
@@ -90,6 +93,7 @@ checkForCoercion(Expr_AST* LHS, Expr_AST* RHS)
 	return 2;
 }
 
+// cast (id, type) -> tmp
 Expr_AST*
 parseCoercion(Expr_AST* Expr, tokenType Type)
 {
@@ -101,7 +105,11 @@ Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseInfixRHS(int, Expr_AST*);
 int logOp_Tot = 0;
 
+// expr -> prim op expr | -expr | !expr | prim | epsilon
+// op -> +, -, *, /, %, ||, &&, op1
+// op1 -> ==, !=, <, <=, >, >= 
 // 0 - infix; 1 - arithm prefix (-); 2 - logical prefix (!)
+// logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
 Expr_AST* 
 parseExpr(int Infix)
 {
@@ -116,11 +124,10 @@ parseExpr(int Infix)
 	ptmp_AST = new UnaryArithmExpr_AST(token(tok_minus), LHS);
     else if ( (2 == Infix) )
 	ptmp_AST = new NotExpr_AST(token(tok_log_not), LHS);
-    if ( (0 == ptmp_AST) )
-	return parseInfixRHS(0, LHS); // don't impose any precedence on LHS
     else
-	return parseInfixRHS(0, ptmp_AST);
-    return 0; // to suppress gcc warning
+	ptmp_AST = LHS;
+
+    return parseInfixRHS(0, ptmp_AST);
 }
 
 Expr_AST* 
@@ -139,7 +146,7 @@ dispatchExpr(void)
 }
 
 // Dijkstra shunting algorithm
-// Example used in comments below: LHS + b * c - d
+// Example to illustrate variable usage: LHS + b * c - d
 //         First time through:            After recursing when prec_2 < prec_3
 //         prec_1: precedence of LHS      prec_2 + 1
 //         prec_2: precedence of '+'      precedence of '*' (changed role)
@@ -233,18 +240,14 @@ parsePrimaryExpr(void)
 {
     std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
     switch(next_Token.Tok()){
-    case tok_intV: return parseIntExpr();
-    case tok_doubleV: return parseFltExpr();
-    case ';': // **TO DO: should not find a ';' (empty expr) - error? ret 0;
-	getNextToken();  // ';' will be handled at a higher level.
-	std::cout << "\n";
-	return parseExpr(0);
-    case '(': return parseParensExpr(); 
-    case '!': 
-    case '-':
-	return dispatchExpr();
     case tok_ID: // coming here, ID has already been entered into ST
 	return parseIdExpr(next_Token.Lex());
+    case tok_intV: return parseIntExpr();
+    case tok_doubleV: return parseFltExpr();
+    case '(': return parseParensExpr(); 
+    case '-':
+    case '!': 
+	return dispatchExpr();
     default: 
 	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
 	break;
@@ -260,7 +263,7 @@ parseVarDecl(token Type)
 {
     // access error
     if ( !(tok_ID == next_Token.Tok()) )
-	throw (Primary_Error(next_Token.Lex(), "expected primary Identifier"));
+	throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
     if ( (0 != findNameInHierarchy(top_Env, next_Token.Lex())) )
 	throw(VarAccess_Error(next_Token.Lex(), 1));
 
@@ -297,9 +300,8 @@ parseVarDecl(token Type)
     return ret;
 }
 
-// assign -> idExpr = Expr;
+// assign -> idExpr [= Expr; | ; ] 
 // invariant: - guarantees that ';' terminates
-//            - exiting, next_Token points to token after ';'
 Assign_AST* 
 parseAssign(void)
 {
@@ -323,8 +325,10 @@ parseAssign(void)
 	break;
     }
 
-    if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
-	RHS = parseCoercion(RHS, LHS->Type().Tok());
+    if ( (0 != RHS) ){
+	if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
+	    RHS = parseCoercion(RHS, LHS->Type().Tok());
+    }
     if ( !(dynamic_cast<IdExpr_AST*>(LHS)) )
 	errExit(0, "logical flaw in use of function parseAssign");
     Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
@@ -335,7 +339,6 @@ parseAssign(void)
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
 // invariant -> leaving, guarantees a ';' has been found where needed;
-//              next_Token points to the next token to be processed
 //              entering, next_Token=first token of stmt, which is
 //              guaranteed to be not '{' or '}'
 Stmt_AST*
@@ -344,13 +347,13 @@ parseStmt(void)
     token t = next_Token;
     Stmt_AST* ret;
     switch(t.Tok()){
-    case tok_int: // should point after int
+    case tok_int:
 	getNextToken();
 	ret = parseVarDecl(token(tok_int));
-    case tok_double: // should point after double
+    case tok_double:
 	getNextToken();
 	ret = parseVarDecl(token(tok_double));
-    case tok_ID: // should point AT ID
+    case tok_ID:
 	ret = parseAssign();
     default: // for now, disallow empty expr (like '4+5;')
 	throw(Primary_Error(t.Lex(), "not allowed in context"));
@@ -363,12 +366,10 @@ parseStmt(void)
 Block_AST* parseBlockCtd(Block_AST*);
 
 // stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
-// invariants -> entering, should point to '{' **TO DO: relax? (allow e;)
+// invariants -> entering, presence of enclosing '{' already checked
 Block_AST*
 parseBlock(void)
 {
-    if ( (-1 == match(0, tok_paropen, 1)) )
-	throw(Punct_Error('{', 0));
     std::cout << "parsing a block...\n";
     if ( (-1 == match(0, tok_parclosed, 0)) ) // {} block
 	return new Block_AST(0, 0);
@@ -382,7 +383,7 @@ parseBlock(void)
 	getNextToken();
 	return new Block_AST(LHS, 0);
     }
-    return 0;
+
     return parseBlockCtd(LHS);
 }
 
@@ -392,19 +393,18 @@ Block_AST*
 parseBlockCtd(Block_AST* LHS)
 {
     std::cout << "entering parseBlockCtd...\n";
-    std::string const err_Msg = "Expected statement";
+    std::string const err_Msg = "expected statement";
     Block_AST* RHS;
-    while ( ('}' != next_Token.Tok()) ){
+    while ( (tok_eof != next_Token.Tok()) && ('}' != next_Token.Tok()) ){
 	switch(next_Token.Tok()){
-	case '{': 
-	    top_Env = addEnv(top_Env);
+	case '{': // recall: adding new frame handled in top-level parseExpr()
 	    RHS = parseBlock();
-		break;
-	case tok_int: // stmt cases - expand as needed 
-	case tok_double: // (could be skipped as checked in parseStmt()
+	    break;
+	case tok_int: // stmt cases (for safer dispatch, check here as well) 
+	case tok_double:
 	case tok_ID:
 	    RHS = parseStmt();
-	    if (!RHS) // might be off reporting ** TO DO: debug
+	    if (!RHS)
 		throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
 	default:
