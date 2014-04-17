@@ -125,7 +125,7 @@ public:
 Block_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
     : Node_AST(LHS, RHS)
     {
-	std::cout << "created a Block_AST\n";
+	std::cout << "\tcreated a Block_AST\n";
     }
 
     ~Block_AST() {} 
@@ -145,7 +145,7 @@ public:
     Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 	: Block_AST(LC, RC) 
     {
-	std::cout << "created a Stmt_AST\n";
+	std::cout << "\tcreated a Stmt_AST\n";
     }
  
     ~Stmt_AST() {}
@@ -491,11 +491,16 @@ public:
 	: Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n"; 
+	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n";
+	if (Expr != 0)
+	    std::cout << "\t\tinitializer = " << Expr->Addr() << "\n";
     }
 
     virtual void accept(AST_Visitor* Visitor)
     {
+	std::cout << "\t\t\t[debug] entering visitor for VarDecl_AST"
+		  << ", addr_ = " << addr_ << "\n";
+
 	if ( (0!= this->lChild_) )
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )

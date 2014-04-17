@@ -261,6 +261,7 @@ parsePrimaryExpr(void)
 VarDecl_AST* 
 parseVarDecl(token Type)
 {
+    std::cout << "parsing a var declaration...\n";
     // access error
     if ( !(tok_ID == next_Token.Tok()) )
 	throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
@@ -274,10 +275,15 @@ parseVarDecl(token Type)
 
     IdExpr_AST* new_Id;
     Expr_AST* RHS;
+    int err_Code;
+    const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
     switch(next_Token.Tok()){
     case tok_eq: 
 	new_Id = new IdExpr_AST(Type, op_Token);
-	top_Env->insertName(op_Token.Lex(), new_Id);
+	// **TO DO: monitor if also for heap***
+	if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
+	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
+	getNextToken();
 	RHS = dispatchExpr(); 
 	if ( (0 == RHS) )
 	    throw(Primary_Error(op_Token.Lex(), "invalid initialization"));
@@ -286,27 +292,35 @@ parseVarDecl(token Type)
 	break;
     case tok_semi:
 	new_Id = new IdExpr_AST(Type, op_Token);
-	top_Env->insertName(op_Token.Lex(), new_Id);
+	// **TO DO: monitor if also for heap***
+	if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
+	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 	RHS = 0;
 	break;
     default: 
 	throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
     }
 
-    if ( (new_Id->Type().Tok() != RHS->Type().Tok()) )
-	RHS = parseCoercion(RHS, new_Id->Type().Tok());
+    if ( (0 != RHS) ){
+	if ( (new_Id->Type().Tok() != RHS->Type().Tok()) )
+	    RHS = parseCoercion(RHS, new_Id->Type().Tok());
+    }
     VarDecl_AST* ret = new VarDecl_AST(new_Id, RHS);
     getNextToken();
     return ret;
 }
 
 // assign -> idExpr [= Expr; | ; ] 
-// invariant: - guarantees that ';' terminates
+// invariant: - upon exit, guarantees that ';' terminates
+//            - upon entry, points at =/;
 Assign_AST* 
 parseAssign(void)
 {
+    std::cout << "parsing a assignment...\n";
     // access error (**TO DO: should handle arrays in fct call)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
+    if ( (0 == LHS) )
+	throw(VarAccess_Error(next_Token.Lex(), 0));
     Expr_AST* RHS;
 
     switch(next_Token.Tok()){
@@ -314,6 +328,7 @@ parseAssign(void)
 	RHS = 0;
 	break;
     case '=':
+	getNextToken();
 	RHS = dispatchExpr();
 	if ( (0 == RHS) )
 	    throw(Primary_Error(next_Token.Lex(), "invalid assignment"));
@@ -329,7 +344,7 @@ parseAssign(void)
 	if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
     }
-    if ( !(dynamic_cast<IdExpr_AST*>(LHS)) )
+    if ( !(dynamic_cast<IdExpr_AST*>(LHS)) ) // in case we coerced
 	errExit(0, "logical flaw in use of function parseAssign");
     Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
     getNextToken();
@@ -344,17 +359,22 @@ parseAssign(void)
 Stmt_AST*
 parseStmt(void)
 {
+    std::cout << "parsing a statement...\n";
     token t = next_Token;
     Stmt_AST* ret;
     switch(t.Tok()){
     case tok_int:
 	getNextToken();
 	ret = parseVarDecl(token(tok_int));
+	break;
     case tok_double:
 	getNextToken();
 	ret = parseVarDecl(token(tok_double));
-    case tok_ID:
+	break;
+    case tok_ID: // **TO DO: allow for array access too
+	getNextToken();
 	ret = parseAssign();
+	break;
     default: // for now, disallow empty expr (like '4+5;')
 	throw(Primary_Error(t.Lex(), "not allowed in context"));
 	break; // not really a 'Primary_Error', but it's a catch-all
@@ -371,15 +391,16 @@ Block_AST*
 parseBlock(void)
 {
     std::cout << "parsing a block...\n";
-    if ( (-1 == match(0, tok_parclosed, 0)) ) // {} block
+    if ( (0== match(0, tok_parclosed, 0)) ) // {} block
 	return new Block_AST(0, 0);
 
     top_Env = addEnv(top_Env);
     Stmt_AST* LHS = parseStmt();
     if ( !LHS )
 	throw(Primary_Error(next_Token.Lex(), "Expected statement"));
-
+    
     if ( (tok_parclosed == next_Token.Tok()) ){
+	top_Env = top_Env->getPrior();
 	getNextToken();
 	return new Block_AST(LHS, 0);
     }
@@ -395,27 +416,30 @@ parseBlockCtd(Block_AST* LHS)
     std::cout << "entering parseBlockCtd...\n";
     std::string const err_Msg = "expected statement";
     Block_AST* RHS;
-    while ( (tok_eof != next_Token.Tok()) && ('}' != next_Token.Tok()) ){
-	switch(next_Token.Tok()){
-	case '{': // recall: adding new frame handled in top-level parseExpr()
-	    RHS = parseBlock();
-	    break;
-	case tok_int: // stmt cases (for safer dispatch, check here as well) 
-	case tok_double:
-	case tok_ID:
-	    RHS = parseStmt();
-	    if (!RHS)
-		throw(Primary_Error(next_Token.Lex(), err_Msg));
-	    break;
-	default:
+    switch(next_Token.Tok()){
+    case '{': // recall: adding new frame handled in top-level parseExpr()
+	getNextToken();
+	RHS = parseBlock();
+	break;
+    case tok_int: // stmt cases (for safer dispatch, check here as well) 
+    case tok_double:
+    case tok_ID:
+	RHS = parseStmt();
+	if (!RHS)
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
-	    break;
-	}
+	break;
+    default:
+	throw(Primary_Error(next_Token.Lex(), err_Msg));
+	break;
+    }
 
+    if ( ('}' != next_Token.Tok()) ){
 	RHS = parseBlockCtd(RHS); // keep attaching as RChildren 
 	if (!RHS)
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
     }
+    else
+	;//	top_Env = top_Env->getPrior();
 
     return (LHS = new Block_AST(LHS, RHS)); // this overwrites as follows:
     // before call of this fct                     after

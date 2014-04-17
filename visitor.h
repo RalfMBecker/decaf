@@ -144,22 +144,25 @@ public:
 
     // Statements begin
 
-    void visit(Stmt_AST* V) { return; } 
     void visit(Block_AST* V) { return; }
+    void visit(Stmt_AST* V) { return; } 
 
     void visit(VarDecl_AST* V)
     {
-	if ( (0 != V->RChild()) ){
-	    std::string target = V->LChild()->Addr();
-	    V->setAddr(target); // **TO DO: [debug]
+	std::string target = V->LChild()->Addr();
+//	V->setAddr(target); // **TO DO: [debug]
 
-	    token Op = token(tok_eq);
+	token Op = token(tok_eq);
+	std::string LHS = "";
+	if ( (0 != V->RChild()) )
 	    std::string LHS = V->RChild()->Addr();
-	    std::string Frame = V->getEnv()->getTableName();
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
 
-	    IR_Line* line = new SSA_Entry(Op, target, LHS, "", Frame);
-	    insertLine(line);
-	}
+	std::cout << "\t\t\t\t\t[debug] LHS = " << LHS << "\n";
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, "", frame_Str);
+	insertLine(line);
     }
 
     void visit(Assign_AST* V)

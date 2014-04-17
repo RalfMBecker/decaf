@@ -41,7 +41,7 @@ enum tokenType{
     tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types and actions
-    tok_ID = -100, tok_tmp = -101, tok_cast = -102, 
+    tok_ID = -100, tok_tmp = -101, tok_cast = -102, tok_dec = -103,
 };
 
 class token{
@@ -110,6 +110,8 @@ public:
 	case tok_parclosed:
 	    lexeme_ = std::string(1, static_cast<char>(t));
 	    break;
+
+	case tok_dec: lexeme_ = "dec"; break;
 
 	default: // add error maybe
 	    break;

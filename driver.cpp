@@ -48,17 +48,17 @@ startParse(void)
     getNextToken();
     while (*input){
 	try{
+	    std::cout << "\t\t\tstarting a try round...\n";
 	    if ( (1 == is_Clean) )
 		match(0, tok_paropen, 1);
 	    is_Clean = 1; // until next error
 	    pFirst_Node = parseBlock();
 
 	    std::cout << "\n";
-	    printEnvAncestorInfo(top_Env);
 	    printSTInfo();
-	    std::cout << "\n";
 	    pFirst_Node->accept(new MakeIR_Visitor);
 	    printIR_List();
+	    getNextToken();
 	}
 	catch(Lexer_Error& m){ // **TO DO: different error class treatment?**
 	    m.print();         // (call only Lexer/Semantic)
