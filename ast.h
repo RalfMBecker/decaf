@@ -350,7 +350,6 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 };
 
 // replaces old position of LHS in AST, with new LC being the TMP
@@ -509,26 +508,25 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 // ***To DO:  give array declarations their own class (?)***
 class VarDecl_AST: public Stmt_AST{
 public:
-    VarDecl_AST(IdExpr_AST* Id, Expr_AST* Expr)
-	: Stmt_AST(Id, Expr)
+    VarDecl_AST(IdExpr_AST* Id)
+	: Stmt_AST(Id, 0), type_(Id->Type())
     {
 	setAddr(Id->Op().Lex());
 	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n";
-	if (Expr != 0)
-	    std::cout << "\t\tinitializer = " << Expr->Addr() << "\n";
     }
+
+    token Type(void) const { return type_; }
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	std::cout << "\t\t\t[debug] entering visitor for VarDecl_AST"
-		  << ", addr_ = " << addr_ << "\n";
-
 	if ( (0!= this->lChild_) )
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
+private:
+    token type_;
 };
 
 // ***To DO:  give array declarations their own class (?)***

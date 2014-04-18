@@ -153,13 +153,9 @@ public:
 	std::string target = V->LChild()->Addr();
 
 	token Op = token(tok_dec);
-	std::string LHS = "";
-	if ( (0 != V->RChild()) )
-	    std::string LHS = V->RChild()->Addr();
+	std::string LHS = V->Type().Lex();
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-
-	std::cout << "\t\t\t\t\t[debug] LHS = " << LHS << "\n";
 
 	IR_Line* line = new SSA_Entry(Op, target, LHS, "", frame_Str);
 	insertLine(line);

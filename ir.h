@@ -22,6 +22,7 @@
 // forward declaration
 class Env;
 
+// **TO DO: monitor if we still need an abstract base
 class IR_Line{
 public:
     virtual void print(void) const = 0;
@@ -106,11 +107,4 @@ private:
     std::string rHS_;
     std::string frame_;
     std::vector<std::string> labels_;
-};
-
-// ***TO DO*** once we have if, while, etc. statements
-class Cond_Entry: public IR_Line{
-public:
-
-private:
 };

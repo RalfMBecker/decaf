@@ -18,6 +18,7 @@
 
 token next_Token;
 Node_AST* pFirst_Node;
+extern std::istream* input;
 
 token
 getNextToken(void) { return (next_Token = getTok()); }
@@ -271,10 +272,6 @@ parseVarDecl(token Type)
     if ( (tok_ID != next_Token.Tok()) )
 	throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
     Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
-
-    std::cout << "prior_Env = " << prior_Env << ", top_Env = " << top_Env << "\n";
-
-
     if ( (prior_Env == top_Env) )
 	throw(VarAccess_Error(next_Token.Lex(), 1));
 
@@ -292,30 +289,19 @@ parseVarDecl(token Type)
     if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
 	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 
-    Expr_AST* RHS;
     switch(next_Token.Tok()){
-    case tok_eq: 
+    case tok_semi: // we are done - declaration only
 	getNextToken();
-	RHS = dispatchExpr(); 
-	if ( (0 == RHS) )
-	    throw(Primary_Error(op_Token.Lex(), "invalid initialization"));
-	if ( (-1 == match(0, tok_semi, 0)) )
-	    throw(Punct_Error(';', 0));
 	break;
-    case tok_semi:
-	RHS = 0;
+    case tok_eq: // prepare to call parserAssign() next
+	input->putback('=');
+	next_Token = op_Token;
 	break;
     default: 
 	throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
     }
 
-    if ( (0 != RHS) ){
-	if ( (new_Id->Type().Tok() != RHS->Type().Tok()) )
-	    RHS = parseCoercion(RHS, new_Id->Type().Tok());
-    }
-    VarDecl_AST* ret = new VarDecl_AST(new_Id, RHS);
-    getNextToken();
-    return ret;
+    return new VarDecl_AST(new_Id);
 }
 
 // assign -> idExpr [= Expr; | ; ] 
@@ -324,7 +310,7 @@ parseVarDecl(token Type)
 Assign_AST* 
 parseAssign(void)
 {
-    std::cout << "parsing a assignment...\n";
+    std::cout << "parsing an assignment...\n";
 
     // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
@@ -459,10 +445,10 @@ parseStmtListCtd(StmtList_AST* LHS)
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
 	}
+	// **TO DO: debug next line for "{}" case
 	LHS = new StmtList_AST(LHS, RHS);
-    }
-	// before call of this fct                    after
-        //        LHS_b                               LHS_a
-        //                                         LHS_b   RHS (compound)
+    } // before call of this fct                    after
+      //        LHS_b                               LHS_a
+      //                                         LHS_b   RHS (compound)
     return 0; // to suppress gcc warning
 }
