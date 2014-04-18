@@ -35,8 +35,9 @@ class AndExpr_AST;
 class RelExpr_AST;
 class NotExpr_AST;
 
-class Stmt_AST;
 class Block_AST;
+class StmtList_AST;
+class Stmt_AST;
 class VarDecl_AST;
 class Assign_AST;
 
@@ -59,8 +60,9 @@ public:
     virtual void visit(RelExpr_AST*) = 0;
     virtual void visit(NotExpr_AST*) = 0;
 
-    virtual void visit(Stmt_AST*) = 0;
     virtual void visit(Block_AST*) = 0;
+    virtual void visit(StmtList_AST*) = 0;
+    virtual void visit(Stmt_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
 
@@ -140,10 +142,30 @@ Block_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
     }
 };
 
-class Stmt_AST: public Block_AST{
+class StmtList_AST: public Block_AST{
+public:
+StmtList_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
+    : Block_AST(LHS, RHS)
+    {
+	std::cout << "\tcreated a StmtList_AST\n";
+    }
+
+    ~StmtList_AST() {} 
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+class Stmt_AST: public StmtList_AST{
 public:
     Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
-	: Block_AST(LC, RC) 
+	: StmtList_AST(LC, RC) 
     {
 	std::cout << "\tcreated a Stmt_AST\n";
     }

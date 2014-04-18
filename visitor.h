@@ -145,6 +145,7 @@ public:
     // Statements begin
 
     void visit(Block_AST* V) { return; }
+    void visit(StmtList_AST* V) { return; }
     void visit(Stmt_AST* V) { return; } 
 
     void visit(VarDecl_AST* V)

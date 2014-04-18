@@ -372,6 +372,7 @@ parseStmt(void)
     std::cout << "parsing a statement...\n";
     token t = next_Token;
     Stmt_AST* ret;
+
     switch(t.Tok()){
     case tok_int:
 	getNextToken();
@@ -392,56 +393,59 @@ parseStmt(void)
     return ret;
 }
 
-Block_AST* parseBlockCtd(Block_AST*);
-int frame_Depth = 0;
+// ****TO DO: relocate/re-order functions
+StmtList_AST* parseStmtList(void);
+StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
 
-// stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
+// block -> { [stmtList | { stmtList }]* } 
 // invariants -> entering, presence of enclosing '{' already checked
-Block_AST*
+//                         pointing to token after '{'
+StmtList_AST*
 parseBlock(void)
 {
-    std::cout << "parsing a block...\n";
-    if ( (0== match(0, tok_parclosed, 0)) ) // {} block
-	return new Block_AST(0, 0);
+    std::cout << "parsing a Block...\n";
+    if ( (0 == match(0, tok_parclosed, 1)) ) // {} block
+	return new StmtList_AST(0, 0);
 
     top_Env = addEnv(top_Env);
-    Stmt_AST* LHS = parseStmt();
-    if ( !LHS )
-	throw(Primary_Error(next_Token.Lex(), "Expected statement"));
-    
-    if ( (tok_parclosed == next_Token.Tok()) ){
+    StmtList_AST* pSL = parseStmtList();
+    top_Env = top_Env->getPrior();
 
-	std::cout << "\t\t\t\tfound a closing '}' - end of Block\n";
+    if ( (-1 == match(0, tok_parclosed, 1)) )
+        throw(Punct_Error(')', 0)); // probably checked in grandchild 
 
-	top_Env = top_Env->getPrior();
-	getNextToken();
-	return new Block_AST(LHS, 0);
-    }
-
-    frame_Depth++; // if we come here, it's more than 1 stmt
-    return parseBlockCtd(LHS);
+    return pSL;
 }
 
-// for logic, compare parseInfixExpr() - similar, only always keep going
-// right as long as legal context on right
-// invariant: - upon entry, we point onto the first token of the next stmt
-Block_AST*
-parseBlockCtd(Block_AST* LHS)
+// stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
+StmtList_AST*
+parseStmtList(void)
 {
-    std::cout << "entering parseBlockCtd...\n";
+    std::cout << "parsing a stmtList...\n";
+    Stmt_AST* LHS = parseStmt();
+    return parseStmtListCtd(LHS); // points ahead
+}
+
+// for logic, compare parseInfixExpr() - similar, with path determined by
+// hitting '{' and '}'
+// invariant: - upon entry, we point onto the first token of the next stmt
+//            - upon return, points to '}'
+StmtList_AST*
+parseStmtListCtd(StmtList_AST* LHS)
+{
+    std::cout << "entering parseStmtListCtd...\n";
     std::string const err_Msg = "expected statement";
-    Block_AST* RHS;
-    while (frame_Depth){
+    StmtList_AST* RHS;
+    for (;;){
 	switch(next_Token.Tok()){
 	case '{':
-	    frame_Depth++;	 
-	    top_Env = addEnv(top_Env);
 	    getNextToken();
+	    RHS = parseBlock();
+	    if (!RHS)
+		throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
 	case '}':
-	    frame_Depth--;
-	    top_Env = top_Env->getPrior();
-	    getNextToken();
+	    return LHS;
 	    break;
 	case tok_int: // stmt cases (for safer dispatch, check here as well) 
 	case tok_double:
@@ -449,64 +453,16 @@ parseBlockCtd(Block_AST* LHS)
 	    RHS = parseStmt();
 	    if (!RHS)
 		throw(Primary_Error(next_Token.Lex(), err_Msg));
-	    RHS = parseBlockCtd(RHS);
+	    RHS = parseStmtListCtd(RHS);
 	    break;
 	default:
 	    throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
 	}
-
-	LHS = new Block_AST(LHS, RHS);
+	LHS = new StmtList_AST(LHS, RHS);
+    }
 	// before call of this fct                    after
         //        LHS_b                               LHS_a
         //                                         LHS_b   RHS (compound)
-    }
     return 0; // to suppress gcc warning
 }
-
-
-/*
-// for logic, compare parseInfixExpr() - similar, only always keep going
-// right as long as legal context on right
-Block_AST*
-parseBlockCtd(Block_AST* LHS)
-{
-    std::cout << "entering parseBlockCtd...\n";
-    std::string const err_Msg = "expected statement";
-    Block_AST* RHS;
-    switch(next_Token.Tok()){
-    case '{': // recall: adding new frame handled in top-level parseExpr()
-	getNextToken();
-	RHS = parseBlock();
-	top_Env = top_Env->getPrior();
-	break;
-    case tok_int: // stmt cases (for safer dispatch, check here as well) 
-    case tok_double:
-    case tok_ID:
-	RHS = parseStmt();
-	if (!RHS)
-	    throw(Primary_Error(next_Token.Lex(), err_Msg));
-	break;
-    default:
-	throw(Primary_Error(next_Token.Lex(), err_Msg));
-	break;
-    }
-
-    if ( ('}' == next_Token.Tok()) )
-	std::cout << "\t\t\t\tfound a closing '}' - end of Ctd\n";
-    if ( ('}' != next_Token.Tok()) ){
-	RHS = parseBlockCtd(RHS); // keep attaching as RChildren 
-	if (!RHS)
-	    throw(Primary_Error(next_Token.Lex(), err_Msg));
-    }
-    else{
-       	top_Env = top_Env->getPrior();
-	return (LHS = new Block_AST(LHS, RHS)); 
-    } // this overwrites as follows:
-    // before call of this fct                  after
-    //      LHS_b                               LHS_a
-    //                                       LHS_b   RHS (compound)
-    return 0;
-}
-
-*/
