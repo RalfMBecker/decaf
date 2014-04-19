@@ -10,6 +10,7 @@
 * Mem Leaks: will add a function to delete AST*s and Env* later
 *
 ********************************************************************/
+// **TO DO: consider keeping debugging output with a -v (verbose) switch
 
 #include "lexer.h"
 #include "ast.h"
@@ -176,8 +177,8 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	int prec_3 = opPriority(next_Token.Tok());
 	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
 
-	// **TO DO: needs debugging for nested '!' which should slip through
-	//          here ('-' should be fine as it shouldn't appear here)
+	//**TO DO: as we next read a Primary_Expr (which dispatches '-', 
+	//         '!', this should handle prefix following fine (confirm) **
 	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
 	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
 	    if (!RHS)
@@ -258,12 +259,9 @@ parsePrimaryExpr(void)
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
 // Shadowing: allowed
-// invariant: - exiting, guarantees that ';' terminates
+// invariant: - exiting, we confirm ';' (decl), or move back to Id (dec+init)
 //            - entering, points at Id
-// Note: if we allow for objects of type 'int a;' to be entered into the
-//       AST, then it is hard to split a declaration cum assignment
-//       into a more elegant sequence 'VarDecl_AST* Assign_AST*' of objects
-//       (-> expected RVs of parse fcts). So we handle both types here.
+// Note: if we initialize, prepare to call parseAssign() after
 VarDecl_AST* 
 parseVarDecl(token Type)
 {
@@ -293,7 +291,7 @@ parseVarDecl(token Type)
     case tok_semi: // we are done - declaration only
 	getNextToken();
 	break;
-    case tok_eq: // prepare to call parserAssign() next
+    case tok_eq: // prepare to call parseAssign() next
 	input->putback('=');
 	next_Token = op_Token;
 	break;
@@ -371,9 +369,15 @@ parseStmt(void)
     case tok_ID: 
 	ret = parseAssign();
 	break;
-    default: // for now, disallow empty expr (like '4+5;')
-	throw(Primary_Error(t.Lex(), "not allowed in context"));
-	break; // not really a 'Primary_Error', but it's a catch-all
+    default: // assume empty expression
+	// ** TO DO: proper function
+	std::cerr << "Near " <<  lineNo << ":" << colNo << ": ";
+	std::cerr << "warning - unused expression\n";
+	dispatchExpr(); // parse and discard
+	if ( (-1 == match(0, tok_semi, 1)) )
+	    throw(Punct_Error(';', 0));
+	return 0;
+	break;
     }
 
     return ret;
@@ -383,22 +387,33 @@ parseStmt(void)
 StmtList_AST* parseStmtList(void);
 StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
 
+int frame_Depth = 0;
+
 // block -> { [stmtList | { stmtList }]* } 
-// invariants -> entering, presence of enclosing '{' already checked
-//                         pointing to token after '{'
+// invariants -> entering, point at '{', if any
 StmtList_AST*
 parseBlock(void)
 {
-    std::cout << "parsing a Block...\n";
-    if ( (0 == match(0, tok_parclosed, 1)) ) // {} block
-	return new StmtList_AST(0, 0);
+    std::cout << "parsing a block...\n";
 
-    top_Env = addEnv(top_Env);
-    StmtList_AST* pSL = parseStmtList();
-    top_Env = top_Env->getPrior();
+    StmtList_AST* pSL;
+    if ( (0 == match(0, tok_paropen, 0)) ){
+	if ( (0 == match(1, tok_parclosed, 0)) ){
+	    getNextToken();
+	    return new StmtList_AST(0, 0);
+	}
+	top_Env = addEnv(top_Env);
+	frame_Depth++;
+    }
 
-    if ( (-1 == match(0, tok_parclosed, 1)) )
-        throw(Punct_Error(')', 0)); // probably checked in grandchild 
+    pSL = parseStmtList();
+
+    if ( (0 < frame_Depth) ){
+	if ( (-1 == match(0, tok_parclosed, 1)) )
+	    throw(Punct_Error('}', 0));
+	top_Env = top_Env->getPrior();
+	frame_Depth--;
+    }
 
     return pSL;
 }
@@ -408,6 +423,7 @@ StmtList_AST*
 parseStmtList(void)
 {
     std::cout << "parsing a stmtList...\n";
+
     Stmt_AST* LHS = parseStmt();
     return parseStmtListCtd(LHS); // points ahead
 }
@@ -425,7 +441,6 @@ parseStmtListCtd(StmtList_AST* LHS)
     for (;;){
 	switch(next_Token.Tok()){
 	case '{':
-	    getNextToken();
 	    RHS = parseBlock();
 	    if (!RHS)
 		throw(Primary_Error(next_Token.Lex(), err_Msg));
@@ -433,19 +448,12 @@ parseStmtListCtd(StmtList_AST* LHS)
 	case '}':
 	    return LHS;
 	    break;
-	case tok_int: // stmt cases (for safer dispatch, check here as well) 
-	case tok_double:
-	case tok_ID:
+	default:
 	    RHS = parseStmt();
-	    if (!RHS)
-		throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    // **TO DO: check for 0 - any actions?
 	    RHS = parseStmtListCtd(RHS);
 	    break;
-	default:
-	    throw(Primary_Error(next_Token.Lex(), err_Msg));
-	    break;
 	}
-	// **TO DO: debug next line for "{}" case
 	LHS = new StmtList_AST(LHS, RHS);
     } // before call of this fct                    after
       //        LHS_b                               LHS_a

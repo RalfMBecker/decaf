@@ -11,6 +11,8 @@ class Expr_AST;
 
 extern Node_AST* pFirst_Node;
 
+extern int frame_Depth;
+
 extern token next_Token;
 token getNextToken(void);
 

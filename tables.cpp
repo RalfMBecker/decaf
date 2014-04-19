@@ -13,6 +13,7 @@
 *
 ********************************************************************/
 
+#include <sstream>
 #include <map>
 #include <string>
 
@@ -167,15 +168,9 @@ findNameInHierarchy(Env* p, std::string Name)
     while ( (root_Env != p) ){
 	if ( (0 == p->findName(Name)) )
 	    return p->readName(Name);
-/*
-	std::map<std::string, Expr_AST*>::const_iterator iter; 
-	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
-	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
-	    if ( (Name == iter->first) )
-		return iter->second;
-*/
 	p = p->getPrior();
     }
+
     return 0;
 }
 
@@ -192,16 +187,9 @@ findFrameInHierarchy(Env* p, std::string Name)
     while ( (root_Env != p) ){
 	if ( (0 == p->findName(Name)) )
 	    return p;
-/*
-	std::map<std::string, Expr_AST*>::const_iterator iter; 
-	std::map<std::string, Expr_AST*> tmp_Type = p->getType();
-	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
-	    if ( (Name == iter->first) )
-		return p;
-	p = p->getPrior();
-*/  
 	p = p->getPrior();
     }
+
     return 0;
 }
 
@@ -230,6 +218,21 @@ printSTInfo()
     for (iter_Outer = ST.begin(); iter_Outer != ST.end(); iter_Outer++){
 	std::cout << "Info for table " << iter_Outer->first << "\n";
 	std::cout << "---------------------------------------------------\n";
+
+	std::ostringstream tmp_Stream;
+	tmp_Stream.width(20);
+	tmp_Stream << "Memory allocation - ";
+	tmp_Stream.width(7);
+	tmp_Stream << "stack: ";
+	tmp_Stream << iter_Outer->second.getOffsetStack() << "\n";
+	tmp_Stream.width(20);
+	tmp_Stream << "";
+	tmp_Stream.width(7);
+	tmp_Stream << "heap: ";
+	tmp_Stream << iter_Outer->second.getOffsetHeap() << "\n\n";
+
+	std::cout << tmp_Stream.str();
+
 	Symbol_Table tmpST(iter_Outer->second);
 	std::map<std::string, Mem_Info> info(tmpST.getInfo());
 	std::map<std::string, Mem_Info>::const_iterator iter_Inner;

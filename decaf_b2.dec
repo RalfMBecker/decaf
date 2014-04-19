@@ -1,14 +1,14 @@
 {
     int a;
     int b = 2;
-
+    3 + 2 < -!(a + b);
     {
 	a = 1 + 5*b;
 	b = b + a;
 	{ 
 	    a = 1;
 	    int d;
-	    int a;
+	    double a;
 	    a = 2;
 	}
     }

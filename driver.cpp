@@ -44,14 +44,9 @@ collectParts() // will collect parts (functions, classes, main,...)
 void // TO DO: update when ready
 startParse(void)
 {
-    int is_Clean = 1;
     getNextToken();
     while (*input){
 	try{
-	    std::cout << "\t\t\tstarting a try round...\n";
-	    if ( (1 == is_Clean) )
-		match(0, tok_paropen, 1);
-	    is_Clean = 1; // until next error
 	    pFirst_Node = parseBlock();
 
 	    std::cout << "\n";
@@ -63,22 +58,18 @@ startParse(void)
 	catch(Lexer_Error& m){ // **TO DO: different error class treatment?**
 	    m.print();         // (call only Lexer/Semantic)
 	    panicModeFwd();
-	    is_Clean = 0;
 	}
 	catch(Primary_Error& m){
 	    m.print();
 	    panicModeFwd();
-	    is_Clean = 0;
 	}
 	catch(Punct_Error& m){
 	    m.print();
 	    panicModeFwd();
-	    is_Clean = 0;
 	}
 	catch(VarAccess_Error& m){
 	    m.print();
 	    panicModeFwd();
-	    is_Clean = 0;
 	}
     }
 
