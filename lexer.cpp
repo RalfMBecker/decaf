@@ -289,6 +289,7 @@ readIntValue(int* Last, int* pBase, int* Count, long* iV, std::string& tmp_Str){
 	tmp_Str += (*Last);
 	(*Last) = input->get();
     } while (isdigit(*Last) );
+
     return 0;
 }
 
@@ -354,6 +355,7 @@ getTok()
 	// calculate number as check for valid number/possible future use
 	ret = readIntValue(&last_Char, &base, &i, &iV, id_Str);
 	if (errorIn_Progress) return token(tok_err);
+
 	if ( (tok_intV == ret) ){  // if we found an oct/hex int, we are done
 	    tmp_Str << iV; // but return as string
 	    id_Str = tmp_Str.str();

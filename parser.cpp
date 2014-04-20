@@ -20,6 +20,7 @@
 token next_Token;
 Node_AST* pFirst_Node;
 extern std::istream* input;
+extern int errorIn_Progress;
 
 int frame_Depth = 0; // track depth of scope nesting
 
@@ -44,6 +45,14 @@ adjScopeLevel(int N)
     }
 }
 
+Stmt_AST*
+errorResetStmt(void)
+{
+    adjScopeLevel(panicModeFwd());
+    errorIn_Progress = 0;
+    return 0;
+}
+
 token
 getNextToken(void) { return (next_Token = getTok()); }
 
@@ -55,9 +64,13 @@ int
 match(int update_Prior, tokenType t, int update_Post)
 {
     std::cout << "matching...\n";
+    if (errorIn_Progress) return -2;
+
     if (update_Prior) getNextToken();
+    if (errorIn_Progress) return -2;
     if ( (t == next_Token.Tok()) ){
 	if (update_Post) getNextToken();
+	if (errorIn_Progress) return -2;
 	return 0;
     }
     else
@@ -69,6 +82,8 @@ Expr_AST*
 parseIntExpr(void)
 {
     std::cout << "parsing an int...\n";
+    if (errorIn_Progress) return 0;
+
     Expr_AST* res = new IntExpr_AST(next_Token);
     getNextToken();
     return res;
@@ -79,6 +94,8 @@ Expr_AST*
 parseFltExpr(void)
 {
     std::cout << "parsing a flt...\n";
+    if (errorIn_Progress) return 0;
+
     Expr_AST* res = new FltExpr_AST(next_Token);
     getNextToken();
     return res;
@@ -92,6 +109,8 @@ Expr_AST*
 parseIdExpr(std::string Name)
 {
     std::cout << "\tparsing (retrieving) an Id...\n";
+    if (errorIn_Progress) return 0;
+
     // TO DO: once we also catch arrays/fcts, might need change
     Expr_AST* pId;
     if ( (0 == (pId = findNameInHierarchy(top_Env, Name))) )
@@ -138,6 +157,8 @@ Expr_AST*
 parseExpr(int Infix)
 {
     std::cout << "parsing an expr...\n";
+    if (errorIn_Progress) return 0;
+
     logOp_Tot = 0;
     Expr_AST* LHS = parsePrimaryExpr();
     if ( !LHS )
@@ -157,6 +178,8 @@ parseExpr(int Infix)
 Expr_AST* 
 dispatchExpr(void)
 {
+    if (errorIn_Progress) return 0;
+
     switch(next_Token.Tok()){
     case '!': 
 	getNextToken(); 
@@ -181,6 +204,8 @@ Expr_AST*
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
     std::cout << "entering parseInfixRHS...\n";
+    if (errorIn_Progress) return 0;
+
     std::string const err_Msg = "Expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
     for (;;){
@@ -244,15 +269,19 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 Expr_AST*
 parseParensExpr(void)
 {
+    if (errorIn_Progress) return 0;
+
     int oldLogic_Status = logOp_Tot;
     logOp_Tot = 0;
     std::cout << "parsing a ParensExpr...\n";
     getNextToken(); // create ready-state
     Expr_AST* E = dispatchExpr();
 
-    if ( (-1 == match(0, tok_rdclosed, 1)) )
-	; // throw(Punct_Error(')', 0));
-
+    if ( (-1 == match(0, tok_rdclosed, 1)) ){
+	punctError(')', 0);
+	errorIn_Progress = 1;
+	return 0;
+    }
     logOp_Tot = oldLogic_Status;
 
     return E;
@@ -263,6 +292,8 @@ Expr_AST*
 parsePrimaryExpr(void)
 {
     std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
+    if (errorIn_Progress) return 0;
+
     switch(next_Token.Tok()){
     case tok_ID: // coming here, ID has already been entered into ST
 	return parseIdExpr(next_Token.Lex());
@@ -332,6 +363,7 @@ Assign_AST*
 parseAssign(void)
 {
     std::cout << "parsing an assignment...\n";
+    if (errorIn_Progress) return 0;
 
     // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
@@ -339,18 +371,30 @@ parseAssign(void)
 	; // throw(VarAccess_Error(next_Token.Lex(), 0));
     // **TO DO: allow for array access too
 
+    std::cout << "\t\t[debug] assign - id read\n";
+
     Expr_AST* RHS;
     switch(next_Token.Tok()){
     case ';': 
 	RHS = 0;
 	break;
     case '=':
+    std::cout << "\t\t[debug] assign - = seen\n";
+
 	getNextToken();
+    std::cout << "\t\t[debug] assign - expr done\n";
+	if (errorIn_Progress) return 0;
+    std::cout << "\t\t[debug] assign - past error check\n";
 	RHS = dispatchExpr();
-	if ( (0 == RHS) )
+	if ( (0 == RHS) ){
 	    ; // throw(Primary_Error(next_Token.Lex(), "invalid assignment"));
-	if ( (-1 == match(0, tok_semi, 0)) )
-	    ; // throw(Punct_Error(';', 0));
+	    return 0;
+	}
+	if ( (-1 == match(0, tok_semi, 0)) ){
+	    punctError(';', 0);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
 	break;
     default:
 	; // throw(Primary_Error(next_Token.Lex(), "= or ; expected"));
@@ -377,16 +421,22 @@ Stmt_AST*
 parseStmt(void)
 {
     std::cout << "parsing a statement...\n";
+
+    std::cout << "\t\t\t\[debug] stmt; error = "<< errorIn_Progress << "\n";
+
+    if (errorIn_Progress) return 0;
     token t = next_Token;
     Stmt_AST* ret;
 
     switch(t.Tok()){
     case tok_int:
 	getNextToken();
+	if (errorIn_Progress) return errorResetStmt();
 	ret = parseVarDecl(token(tok_int));
 	break;
     case tok_double:
 	getNextToken();
+	if (errorIn_Progress) return errorResetStmt();
 	ret = parseVarDecl(token(tok_double));
 	break;
     case tok_ID: 
@@ -397,18 +447,29 @@ parseStmt(void)
 	std::cerr << "Near " <<  line_No << ":" << col_No << ": ";
 	std::cerr << "warning - unused expression\n";
 	dispatchExpr(); // parse and discard
-	if ( (-1 == match(0, tok_semi, 1)) )
-	    ; // throw(Punct_Error(';', 0));
+	if (errorIn_Progress) return errorResetStmt();
+	if ( (-1 == match(0, tok_semi, 1)) ){
+	    punctError(';', 0);
+	    return errorResetStmt();
+	}
 	return 0;
 	break;
     }
 
+    std::cout << "\t\t[debug] stmt - resetting next\n";
+    std::cout << "\t[debug] line = " << line_No << ", col = " << col_No << "\n";
+
+    if (errorIn_Progress) return errorResetStmt();
     return ret;
 }
 
 StmtList_AST* parseStmtList(void);
 StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
 
+// **TO DO: problem if the following combination: (a) 1-line stmtList (if we 
+//  have several stmts with no {}, this applies to them all, and (2) var
+//  declarations in those lines, used later in the line (no new scope prepared
+//  in current drafting)
 // block -> { [stmtList | { stmtList }]* } 
 // invariants -> entering, point at '{', if any
 StmtList_AST*
@@ -416,21 +477,29 @@ parseBlock(void)
 {
     std::cout << "parsing a block...\n";
 
+    std::cout << "\t\t\t\[debug] block -1; error = " << errorIn_Progress << "\n";
     StmtList_AST* pSL;
     if ( (0 == match(0, tok_paropen, 0)) ){
 	if ( (0 == match(1, tok_parclosed, 0)) ){
+	    if (errorIn_Progress) return 0;
 	    getNextToken();
+	    if (errorIn_Progress) return 0;
 	    return new StmtList_AST(0, 0);
 	}
 	top_Env = addEnv(top_Env);
 	frame_Depth++;
     }
 
+    std::cout << "\t\t\t\[debug] block -2; error = " << errorIn_Progress << "\n";
+
     pSL = parseStmtList();
+    if (errorIn_Progress) return 0;
 
     if ( (0 < frame_Depth) ){
-	if ( (-1 == match(0, tok_parclosed, 1)) )
+	if ( (-1 == match(0, tok_parclosed, 1)) ){
+	    if (errorIn_Progress) return 0;
 	    ; // throw(Punct_Error('}', 0));
+	}
 	top_Env = top_Env->getPrior();
 	frame_Depth--;
     }
@@ -439,12 +508,19 @@ parseBlock(void)
 }
 
 // stmtLst -> { [stmt stmtLst] } | stmt | epsilon 
+// Note: errors handled on level below; so we are clean here
 StmtList_AST*
 parseStmtList(void)
 {
     std::cout << "parsing a stmtList...\n";
 
+    std::cout << "\t\t\t\[debug] stmtList - 1; error = "<< errorIn_Progress << "\n";
+
     Stmt_AST* LHS = parseStmt();
+
+    std::cout << "\t\t\t\[debug] stmtList - 2; error = "<< errorIn_Progress << "\n";
+    std::cout << "\t[debug] line = " << line_No << ", col = " << col_No << "\n";
+
     return parseStmtListCtd(LHS); // points ahead
 }
 
@@ -456,21 +532,23 @@ StmtList_AST*
 parseStmtListCtd(StmtList_AST* LHS)
 {
     std::cout << "entering parseStmtListCtd...\n";
+
+    std::cout << "\t[debug] line = " << line_No << ", col = " << col_No << "\n";
+
     std::string const err_Msg = "expected statement";
     StmtList_AST* RHS;
     for (;;){
 	switch(next_Token.Tok()){
 	case '{':
 	    RHS = parseBlock();
-	    if (!RHS)
-		; // throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    if (!RHS) return 0;
 	    break;
 	case '}':
 	    return LHS;
 	    break;
 	default:
 	    RHS = parseStmt();
-	    // **TO DO: check for 0 - any actions?
+	    if (!RHS) return 0; // **TO DO: needs work
 	    RHS = parseStmtListCtd(RHS);
 	    break;
 	}

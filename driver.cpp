@@ -41,45 +41,31 @@ collectParts() // will collect parts (functions, classes, main,...)
 
 }
 
-void // TO DO: update when ready
+void
 startParse(void)
 {
     getNextToken();
-    while (*input){
-//	try{
-	    pFirst_Node = parseBlock();
-
-	    std::cout << "\n";
-	    printSTInfo();
-	    pFirst_Node->accept(new MakeIR_Visitor);
-	    printIR_List();
-	    getNextToken();
+    pFirst_Node = parseBlock();
+    if ( (0 != pFirst_Node) ){
+	printSTInfo();
+	pFirst_Node->accept(new MakeIR_Visitor);
+	printIR_List();
     }
-//	}
-/*
-	catch(Lexer_Error& m){ // **TO DO: different error class treatment?**
-	    m.print();         // (call only Lexer/Semantic)
-	    panicModeFwd();
-	}
-	catch(Primary_Error& m){
-	    m.print();
-	    panicModeFwd();
-	}
-	catch(Punct_Error& m){
-	    m.print();
-	    panicModeFwd();
-	}
-	catch(VarAccess_Error& m){
-	    m.print();
-	    panicModeFwd();
-	}
+    else
+	std::cerr << "---no valid statements found---\n";
+
+    std::string plural;
+    if (no_lex_Errors){
+	std::cerr << "found " << no_lex_Errors << " lexical error";
+	plural = ( (1 < no_lex_Errors) )?"s\n":"\n";
+	std::cerr << plural;
     }
-*/
-
-    if (no_lex_Errors)
-	std::cerr << "found " << no_lex_Errors << " lexical errors\n";
-
-    if (no_par_Errors)
+    if (no_par_Errors){
 	std::cerr << "found "<< no_par_Errors << " syntactic/semantic errors\n";
+	plural = ( (1 < no_par_Errors) )?"s\n":"\n";
+	std::cerr << plural;
+    }
+
+
 }
 

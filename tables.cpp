@@ -193,6 +193,7 @@ findFrameInHierarchy(Env* p, std::string Name)
 void
 printEnvAncestorInfo(Env* p)
 {
+    if ( (0 == p) ) return;
     while ( (root_Env != p) ){
 	std::cout << "Info for table " << p->getTableName() << "\n";
 	std::cout << "-----------------------------------\n";
@@ -210,6 +211,7 @@ printEnvAncestorInfo(Env* p)
 void
 printSTInfo()
 {
+    if ( ST.empty() ) return;
     std::map<std::string, Symbol_Table>::const_iterator iter_Outer;
     for (iter_Outer = ST.begin(); iter_Outer != ST.end(); iter_Outer++){
 	std::cout << "Info for table " << iter_Outer->first << "\n";

@@ -27,21 +27,24 @@ const int MAX_MSG = 96;
 int
 panicModeFwd(void)
 {
-    int c, adj;
+    int c;
+    int adj(0);
 
 // **TO DO: the following line might be necessary for some cases
 //     if ( ('\n' != last_Char) && (EOF != last_Char) ){
-    while( (EOF != (c = getNext())) && (';' != c) ){
-	if ( ('{' == c) )
-	    adj++;
-	else if ( ('}' == c) )
-	    adj--;
+    if ( (EOF != last_Char) ){
+	while( (EOF != (c = getNext())) && (';' != c) ){
+	    if ( ('{' == c) )
+		adj++;
+	    else if ( ('}' == c) )
+		adj--;
+	}
+
+	if (EOF != last_Char)
+	    getNext();
+
+	return adj;
     }
-
-    if (EOF != last_Char)
-	getNext();
-
-    return adj;
 }
 
 // error class for compiler-usage errors (never prompted by user of

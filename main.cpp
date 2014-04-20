@@ -38,11 +38,6 @@ main(int argc, char* argv[])
 /*
     std::string Str = "Test_Str";
 
-    lexerError(0, Str, "illegal ascii value");
-    tooLongError(Str, "MAX_LIT", MAX_LIT);
-    strToNumError(Str, "integer", 'C');
-    std::cerr << "\n";
-
     parseError(Str, "not declared");
     parseWarning(Str, "not declared");
     punctError(')', 0);
