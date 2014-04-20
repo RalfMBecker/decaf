@@ -84,8 +84,7 @@ parseFltExpr(void)
     return res;
 }
 
-// ******NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
-// *******************************************************
+// ******TO DO: NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // id -> alpha* [alphanum | _]*
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
@@ -407,7 +406,6 @@ parseStmt(void)
     return ret;
 }
 
-// ****TO DO: relocate/re-order functions
 StmtList_AST* parseStmtList(void);
 StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
 

@@ -18,11 +18,7 @@
 #include <string>
 
 #include "lexer.h"
-//#include "error.h"
 #include "tables.h"
-
-// forward declarations
-class IdExpr_AST;
 
 // compile-time globals
 std::map<tokenType, int> binOP_Table;

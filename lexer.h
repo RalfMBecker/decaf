@@ -132,6 +132,7 @@ private:
 extern int line_No;
 extern int col_No;
 extern int last_Char; // not ideal, but nice to be able to access elsewhere
+extern int errorIn_Progress;
 
 token getTok(void);
 int getNext(void);

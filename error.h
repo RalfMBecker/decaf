@@ -43,7 +43,8 @@ void tooLongError(std::string const& Name,std::string const& type_Str,int Type);
 void strToNumError(std::string const& Name, std::string const& Type, char C);
 
 void varAccessError(std::string Name, int Type);
-void primaryError(int Type, std::string tok_Str, std::string com_Str);
+void parseError(std::string tok_Str, std::string com_Str);
+void parseWarning(std::string tok_Str, std::string com_Str);
 void punctError(char C, int What);
 
 #endif

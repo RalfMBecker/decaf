@@ -4,12 +4,15 @@
 * Note: abstract base class defined in ast.h to break dependency
 *       cycle
 *
+* TO DO: add visitor class deleting the AST nodes
+*
 ********************************************************************/
 
 #include <string>
 #include <sstream>
 
 #include "ast.h"
+#include "tables.h"
 #include "ir.h"
 
 class MakeIR_Visitor: public AST_Visitor{

@@ -8,7 +8,6 @@
 #include <cstring>
 
 #include "ename.h"
-#include "lexer.h"
 #include "error.h"
 
 // used from lexer.h
@@ -169,13 +168,25 @@ varAccessError(std::string Name, int Type)
 }
 
 void
-primaryError(int Type, std::string tok_Str, std::string com_Str) 
+parseError(std::string tok_Str, std::string com_Str) 
 {
-    errorBase(Type);
+    errorBase(1);
     no_par_Errors++;
 
     std::ostringstream tmp_Str;
     tmp_Str << "Syntax error (" << tok_Str << ") - " << com_Str << "\n";
+ 
+    std::cerr << tmp_Str.str();
+}
+
+void
+parseWarning(std::string tok_Str, std::string com_Str) 
+{
+    errorBase(0);
+    no_par_Errors++;
+
+    std::ostringstream tmp_Str;
+    tmp_Str << "In (" << tok_Str << ") - " << com_Str << "\n";
  
     std::cerr << tmp_Str.str();
 }

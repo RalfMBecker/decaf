@@ -35,6 +35,7 @@ std::istream* input;
 int
 main(int argc, char* argv[])
 {
+/*
     std::string Str = "Test_Str";
 
     lexerError(0, Str, "illegal ascii value");
@@ -42,14 +43,15 @@ main(int argc, char* argv[])
     strToNumError(Str, "integer", 'C');
     std::cerr << "\n";
 
-    primaryError(0, Str, "not declared");
+    parseError(Str, "not declared");
+    parseWarning(Str, "not declared");
     punctError(')', 0);
     punctError(')', 1);
     varAccessError(Str, 0);
     varAccessError(Str, 1);
 
     exit(EXIT_SUCCESS);
-
+*/
     std::string name_Str;
     switch(argc){
     case 1:

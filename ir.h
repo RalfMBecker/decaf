@@ -12,7 +12,6 @@
 #include <cstdio>
 
 #include "lexer.h"
-#include "tables.h"
 
 #define LABELS 10
 #define SSA 7

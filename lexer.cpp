@@ -12,7 +12,7 @@
 *       However, we forbid the following character sequence types:
 *       - 0x1af
 *       - 1.1.e
-*       (this is as specified in the Brown grammer)
+*       (this is as specified in the Brown grammar)
 *
 ********************************************************************/
 
@@ -29,6 +29,7 @@ extern std::istream* input;
 int line_No = 1;
 int col_No = 0;
 int last_Char = ' ';
+int errorIn_Progress = 0;
 
 token
 checkReserved(std::string Str)
@@ -123,15 +124,16 @@ retOpPunct(int Test)
     case '}': return token(tok_parclosed);
 
     default: 
+	errorIn_Progress = 1;
 	return token(tok_err);
     }
 }
 
-// cannot use readIntValue as we also keep recording into id_Str here
-// errors handled here; returns length of escape sequence if ok
-// upon entry, *last points to 'O'/'x' in escape sequence
-// upon exit, it points to the last valid number in it
-// reports len = -1 if nothing read
+// Cannot use readIntValue as we also keep recording into id_Str here
+// Returns: length of escape sequence if ok; -1 if nothing read; 
+//          -2 if error
+// Upon entry, *last points to 'O'/'x' in escape sequence
+// Upon exit, it points to the last valid number in it
 int
 readOctHex(int* Last, std::string& Str, int Base)
 {
@@ -155,16 +157,19 @@ readOctHex(int* Last, std::string& Str, int Base)
     if ( (8 == Base) ){ // check if valid ascii (always valid if base = 16)
 	char* endPtr;
 	long range = strtol(test_Str.c_str(), &endPtr, 8);
-	if ( (255 < range) )
-	    ; // throw(Lexer_Error(Str, "illegal ascii value"));
+	if ( (255 < range) ){
+	    lexerError(0, Str, "illegal ascii value");
+	    errorIn_Progress = 1;
+	    return -2;
+	}
     }
 
     return i-1; // we read one too far
 }
 
-// errors handled here; returns lenght of escape sequence if fine
-// upon entry, *last point to '\\'. 
-// upon exit, it points to the last valid character in the escape sequence
+// Returns: lenght of escape sequence if fine; -2 if not
+// Upon entry, *last point to '\\'. 
+// Upon exit, it points to the last valid character in the escape sequence
 int
 validEscape(int* Last, std::string& tmp_Str)
 {
@@ -181,21 +186,31 @@ validEscape(int* Last, std::string& tmp_Str)
     case '0':
 	tmp_Str += *Last;
 	len += readOctHex(Last, tmp_Str, 8);
-	if ( (1 == len) ) // \0[non-octal]
-	    ; // throw(Lexer_Error(tmp_Str, "invalid escape sequence"));
+	if (errorIn_Progress) return -2;
+	if ( (1 == len) ){ // \0[non-octal]
+	    lexerError(0, tmp_Str, "illegal escape sequence");
+	    errorIn_Progress = 1;
+	    return -2;
+	}
 	break;
 
     case 'x': case 'X':
 	tmp_Str += *Last; 
 	len += readOctHex(Last, tmp_Str, 16);
-	if ( (1 == len) ) // \x[non-octal]
-	    ; // throw(Lexer_Error(tmp_Str, "invalid escape sequence"));
+	if (errorIn_Progress) return -2;
+	if ( (1 == len) ){ // \x[non-octal]
+	    lexerError(0, tmp_Str, "illegal escape sequence");
+	    errorIn_Progress = 1;
+	    return -2;
+	}
 	break;
 
     default: 
 	std::string err_Str;
 	err_Str += static_cast<char> (*Last);
-	; // throw(Lexer_Error(err_Str, ""));
+	lexerError(0, err_Str, "");
+	errorIn_Progress = 1;
+	return -2;
 	break;
     }
 
@@ -223,7 +238,10 @@ getBase(int* Last)
     }
 }
 
-// returns tok_int if octal/hex; 0 if so far correct processing of a dec int
+// Returns: tok_int if octal/hex; 0 if so far correct processing of a dec int;
+//          token(tok_err) if error
+// Note:    returning tok_err could be a perfectly valid integer; hence,
+//          caller is expted to check errorIn_Prog instead
 // (handled differently as octal/hex can only be integers; but for decimals,
 // we might have parsed only the 'x' part of x.y[e[+|-]z]] )
 int
@@ -234,8 +252,11 @@ readIntValue(int* Last, int* pBase, int* Count, long* iV, std::string& tmp_Str){
 
     if ( (8 == base) || (16 == base) ){
 	do{
-	    if ( (MAX_LIT == ++(*Count)) )
-		; // throw(TooLong_Error(tmp_Str, "MAX_LIT", MAX_LIT));
+	    if ( (MAX_LIT == ++(*Count)) ){
+		tooLongError(tmp_Str, "MAX_LIT", MAX_LIT);
+		errorIn_Progress = 1;
+		return tok_err;
+	    }
 	    tmp_Str += (*Last);
 	    (*Last) = input->get();
 	} while ( ((8==base) && isdigit(*Last)) || 
@@ -251,15 +272,20 @@ readIntValue(int* Last, int* pBase, int* Count, long* iV, std::string& tmp_Str){
 		tmp_Str.insert(0, "0");
 	    else if (16 == base)
 		tmp_Str.insert(0, "0x");
-	    ; // throw(StrToNum_Error(tmp_Str, "integer", end_Ptr[0]));
+	    strToNumError(tmp_Str, "integer", end_Ptr[0]);
+	    errorIn_Progress = 1;
+	    return tok_err;
 	}
 	return tok_intV;
     }
 
     // dealing with decimal input
     do{
-	if ( (MAX_LIT == ++(*Count)) )
-	    ; // throw(TooLong_Error(tmp_Str, "MAX_LIT", MAX_LIT));
+	if ( (MAX_LIT == ++(*Count)) ){
+	    tooLongError(tmp_Str, "MAX_LIT", MAX_LIT);
+	    errorIn_Progress = 1;
+	    return tok_err;
+	}
 	tmp_Str += (*Last);
 	(*Last) = input->get();
     } while (isdigit(*Last) );
@@ -280,10 +306,9 @@ getNext(void)
     return (last_Char = input->get());
 }
 
-// gettok - return the next token from 'input'-stream
+// getTok() - return the next token from 'input'-stream
 // invariant: upon return (other than from EOF), last_Char has the next
 //            unprocessed char
-// Note: mem leaks on its own. Relies on caller to delete pointer. 
 token
 getTok()
 {
@@ -299,8 +324,11 @@ getTok()
 	id_Str = last_Char;
 	while ( (std::isalnum(getNext())) || 
 		('_' == last_Char) ){
-	    if ( (MAX_ID == ++i) )
-		; // throw(TooLong_Error(id_Str, "MAX_ID", MAX_ID));
+	    if ( (MAX_ID == ++i) ){
+		tooLongError(id_Str, "MAX_ID", MAX_ID);
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    id_Str += last_Char;
 	}
 
@@ -323,8 +351,9 @@ getTok()
 
 	base = getBase(&last_Char);
 
-	// calculate number as check for valid numer/possible future use
+	// calculate number as check for valid number/possible future use
 	ret = readIntValue(&last_Char, &base, &i, &iV, id_Str);
+	if (errorIn_Progress) return token(tok_err);
 	if ( (tok_intV == ret) ){  // if we found an oct/hex int, we are done
 	    tmp_Str << iV; // but return as string
 	    id_Str = tmp_Str.str();
@@ -332,8 +361,11 @@ getTok()
 	}
 
 	if ( ('.' == last_Char) ){ 
-	    if ( (MAX_LIT == ++i) )
-		; // throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
+	    if ( (MAX_LIT == ++i) ){
+		tooLongError(id_Str, "MAX_LIT", MAX_LIT);
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    id_Str += last_Char;
 	    getNext();
 	}
@@ -345,7 +377,9 @@ getTok()
 		    id_Str.insert(0, "0");
 		else if (16 == base)
 		    id_Str.insert(0, "0x");
-		; // throw(StrToNum_Error(id_Str, "integer", end_Ptr[0]));
+		strToNumError(id_Str, "integer", end_Ptr[0]);
+		errorIn_Progress = 1;
+		return tok_err;
 	    }
 	    tmp_Str << iV;
 	    id_Str = tmp_Str.str();
@@ -354,33 +388,47 @@ getTok()
 
 	// integer after '.'
 	while ( isdigit(last_Char) ){
-	    if ( (MAX_LIT == ++i) )
-		; // throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
+	    if ( (MAX_LIT == ++i) ){
+		tooLongError(id_Str, "MAX_LIT", MAX_LIT);
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    id_Str += last_Char;
 	    getNext();
 	}
 
 	// deal with scientific notation
 	if ( ('e' == last_Char) || ('E' == last_Char) ){
-	    if ( (MAX_LIT == ++i) )
-		; // throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
+	    if ( (MAX_LIT == ++i) ){
+		tooLongError(id_Str, "MAX_LIT", MAX_LIT);
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    id_Str += last_Char;
 	    getNext();
 	    id_Str += last_Char;
 	    if ( !(std::isdigit(last_Char)) && 
-		 ('-' != last_Char ) && ('+' != last_Char) )
-		; // throw(Lexer_Error(id_Str, ""));
-
+		 ('-' != last_Char ) && ('+' != last_Char) ){
+		lexerError(0, id_Str, "");
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    while ( isdigit(getNext())  ){
-		if ( (MAX_LIT == ++i) )
-		    ; // throw(TooLong_Error(id_Str, "MAX_LIT", MAX_LIT));
+		if ( (MAX_LIT == ++i) ){
+		    tooLongError(id_Str, "MAX_LIT", MAX_LIT);
+		    errorIn_Progress = 1;
+		    return token(tok_err);
+		}
 		id_Str += last_Char;
 	   }
 	}
 
 	fV = strtod(id_Str.c_str(), &end_Ptr);
-	if ((id_Str.c_str() == end_Ptr)||('\0' != end_Ptr[0])|| ( 0 != errno) )
-	    ; // throw(StrToNum_Error(id_Str, "float", end_Ptr[0]));
+	if ((id_Str.c_str() == end_Ptr)||('\0' != end_Ptr[0])|| ( 0 != errno) ){
+	    strToNumError(id_Str, "float", end_Ptr[0]);
+	    errorIn_Progress = 1;
+	    return token(tok_err);
+	}
 	tmp_Str << fV;
 	id_Str = tmp_Str.str();
 	return token(tok_doubleV, id_Str);
@@ -391,15 +439,25 @@ getTok()
 	int i = 0;
 	id_Str.clear();
 	while ( ('\"' != getNext()) && (EOF != last_Char)){
-	    if ( (MAX_STR == ++i) )
-		; // throw(TooLong_Error(id_Str, "MAX_STR", MAX_STR));
-	    else if ( ('\n' == last_Char) || (EOF == last_Char) )
-		; // throw(Lexer_Error(id_Str, "string missing closing \""));
+	    if ( (MAX_STR == ++i) ){
+		tooLongError(id_Str, "MAX_STR", MAX_STR);
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
+	    else if ( ('\n' == last_Char) || (EOF == last_Char) ){
+		lexerError(0, id_Str, "string missing closing \"");
+		errorIn_Progress = 1;
+		return token(tok_err);
+	    }
 	    else if ( ('\\' == last_Char) ){
 		id_Str += '\\';
 		i += validEscape(&last_Char, id_Str);
-		if ( (MAX_STR < i) )
-		    ; // throw(TooLong_Error(id_Str, "MAX_STR", MAX_STR));
+		if (errorIn_Progress) return token(tok_err);
+		if ( (MAX_STR < i) ){
+		    tooLongError(id_Str, "MAX_STR", MAX_STR);
+		    errorIn_Progress = 1;
+		    return token(tok_err);
+		}
 	    }
 	    else
 		id_Str += last_Char;
@@ -418,8 +476,11 @@ getTok()
 	    id_Str = "/*";
 	    for (;;){ // need infinite loop to allow for /* * */ type 
 		id_Str += getNext();
-		if ( (EOF == last_Char) )
-		    ; // throw(Lexer_Error(id_Str, "comment missing closing */"));
+		if ( (EOF == last_Char) ){
+		    lexerError(0, id_Str, "comment missing closing */");
+		    errorIn_Progress = 1;
+		    return token(tok_err);
+		}
 		else if ( ('*' == last_Char) ){
 		    if ( ('/' == getNext()) ){
 			id_Str.clear();
@@ -440,7 +501,7 @@ getTok()
 	//         type 2: pointing at the closing tag (last 2 chars '*/).
 	if ( last_Char != EOF){
 	    getNext();
-	    return getTok(); // re-; // throw when done with comment line
+	    return getTok(); // re-throw when done with comment line
 	}
 	else 
 	    return token(tok_eof);
@@ -488,16 +549,22 @@ getTok()
 	    getNext();
 	    return token(tok_log_and);
 	}
-	else
-	    ; // throw(Lexer_Error("&", ""));
+	else{
+	    lexerError(0, "&", "");
+	    errorIn_Progress = 1;
+	    return token(tok_err);
+	}
     }
     if ( ('|' == last_Char) ){
 	if ( ('|' == getNext()) ){
 	    getNext();
 	    return token(tok_log_or);
 	}
-	else
-	    ; // throw(Lexer_Error("|", ""));
+	else{
+	    lexerError(0, "|", "");
+	    errorIn_Progress = 1;
+	    return token(tok_err);
+	}
     }
     if ( ('[' == last_Char) ){
 	if ( (']' == getNext()) ){
@@ -508,13 +575,10 @@ getTok()
 	    return token(tok_sqopen);
     }
 
-    // if we come here, we are down to single character operators and 
-    // punctuation symbols, and illegal characters. 
-    // 'tok_eof' signals: no valid 1-char token; not actually EOF
-    // note that we also need to ready the next last_Char
+    // If we come here, we are down to single character operators and 
+    // punctuation symbols, and illegal characters (sent as token(tok_err)).
+    // Note that we also need to ready the next last_Char
     token tmpT = retOpPunct(last_Char);
-    if ( (tok_eof == tmpT.Tok()) )
-	; // throw(Lexer_Error(std::string(1, last_Char), "invalid token"));
     getNext();
     return tmpT;
 }
