@@ -41,15 +41,16 @@ enum tokenType{
     tok_semi = ';', tok_comma = ',', tok_sqclosed = ']', tok_rdopen = '(',
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types and actions
-    tok_ID = -100, tok_tmp = -101, tok_cast = -102, tok_dec = -103,
+    tok_err = -100, tok_ID = -101, tok_tmp = -102, tok_cast = -103, 
+    tok_dec = -104,
 };
 
 class token{
 public:
-    token(tokenType t = tok_eof, std::string lex = "")
-	: token_(t)
+    token(tokenType T = tok_eof, std::string Lex = "")
+	: token_(T)
     {
-	switch(t){ 
+	switch(T){ 
 	case tok_eof: break;
 
 	case tok_void: lexeme_ = "void"; break;
@@ -63,7 +64,7 @@ public:
 	case tok_null: lexeme_ = "null"; break;
 	case tok_intV:
 	case tok_doubleV:
-	case tok_stringV: lexeme_ = lex; break;
+	case tok_stringV: lexeme_ = Lex; break;
 
 	case tok_return: lexeme_ = "return"; break;
 	case tok_for: lexeme_ = "for"; break;
@@ -94,11 +95,11 @@ public:
 	case tok_sqopenclosed: lexeme_ = "[]"; break;
 
 	case tok_tmp: 
-	    lexeme_ = ("" == lex)?"t":lex;
+	    lexeme_ = ("" == Lex)?"t":Lex;
 	    break;
 	case tok_cast: lexeme_ = "cast"; break;
 
-	case tok_ID: lexeme_ = lex; break;
+	case tok_ID: lexeme_ = Lex; break;
 
 	case tok_plus: case tok_minus: case tok_mult: 
 	case tok_div: case tok_mod:
@@ -108,12 +109,12 @@ public:
 	case tok_semi: case tok_comma: case tok_sqclosed: 
 	case tok_rdopen: case tok_rdclosed: case tok_paropen: 
 	case tok_parclosed:
-	    lexeme_ = std::string(1, static_cast<char>(t));
+	    lexeme_ = std::string(1, static_cast<char>(T));
 	    break;
 
 	case tok_dec: lexeme_ = "dec"; break;
-
-	default: // add error maybe
+	case tok_err: lexeme_ = Lex; break;
+	default: // no throwing error - counter to "Effective C++" (ctor)
 	    break;
 	}
     }
@@ -128,8 +129,8 @@ private:
     std::string lexeme_;
 };
 
-extern int lineNo;
-extern int colNo;
+extern int line_No;
+extern int col_No;
 extern int last_Char; // not ideal, but nice to be able to access elsewhere
 
 token getTok(void);

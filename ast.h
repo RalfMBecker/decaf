@@ -77,7 +77,7 @@ public:
 class Node_AST{
 public:
 Node_AST(Node_AST* lC=0, Node_AST* rC=0)
-    : parent_(0), lChild_(lC), rChild_(rC), line_(lineNo), col_(colNo),
+    : parent_(0), lChild_(lC), rChild_(rC), line_(line_No), col_(col_No),
 	addr_(""), env_(top_Env)
     {
 	if ( (0 != lChild_) )

@@ -27,11 +27,29 @@
 // forward declaration
 void errExit(int pError, const char* msg, ...);
 
+#include <string> // *********** REMOVE NEXT TWO LINES AFTER DEBUG
+#include "error.h"
+
 std::istream* input;
 
 int
 main(int argc, char* argv[])
 {
+    std::string Str = "Test_Str";
+
+    lexerError(0, Str, "illegal ascii value");
+    tooLongError(Str, "MAX_LIT", MAX_LIT);
+    strToNumError(Str, "integer", 'C');
+    std::cerr << "\n";
+
+    primaryError(0, Str, "not declared");
+    punctError(')', 0);
+    punctError(')', 1);
+    varAccessError(Str, 0);
+    varAccessError(Str, 1);
+
+    exit(EXIT_SUCCESS);
+
     std::string name_Str;
     switch(argc){
     case 1:

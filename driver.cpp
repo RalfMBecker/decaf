@@ -18,8 +18,8 @@
 extern std::istream* input;
 extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity
 
-int no_lex_Errors = 0;
-int no_par_Errors = 0;
+extern int no_lex_Errors;
+extern int no_par_Errors;
 
 void
 initFrontEnd(std::string Str)
@@ -46,7 +46,7 @@ startParse(void)
 {
     getNextToken();
     while (*input){
-	try{
+//	try{
 	    pFirst_Node = parseBlock();
 
 	    std::cout << "\n";
@@ -54,7 +54,9 @@ startParse(void)
 	    pFirst_Node->accept(new MakeIR_Visitor);
 	    printIR_List();
 	    getNextToken();
-	}
+    }
+//	}
+/*
 	catch(Lexer_Error& m){ // **TO DO: different error class treatment?**
 	    m.print();         // (call only Lexer/Semantic)
 	    panicModeFwd();
@@ -72,25 +74,12 @@ startParse(void)
 	    panicModeFwd();
 	}
     }
+*/
 
     if (no_lex_Errors)
 	std::cerr << "found " << no_lex_Errors << " lexical errors\n";
 
     if (no_par_Errors)
 	std::cerr << "found "<< no_par_Errors << " syntactic/semantic errors\n";
-}
-
-void // ***TO DO: better a method for each Error type (as we forward
-panicModeFwd(void) // in different ways)
-{
-    int c;
-
-    if ( ('\n' != last_Char) && (EOF != last_Char) ){
-	while( ('\n' != (c = getNext())) && (';' != c) )
-	    ;
-    }
-
-    if (EOF != last_Char)
-	getNext();
 }
 

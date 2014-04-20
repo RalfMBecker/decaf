@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "lexer.h"
+#include "ast.h"
 
 void errExit(int, const char* format, ...);
 
@@ -23,13 +24,11 @@ class IdExpr_AST;
 extern std::map<tokenType, int> binOp_Table;
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
-//extern std::map<tokenType, int> logArithm_Table;
 
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);
 void addToWidthTable(std::string Name, int Width);
-void makeLogArithmTable(void);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
 int opPriority(token t);

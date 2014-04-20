@@ -18,7 +18,7 @@
 #include <string>
 
 #include "lexer.h"
-#include "error.h"
+//#include "error.h"
 #include "tables.h"
 
 // forward declarations

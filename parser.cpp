@@ -21,6 +21,29 @@ token next_Token;
 Node_AST* pFirst_Node;
 extern std::istream* input;
 
+int frame_Depth = 0; // track depth of scope nesting
+
+/***************************************
+*  Helper functions
+***************************************/
+
+// used in error handling (fed by rv of panicModeFwd())
+void
+adjScopeLevel(int N)
+{
+    int i;
+
+    frame_Depth += N;
+    if ( (0 < N) ){
+	for (i = 0; i < N; i++)
+	    top_Env = addEnv(top_Env);
+    }
+    else{
+	for (i = 0; i > N; i--)
+	    top_Env = top_Env->getPrior();
+    }
+}
+
 token
 getNextToken(void) { return (next_Token = getTok()); }
 
@@ -73,7 +96,7 @@ parseIdExpr(std::string Name)
     // TO DO: once we also catch arrays/fcts, might need change
     Expr_AST* pId;
     if ( (0 == (pId = findNameInHierarchy(top_Env, Name))) )
-	throw(Primary_Error(Name, "not declared"));
+	; // throw(Primary_Error(Name, "not declared"));
 
     if ( (0 == match(1, tok_rdopen, 0)) )
 	; // TO DO: this can catch function definitions
@@ -119,7 +142,7 @@ parseExpr(int Infix)
     logOp_Tot = 0;
     Expr_AST* LHS = parsePrimaryExpr();
     if ( !LHS )
-	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
+	; // throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
 
     Expr_AST* ptmp_AST = 0;
     if ( (1 == Infix) )
@@ -172,17 +195,17 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	getNextToken();
 	Expr_AST* RHS = parsePrimaryExpr();
 	if (!RHS)
-	    throw(Primary_Error(next_Token.Lex(), err_Msg));
+	    ; // throw(Primary_Error(next_Token.Lex(), err_Msg));
 
 	int prec_3 = opPriority(next_Token.Tok());
 	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
 
-	//**TO DO: as we next read a Primary_Expr (which dispatches '-', 
-	//         '!', this should handle prefix following fine (confirm) **
+	// Note: as we next read a Primary_Expr (which dispatches '-', 
+	//       '!'), this handles a prefix expr following fine.
 	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
 	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
 	    if (!RHS)
-		throw(Primary_Error(next_Token.Lex(), err_Msg));
+		; // throw(Primary_Error(next_Token.Lex(), err_Msg));
 	}
 
 	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
@@ -209,7 +232,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	case tok_log_eq: case tok_log_ne: case tok_lt:
 	case tok_le: case tok_gt: case tok_ge:
 	    if ( (1 < ++logOp_Tot) )
-		throw(Primary_Error(binOp1.Lex(), err_Msg2));
+		; // throw(Primary_Error(binOp1.Lex(), err_Msg2));
 	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
 	default:
@@ -229,7 +252,7 @@ parseParensExpr(void)
     Expr_AST* E = dispatchExpr();
 
     if ( (-1 == match(0, tok_rdclosed, 1)) )
-	throw(Punct_Error(')', 0));
+	; // throw(Punct_Error(')', 0));
 
     logOp_Tot = oldLogic_Status;
 
@@ -251,9 +274,10 @@ parsePrimaryExpr(void)
     case '!': 
 	return dispatchExpr();
     default: 
-	throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
+	; // throw(Primary_Error(next_Token.Lex(), "Expected primary expression"));
 	break;
     }
+    return 0; // to suppress gcc warning
 }
 
 // decl -> type id;
@@ -268,10 +292,10 @@ parseVarDecl(token Type)
     std::cout << "parsing a var declaration...\n";
     // access error (allow for shadowing)
     if ( (tok_ID != next_Token.Tok()) )
-	throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
+	; // throw (Primary_Error(next_Token.Lex(), "expected primary identifier"));
     Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
     if ( (prior_Env == top_Env) )
-	throw(VarAccess_Error(next_Token.Lex(), 1));
+	; // throw(VarAccess_Error(next_Token.Lex(), 1));
 
     // handle arrays
     token op_Token = next_Token;
@@ -296,7 +320,7 @@ parseVarDecl(token Type)
 	next_Token = op_Token;
 	break;
     default: 
-	throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
+	; // throw(Primary_Error(next_Token.Lex(), "expected = or ; instead"));
     }
 
     return new VarDecl_AST(new_Id);
@@ -313,7 +337,7 @@ parseAssign(void)
     // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
     if ( (0 == LHS) )
-	throw(VarAccess_Error(next_Token.Lex(), 0));
+	; // throw(VarAccess_Error(next_Token.Lex(), 0));
     // **TO DO: allow for array access too
 
     Expr_AST* RHS;
@@ -325,12 +349,12 @@ parseAssign(void)
 	getNextToken();
 	RHS = dispatchExpr();
 	if ( (0 == RHS) )
-	    throw(Primary_Error(next_Token.Lex(), "invalid assignment"));
+	    ; // throw(Primary_Error(next_Token.Lex(), "invalid assignment"));
 	if ( (-1 == match(0, tok_semi, 0)) )
-	    throw(Punct_Error(';', 0));
+	    ; // throw(Punct_Error(';', 0));
 	break;
     default:
-	throw(Primary_Error(next_Token.Lex(), "= or ; expected"));
+	; // throw(Primary_Error(next_Token.Lex(), "= or ; expected"));
 	break;
     }
 
@@ -371,11 +395,11 @@ parseStmt(void)
 	break;
     default: // assume empty expression
 	// ** TO DO: proper function
-	std::cerr << "Near " <<  lineNo << ":" << colNo << ": ";
+	std::cerr << "Near " <<  line_No << ":" << col_No << ": ";
 	std::cerr << "warning - unused expression\n";
 	dispatchExpr(); // parse and discard
 	if ( (-1 == match(0, tok_semi, 1)) )
-	    throw(Punct_Error(';', 0));
+	    ; // throw(Punct_Error(';', 0));
 	return 0;
 	break;
     }
@@ -386,8 +410,6 @@ parseStmt(void)
 // ****TO DO: relocate/re-order functions
 StmtList_AST* parseStmtList(void);
 StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
-
-int frame_Depth = 0;
 
 // block -> { [stmtList | { stmtList }]* } 
 // invariants -> entering, point at '{', if any
@@ -410,7 +432,7 @@ parseBlock(void)
 
     if ( (0 < frame_Depth) ){
 	if ( (-1 == match(0, tok_parclosed, 1)) )
-	    throw(Punct_Error('}', 0));
+	    ; // throw(Punct_Error('}', 0));
 	top_Env = top_Env->getPrior();
 	frame_Depth--;
     }
@@ -443,7 +465,7 @@ parseStmtListCtd(StmtList_AST* LHS)
 	case '{':
 	    RHS = parseBlock();
 	    if (!RHS)
-		throw(Primary_Error(next_Token.Lex(), err_Msg));
+		; // throw(Primary_Error(next_Token.Lex(), err_Msg));
 	    break;
 	case '}':
 	    return LHS;
