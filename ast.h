@@ -536,7 +536,7 @@ public:
 	: Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Assign_AST with addr = " << addr_ << "\n"; 
+	std::cout << "\tcreated Assign_AST with LHS = " << addr_;
     }
 
     virtual void accept(AST_Visitor* Visitor)

@@ -35,18 +35,7 @@ std::istream* input;
 int
 main(int argc, char* argv[])
 {
-/*
-    std::string Str = "Test_Str";
 
-    parseError(Str, "not declared");
-    parseWarning(Str, "not declared");
-    punctError(')', 0);
-    punctError(')', 1);
-    varAccessError(Str, 0);
-    varAccessError(Str, 1);
-
-    exit(EXIT_SUCCESS);
-*/
     std::string name_Str;
     switch(argc){
     case 1:
@@ -63,8 +52,8 @@ main(int argc, char* argv[])
 	errExit(0, "Error: # of args (%d). Usage: <program> <file>\n", argc);
     }
 
-    // create ready-state
-/* 
+    
+/* // create ready-state
    if ( (&std::cin == input) )
 	std::cout << "ready> ";
     getNext();

@@ -1,15 +1,15 @@
-/******************************************************
-* error.cpp -   fatal error function                  *
-*                                                     *
-******************************************************/
+/********************************************************
+* error.cpp - error function implementations & globals
+*                                                     
+********************************************************/
 
 #include <sstream>
 #include <iostream>
 #include <cstring>
 
 #include "ename.h"
-#include "error.h"
 #include "lexer.h"
+#include "error.h"
 
 token getNextToken(void);
 
@@ -27,16 +27,17 @@ panicModeFwd(void)
     int c;
     int adj(0);
 
-// **TO DO: the following line might be necessary for some cases
-//     if ( ('\n' != last_Char) && (EOF != last_Char) ){
     if ( (EOF != last_Char) ){
+	if ( (';' != last_Char) ){
 	while( (EOF != (c = getNext())) && (';' != c) ){
 	    if ( ('{' == c) )
 		adj++;
 	    else if ( ('}' == c) )
 		adj--;
+	 }
 	}
 
+	// we now point at ';', if any left in source file
 	if ( (EOF != last_Char) ){
 	    getNext(); // eat ';'
 	    getNextToken();
@@ -87,10 +88,12 @@ errExit(int pError, const char* format, ...)
 void
 errorBase(int is_Error)
 {
-    if (is_Error)
+    if ( (1 == is_Error) )
 	std::cerr << "Error ";
-    else
+    else if ( (0 == is_Error) )
 	std::cerr << "Warning ";
+    else
+	errExit(0, "illegal use of function \'errorBase\'");
     std::cerr << "near " << line_No << ":" << col_No << ": ";
 }
 
@@ -186,12 +189,14 @@ void
 parseWarning(std::string tok_Str, std::string com_Str) 
 {
     errorBase(0);
-    no_par_Errors++;
 
-    std::ostringstream tmp_Str;
-    tmp_Str << "In (" << tok_Str << ") - " << com_Str << "\n";
- 
-    std::cerr << tmp_Str.str();
+    if ( ("" != tok_Str) ){
+	std::ostringstream tmp_Str;
+	tmp_Str << "In (" << tok_Str << ") - " << com_Str << "\n"; 
+	std::cerr << tmp_Str.str();
+    }
+    else
+	std::cerr << com_Str << "\n";
 }
 
 // What - 0: missing; 1: spare

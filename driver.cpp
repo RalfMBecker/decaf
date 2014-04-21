@@ -56,16 +56,14 @@ startParse(void)
 
     std::string plural;
     if (no_lex_Errors){
-	std::cerr << "found " << no_lex_Errors << " lexical error";
+	std::cerr << "\nfound " << no_lex_Errors << " lexical error";
 	plural = ( (1 < no_lex_Errors) )?"s\n":"\n";
 	std::cerr << plural;
     }
     if (no_par_Errors){
-	std::cerr << "found "<< no_par_Errors << " syntactic/semantic errors\n";
+	std::cerr << "found "<< no_par_Errors << " syntactic/semantic error";
 	plural = ( (1 < no_par_Errors) )?"s\n":"\n";
 	std::cerr << plural;
     }
-
-
 }
 

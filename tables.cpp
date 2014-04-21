@@ -138,6 +138,7 @@ addEnv(Env* Prior)
 int
 addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
 {
+    if ( (0 == pEnv) || (root_Env == pEnv) ) return -1;
     std::string Name = new_Id->Addr();
     // add to Env* entry of Env ll rooted at root_Env
     if ( (0 == pEnv->findName(Name) ) ) // already in tables
