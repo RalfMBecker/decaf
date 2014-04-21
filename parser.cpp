@@ -346,7 +346,7 @@ parseVarDecl(token Type)
 	getNextToken();
 	break;
     case tok_eq: // prepare to call parseAssign() next
-	input->putback('=');
+	putBack('=');
 	next_Token = op_Token;
 	break;
     default: 
@@ -476,28 +476,25 @@ StmtList_AST*
 parseBlock(void)
 {
     std::cout << "parsing a block...\n";
-
-    std::cout << "\t\t\t\[debug] block -1; error = " << errorIn_Progress << "\n";
-    StmtList_AST* pSL;
-    if ( (0 == match(0, tok_paropen, 0)) ){
-	if ( (0 == match(1, tok_parclosed, 0)) ){
-	    if (errorIn_Progress) return 0;
-	    getNextToken();
-	    if (errorIn_Progress) return 0;
-	    return new StmtList_AST(0, 0);
-	}
-	top_Env = addEnv(top_Env);
-	frame_Depth++;
+;
+    StmtList_AST* pSL; 
+    if ( (-1 == match(0, tok_paropen, 1)) )
+	return 0; // **TO DO: add error handling on this level
+    if ( (0 == match(0, tok_parclosed, 0)) ){
+	getNextToken();       
+	return new StmtList_AST(0, 0);
     }
 
-    std::cout << "\t\t\t\[debug] block -2; error = " << errorIn_Progress << "\n";
+    top_Env = addEnv(top_Env);
+    frame_Depth++;
 
+    std::cout << "\t\t\t\[debug] block; error = " << errorIn_Progress << "\n";
     pSL = parseStmtList();
-    if (errorIn_Progress) return 0;
+    // if (errorIn_Progress) return 0;
 
-    if ( (0 < frame_Depth) ){
+    // TO TO: make tight by tracking how much error handling reduced, if any
+    if ( (0 < frame_Depth) ){ // could have been reduced in error handling
 	if ( (-1 == match(0, tok_parclosed, 1)) ){
-	    if (errorIn_Progress) return 0;
 	    ; // throw(Punct_Error('}', 0));
 	}
 	top_Env = top_Env->getPrior();
@@ -521,7 +518,10 @@ parseStmtList(void)
     std::cout << "\t\t\t\[debug] stmtList - 2; error = "<< errorIn_Progress << "\n";
     std::cout << "\t[debug] line = " << line_No << ", col = " << col_No << "\n";
 
-    return parseStmtListCtd(LHS); // points ahead
+    if ( (0 < frame_Depth) ) // could be less if error
+	return parseStmtListCtd(LHS); // points ahead
+    else
+	return LHS;
 }
 
 // for logic, compare parseInfixExpr() - similar, with path determined by
@@ -533,10 +533,11 @@ parseStmtListCtd(StmtList_AST* LHS)
 {
     std::cout << "entering parseStmtListCtd...\n";
 
-    std::cout << "\t[debug] line = " << line_No << ", col = " << col_No << "\n";
+    std::cout << "\t[debug] ctd, line = " << line_No << ", col = " << col_No << "\n";
 
     std::string const err_Msg = "expected statement";
     StmtList_AST* RHS;
+
     for (;;){
 	switch(next_Token.Tok()){
 	case '{':

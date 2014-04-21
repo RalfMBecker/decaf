@@ -9,12 +9,9 @@
 
 #include "ename.h"
 #include "error.h"
+#include "lexer.h"
 
-// used from lexer.h
-extern int line_No;
-extern int col_No;
-extern int last_Char;
-int getNext(void);
+token getNextToken(void);
 
 int no_lex_Errors = 0;
 int no_par_Errors = 0;
@@ -40,11 +37,14 @@ panicModeFwd(void)
 		adj--;
 	}
 
-	if (EOF != last_Char)
-	    getNext();
+	if ( (EOF != last_Char) ){
+	    getNext(); // eat ';'
+	    getNextToken();
+	}
 
 	return adj;
     }
+    return 0; // to suppress gcc warning
 }
 
 // error class for compiler-usage errors (never prompted by user of

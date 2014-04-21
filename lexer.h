@@ -136,5 +136,6 @@ extern int errorIn_Progress;
 
 token getTok(void);
 int getNext(void);
+void putBack(char);
 
 #endif

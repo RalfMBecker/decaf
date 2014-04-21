@@ -29,7 +29,38 @@ extern std::istream* input;
 int line_No = 1;
 int col_No = 0;
 int last_Char = ' ';
+int col_Last = 0; // if we wrap around line, store col # so we can retrieve
+                  // it if we need to put a character back
 int errorIn_Progress = 0;
+
+int
+getNext(void)
+{
+    // do this first: if we pointed to '\n' when error was found, necessary
+    if ( ('\n' == last_Char) ){
+	line_No++;
+	col_Last = col_No;
+	col_No = 1;
+    }
+    else
+	col_No++;
+
+    return (last_Char = input->get());
+}
+
+void
+putBack(char c)
+{
+    if ( ('\n' == last_Char) ){
+	col_No = col_Last;
+	if ( (1 < line_No) )
+	    line_No--;
+    }
+    else
+	col_No--;
+
+    input->putback(c);
+}
 
 token
 checkReserved(std::string Str)
@@ -142,14 +173,14 @@ readOctHex(int* Last, std::string& Str, int Base)
     std::string test_Str;
 
     while ( i++ < max ){
-	*Last = input->get();
+	*Last = getNext();
 	if ( ( (8 == Base) && ('0' <= *Last) && ('8' > *Last) ) || 
 	     ( (16 == Base) && (std::isxdigit(*Last)) ) ){
 	    Str += *Last;
 	    test_Str += *Last;
 	}
 	else{
-	    input->putback(*Last);
+	    putBack(*Last);
 	    break;
 	}
     }
@@ -175,7 +206,7 @@ validEscape(int* Last, std::string& tmp_Str)
 {
     int len = 1;
 
-    *Last = input->get();
+    *Last = getNext();
     switch(*Last){
 
     case 'a': case 'b': case 'f': case 'n': case 'r': case 't':
@@ -224,14 +255,14 @@ getBase(int* Last)
     if ( ('0' != (*Last)) )
 	return 10;
     else{
-	if ( ('x' == ((*Last) = input->get())) || ('X' == (*Last)) ){
-	    *Last = input->get();
+	if ( ('x' == ((*Last) = getNext())) || ('X' == (*Last)) ){
+	    *Last = getNext();
 	    return 16;
 	}
 	else if ( isdigit(*Last) )
 	    return 8;
 	else{
-	    input->putback(*Last);
+	    putBack(*Last);
 	    *Last = '0';
 	    return 10;
 	}
@@ -258,7 +289,7 @@ readIntValue(int* Last, int* pBase, int* Count, long* iV, std::string& tmp_Str){
 		return tok_err;
 	    }
 	    tmp_Str += (*Last);
-	    (*Last) = input->get();
+	    (*Last) = getNext();
 	} while ( ((8==base) && isdigit(*Last)) || 
 		  ((16==base) && isxdigit(*Last)) );
 
@@ -287,24 +318,10 @@ readIntValue(int* Last, int* pBase, int* Count, long* iV, std::string& tmp_Str){
 	    return tok_err;
 	}
 	tmp_Str += (*Last);
-	(*Last) = input->get();
+	(*Last) = getNext();
     } while (isdigit(*Last) );
 
     return 0;
-}
-
-int
-getNext(void)
-{
-    // do this first: if we pointed to '\n' when error was found, necessary
-    if ( ('\n' == last_Char) ){
-	line_No++;
-	col_No = 1;
-    }
-    else
-	col_No++;
-
-    return (last_Char = input->get());
 }
 
 // getTok() - return the next token from 'input'-stream
@@ -489,7 +506,7 @@ getTok()
 			break; // found a type 2 comment
 		    }
 		    else
-			input->putback(static_cast<char>(last_Char));
+			putBack(static_cast<char>(last_Char));
 		}
 	    }
 	} // end loop for type 2 comments
