@@ -1,5 +1,5 @@
 /***********************************************************************
-* error.h -   basic error classes                     
+* error.h -   header file for error.cpp                     
 *                                                     
 * Stroustrup: "(throw-catch) Exception handling is intended for dealing 
 *             with non-local problems." (Special Edition, p. 193)

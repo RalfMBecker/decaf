@@ -7,6 +7,7 @@
 #define PARSER_H_
 
 class Node_AST;
+class Block_AST;
 class Expr_AST;
 
 extern Node_AST* pFirst_Node;

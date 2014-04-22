@@ -33,6 +33,8 @@ int col_No = 0;
 int last_Char = ' ';
 int errorIn_Progress = 0;
 
+extern token next_Token;
+
 int
 getNext(void)
 {
@@ -47,7 +49,7 @@ getNext(void)
     return (last_Char = input->get());
 }
 
-// So wrap back around lines, we would need to track chars on a stack
+// To wrap back around lines, we would need to track chars on a stack
 // This scheme might create phantom col numbers, but rarely used. 
 void
 putBack(char c)

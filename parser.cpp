@@ -7,9 +7,9 @@
 *
 * Invariant: upon return, parse functions ensure to point ahead
 *
-* Error handling: local error report, after which the error is is 
+* Error handling: local error report, after which the error is 
 *                 handed on to statement level, and processed there
-*                 using Panice Mode recovery 
+*                 (using Panic Mode recovery) 
 *
 * Mem Leaks: will add a function to delete AST*s and Env* later
 *
@@ -65,10 +65,6 @@ errorResetStmt(void)
 token
 getNextToken(void) { return (next_Token = getTok()); }
 
-/***************************************
-*  Primary expressions
-***************************************/
-
 int
 match(int update_Prior, tokenType t, int update_Post)
 {
@@ -85,6 +81,10 @@ match(int update_Prior, tokenType t, int update_Post)
     else
 	return -1;
 }
+
+/***************************************
+*  Primary expressions
+***************************************/
 
 // int -> <integer value>
 Expr_AST*
@@ -170,7 +170,6 @@ Expr_AST*
 parseExpr(int Infix)
 {
     std::cout << "parsing an expr...\n";
-    if (errorIn_Progress) return 0; // ** TO DO: confirm - needed
 
     logOp_Tot = 0;
     Expr_AST* LHS = parsePrimaryExpr();
@@ -185,6 +184,7 @@ parseExpr(int Infix)
     else
 	ptmp_AST = LHS;
 
+    if (errorIn_Progress) return 0;
     return parseInfixRHS(0, ptmp_AST);
 }
 
@@ -294,7 +294,6 @@ Expr_AST*
 parseParensExpr(void)
 {
     std::cout << "parsing a ParensExpr...\n";
-    if (errorIn_Progress) return 0;
 
     int oldLogic_Status = logOp_Tot;
     logOp_Tot = 0;
@@ -354,7 +353,6 @@ parseVarDecl(token Type)
 	errorIn_Progress = 1;
 	return 0;
     }
-
     Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
     if ( (prior_Env == top_Env) ){
 	varAccessError(next_Token.Lex(), 1);
@@ -422,14 +420,12 @@ parseAssign(void)
     case '=':
 	getNextToken();
 	if (errorIn_Progress) return 0;
-
 	RHS = dispatchExpr();
 	if ( (0 == RHS) ){
 	    parseError(next_Token.Lex(), "invalid assignment");
 	    errorIn_Progress = 1;
 	    return 0;
 	}
-
 	if ( (-1 == match(0, tok_semi, 0)) ){
 	    punctError(';', 0);
 	    errorIn_Progress = 1;
@@ -527,13 +523,20 @@ parseBlock(void)
 
     // TO DO: more thinking about this once integrated higher
     if ( (0 < frame_Depth) ){ // could have been reduced in error handling
-	if ( (-1 == match(0, tok_parclosed, 1)) ){
+	int test;
+	if ( (-1 == (test = match(0, tok_parclosed, 1))) ){
 	    punctError('}', 0);
-	    // errorIn_Progress = 1;
+	    // errorIn_Progress = 1; **TO DO: handle later
 	    return 0;
 	}
-	top_Env = top_Env->getPrior();
-	frame_Depth--;
+	else if ( (-2 == test) ){
+	    // errorIn_Progress = 1; **TO DO: handle later
+	    return 0;
+	}
+	else{
+	    top_Env = top_Env->getPrior();
+	    frame_Depth--;
+	}
     }
 
     return pSL;
@@ -562,13 +565,10 @@ parseStmtListCtd(StmtList_AST* LHS)
 {
     std::cout << "entering parseStmtListCtd...\n";
 
-    // **TO DO: when more integrated, how to process this more gently?
     if ( (1 > frame_Depth) || (tok_eof == next_Token.Tok()) )
 	errExit(0, "missing \'}\' - symbol table corrupted");
 
-    std::string const err_Msg = "expected statement";
     StmtList_AST* RHS;
-
     for (;;){
 	switch(next_Token.Tok()){
 	case '{':
@@ -576,16 +576,27 @@ parseStmtListCtd(StmtList_AST* LHS)
 	    if (!RHS) return 0;
 	    break;
 	case '}': // if we skip by one in errorResetStmt(), we get stuck. 
-	    return LHS; // **TO DO: (above)
+	    if ( (0 < frame_Depth) )
+		return LHS;
+	    else
+		errExit(0, "spare '}' - symbol table corrupted");
 	    break;
 	default:
 	    RHS = parseStmt(); // RHS = 0 signals (1) empty expr; (2) error
-	    RHS = parseStmtListCtd(RHS);
+	    if ( (0 < frame_Depth) )
+		RHS = parseStmtListCtd(RHS);
+	    else
+		errExit(0, "spare '}' - symbol table corrupted");
 	    break;
 	}
+
+	std::cout << "\t\t\t[debug] stmt (ready to create StmtList)\n";
+
 	LHS = new StmtList_AST(LHS, RHS);
     } // before call of this fct                    after
       //        LHS_b                               LHS_a
       //                                         LHS_b   RHS (compound)
+
+    std::cout << "\t\t\t[debug] stmt (end)\n";
     return 0; // to suppress gcc warning
 }

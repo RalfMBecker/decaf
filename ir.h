@@ -3,6 +3,9 @@
 *
 ********************************************************************/
 
+#ifndef IR_H_
+#define IR_H_
+
 #include <sstream>
 #include <ostream>
 #include <string>
@@ -107,3 +110,5 @@ private:
     std::string frame_;
     std::vector<std::string> labels_;
 };
+
+#endif

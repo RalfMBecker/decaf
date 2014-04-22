@@ -27,9 +27,6 @@
 // forward declaration
 void errExit(int pError, const char* msg, ...);
 
-#include <string> // *********** REMOVE NEXT TWO LINES AFTER DEBUG
-#include "error.h"
-
 std::istream* input;
 
 int
@@ -51,13 +48,6 @@ main(int argc, char* argv[])
     default:
 	errExit(0, "Error: # of args (%d). Usage: <program> <file>\n", argc);
     }
-
-    
-/* // create ready-state
-   if ( (&std::cin == input) )
-	std::cout << "ready> ";
-    getNext();
-*/
 
     // relegate execution to a driver module
     initFrontEnd(name_Str);

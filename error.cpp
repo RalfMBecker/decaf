@@ -9,6 +9,7 @@
 
 #include "ename.h"
 #include "lexer.h"
+#include "parser.h"
 #include "error.h"
 
 token getNextToken(void);
@@ -16,7 +17,7 @@ token getNextToken(void);
 int no_lex_Errors = 0;
 int no_par_Errors = 0;
 
-const int MAX_MSG = 96;
+const int MAX_MSG = 120;
 
 // Returns number of scope level adjustments, if any (used in 
 // helper adjScopeLevel(int n) in parser.cpp)
@@ -29,23 +30,40 @@ panicModeFwd(void)
 
     if ( (EOF != last_Char) ){
 	if ( (';' != last_Char) ){
-	while( (EOF != (c = getNext())) && (';' != c) ){
-	    if ( ('{' == c) )
-		adj++;
-	    else if ( ('}' == c) )
-		adj--;
-	 }
+	    while( (EOF != (c = getNext())) && (';' != c) ){
+		if ( ('{' == c) )
+		    adj++;
+		else if ( ('}' == c) )
+		    adj--;
+	    }
 	}
 
 	// we now point at ';', if any left in source file
 	if ( (EOF != last_Char) ){
 	    getNext(); // eat ';'
 	    getNextToken();
+	    if ( (tok_eof == next_Token.Tok()) )
+		errExit(0, "end of file reached while processing error");
 	}
 
 	return adj;
     }
-    return 0; // to suppress gcc warning
+    else
+	errExit(0, "end of file reached while processing error");
+    return -1; // == tok_eof
+}
+
+// is_Error: 0 - warning, 1 - error
+void
+errorBase(int is_Error)
+{
+    if ( (1 == is_Error) )
+	std::cerr << "Error ";
+    else if ( (0 == is_Error) )
+	std::cerr << "Warning ";
+    else
+	errExit(0, "illegal use of function \'errorBase\'");
+    std::cerr << "near " << line_No << ":" << col_No << ": ";
 }
 
 // error class for compiler-usage errors (never prompted by user of
@@ -75,26 +93,14 @@ errExit(int pError, const char* format, ...)
         strcpy(errMsg, " ");
 
     // could be too long for str; ignored
-    snprintf(str, MAX_MSG, "ERROR: %s %s\n", usrMsg, errMsg);
+    errorBase(1);
+    snprintf(str, MAX_MSG, "%s %s\n", usrMsg, errMsg);
 
     fflush(stdout);
     fputs(str, stderr);
     fflush(stderr);
 
     exit(EXIT_FAILURE);
-}
-
-// is_Error: 0 - warning, 1 - error
-void
-errorBase(int is_Error)
-{
-    if ( (1 == is_Error) )
-	std::cerr << "Error ";
-    else if ( (0 == is_Error) )
-	std::cerr << "Warning ";
-    else
-	errExit(0, "illegal use of function \'errorBase\'");
-    std::cerr << "near " << line_No << ":" << col_No << ": ";
 }
 
 /***************************************

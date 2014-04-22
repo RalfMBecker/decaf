@@ -5,6 +5,7 @@
 
 #include <cstdio> // include max. # of #include files to monitor dependencies
 #include <sstream>
+#include <iostream>
 #include <cstdio>
 #include "lexer.h"
 #include "ast.h"
