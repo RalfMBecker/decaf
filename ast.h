@@ -399,7 +399,7 @@ UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
     }
 };
 
-// ***To DO:  give array declarations their own class (?)***
+// ***To DO: treat array in expr as sub class of this?***
 class AssignExpr_AST: public Expr_AST{
 public:
 AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)

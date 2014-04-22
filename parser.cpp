@@ -267,7 +267,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    std::cout << "coercing LHS...\n";
 	    LHS = parseCoercion(LHS, RHS->Type().Tok());
 	}
-	else if ( (2 == tmp) ){
+	else if ( (2 == tmp) || ( (1 == tmp) && (is_Assign) ) ){
 	    std::cout << "coercing RHS...\n";
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
 	} 
