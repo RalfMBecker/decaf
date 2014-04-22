@@ -29,6 +29,7 @@ class FltExpr_AST;
 class ArithmExpr_AST;
 class CoercedExpr_AST;
 class UnaryArithmExpr_AST;
+class AssignExpr_AST;
 class LogicalExpr_AST;
 class OrExpr_AST;
 class AndExpr_AST;
@@ -54,6 +55,7 @@ public:
     virtual void visit(ArithmExpr_AST*) = 0;
     virtual void visit(CoercedExpr_AST*) = 0;
     virtual void visit(UnaryArithmExpr_AST*) = 0;
+    virtual void visit(AssignExpr_AST* V) = 0;
     virtual void visit(LogicalExpr_AST*) = 0;
     virtual void visit(OrExpr_AST*) = 0;
     virtual void visit(AndExpr_AST*) = 0;
@@ -397,6 +399,26 @@ UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
     }
 };
 
+// ***To DO:  give array declarations their own class (?)***
+class AssignExpr_AST: public Expr_AST{
+public:
+AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
+    : Expr_AST(token(Id->Type()), token(tok_eq), Id, Expr) 
+    {
+	setAddr(Id->Op().Lex());
+	std::cout << "\tcreated AssignExpr_AST with LHS = " << addr_ << "\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
 /***************************************
 * Expression Logical children
 ***************************************/
@@ -536,7 +558,7 @@ public:
 	: Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Assign_AST with LHS = " << addr_;
+	std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";;
     }
 
     virtual void accept(AST_Visitor* Visitor)

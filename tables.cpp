@@ -40,19 +40,20 @@ int Env::count_ = -1; // associate 0 with never-used root_Env pointer
 void
 makeBinOpTable(void)
 {
-    binOP_Table[tok_log_or] = 100;
-    binOP_Table[tok_log_and] = 200;
-    binOP_Table[tok_log_eq] = 300;
-    binOP_Table[tok_log_ne] = 300;
-    binOP_Table[tok_lt] = 400;
-    binOP_Table[tok_le] = 400;
-    binOP_Table[tok_gt] = 400;
-    binOP_Table[tok_ge] = 400;
-    binOP_Table[tok_plus] = 500;
-    binOP_Table[tok_minus] = 500;
-    binOP_Table[tok_mult] = 600;
-    binOP_Table[tok_div] = 600;
-    binOP_Table[tok_mod] = 600;
+    binOP_Table[tok_eq] = 100;
+    binOP_Table[tok_log_or] = 200;
+    binOP_Table[tok_log_and] = 300;
+    binOP_Table[tok_log_eq] = 400;
+    binOP_Table[tok_log_ne] = 400;
+    binOP_Table[tok_lt] = 500;
+    binOP_Table[tok_le] = 500;
+    binOP_Table[tok_gt] = 500;
+    binOP_Table[tok_ge] = 500;
+    binOP_Table[tok_plus] = 600;
+    binOP_Table[tok_minus] = 600;
+    binOP_Table[tok_mult] = 700;
+    binOP_Table[tok_div] = 700;
+    binOP_Table[tok_mod] = 700;
 }
 
 int

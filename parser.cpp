@@ -164,10 +164,10 @@ int logOp_Tot = 0;
 // expr -> prim op expr | -expr | !expr | prim | epsilon
 // op -> +, -, *, /, %, ||, &&, op1
 // op1 -> ==, !=, <, <=, >, >= 
-// 0 - infix; 1 - arithm prefix (-); 2 - logical prefix (!)
+// Type: 0 - infix; 1 - arithm prefix (-); 2 - logical prefix (!)
 // logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
 Expr_AST* 
-parseExpr(int Infix)
+parseExpr(int Type)
 {
     std::cout << "parsing an expr...\n";
 
@@ -177,9 +177,9 @@ parseExpr(int Infix)
 	return 0; // handled by caller
 
     Expr_AST* ptmp_AST = 0;
-    if ( (1 == Infix) )
+    if ( (1 == Type) )
 	ptmp_AST = new UnaryArithmExpr_AST(token(tok_minus), LHS);
-    else if ( (2 == Infix) )
+    else if ( (2 == Type) )
 	ptmp_AST = new NotExpr_AST(token(tok_log_not), LHS);
     else
 	ptmp_AST = LHS;
@@ -222,6 +222,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
     std::string const err_Msg = "Expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
+    std::string const err_Msg3 = "illegal assignment: lvalue expected";
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
 	std::cout << "current token (1) = " << next_Token.Lex() << "\n";
@@ -254,8 +255,15 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	}
 
 	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
+	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
+	if ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ){
+	    parseError(next_Token.Lex(), err_Msg3);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+
 	int tmp = checkForCoercion(LHS, RHS);
-	if ( (1 == tmp) ){
+	if ( (1 == tmp) && !(is_Assign) ){
 	    std::cout << "coercing LHS...\n";
 	    LHS = parseCoercion(LHS, RHS->Type().Tok());
 	}
@@ -263,10 +271,14 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    std::cout << "coercing RHS...\n";
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
 	} 
+
 	switch(binOp1.Tok()){
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
 	case tok_mod: 
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
+	    break;
+	case tok_eq: // validity check above
+	    LHS = new AssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
 	    break;
 	case tok_log_or: 
 	    LHS = new OrExpr_AST(LHS, RHS);
@@ -324,13 +336,14 @@ parsePrimaryExpr(void)
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
     case '(': return parseParensExpr(); 
+    case '=':
     case '-':
     case '!': 
 	return dispatchExpr();
     case ';': // might terminate an empty expression; don't forward
 	return 0; // caller must handle properly
-    default: 
-	parseError(next_Token.Lex(), "expected primary expression");
+    default: // reporting handled by caller 
+	// parseError(next_Token.Lex(), "expected primary expression");
 	errorIn_Progress = 1; // fall through for return
 	break;
     }
@@ -376,7 +389,6 @@ parseVarDecl(token Type)
     if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
 	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 
-    std::cout << "[debug] decl, next_Token = " << next_Token.Lex() << "\n";
     switch(next_Token.Tok()){
     case tok_semi: // we are done - declaration only
 	getNextToken();
@@ -590,13 +602,10 @@ parseStmtListCtd(StmtList_AST* LHS)
 	    break;
 	}
 
-	std::cout << "\t\t\t[debug] stmt (ready to create StmtList)\n";
-
 	LHS = new StmtList_AST(LHS, RHS);
     } // before call of this fct                    after
       //        LHS_b                               LHS_a
       //                                         LHS_b   RHS (compound)
 
-    std::cout << "\t\t\t[debug] stmt (end)\n";
     return 0; // to suppress gcc warning
 }

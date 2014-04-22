@@ -74,6 +74,22 @@ public:
 	insertLine(new SSA_Entry(Op, target, "0", RHS, Frame));
     }
 
+    void visit(AssignExpr_AST* V)
+    {
+	// empty assignment?
+	if ( (0 == V->RChild()) )
+	    return;
+
+	std::string target = V->LChild()->Addr();
+
+	token Op = token(tok_eq);
+	std::string LHS = V->RChild()->Addr();
+	std::string Frame = V->getEnv()->getTableName();
+
+	IR_Line* line = new SSA_Entry(Op, target, LHS, "", Frame);
+	insertLine(line);
+    }
+
     // Even if different objects have the same code, must implement
     // separately for each. There is certainly a way around this using
     // another indirection; but we did not pursue it.
@@ -171,7 +187,6 @@ public:
 	    return;
 
 	std::string target = V->LChild()->Addr();
-	// **TO DO: [debug] monitor addr
 
 	token Op = token(tok_eq);
 	std::string LHS = V->RChild()->Addr();
