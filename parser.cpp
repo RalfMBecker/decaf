@@ -21,13 +21,11 @@
 #include "error.h"
 #include "tables.h"
 
-token next_Token;
 Node_AST* pFirst_Node;
 extern std::istream* input;
 extern int errorIn_Progress;
 
 int frame_Depth = 0; // track depth of scope nesting
-
 
 /***************************************
 *  Helper functions
@@ -61,9 +59,6 @@ errorResetStmt(void)
     errorIn_Progress = 0;
     return 0;
 }
-
-token
-getNextToken(void) { return (next_Token = getTok()); }
 
 int
 match(int update_Prior, tokenType t, int update_Post)
@@ -381,21 +376,20 @@ parseIfStmt(void)
     // handle [ stmt | block ]
     StmtList_AST* stmt;
     if ( (0 == match(0, tok_paropen, 0)) ){
-	getNextToken();
-	if (errorIn_Progress) return 0;
 	stmt = parseBlock();
 	if (errorIn_Progress) return 0;
-	if ( (-1 == match(0, tok_parclosed, 1)) ){
-	    parseError(next_Token.Lex(), "expected \'}\'");
-	    errorIn_Progress = 1;
-	    return 0;
-	}
     }
     else{
+	top_Env = addEnv(top_Env);
 	stmt = parseStmt();
+	top_Env = top_Env->getPrior();
 	if (errorIn_Progress) return 0;
     }
-    If_AST* pIf = new If_AST(expr, stmt);
+
+    int endBlock_Marker = 0;
+    if ( (tok_parclosed == next_Token.Tok()) )
+	endBlock_Marker = 1;
+    If_AST* pIf = new If_AST(expr, stmt, endBlock_Marker);
 
     return pIf;
 }

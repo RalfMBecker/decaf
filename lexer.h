@@ -42,7 +42,7 @@ enum tokenType{
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types and actions
     tok_err = -100, tok_ID = -101, tok_tmp = -102, tok_cast = -103, 
-    tok_dec = -104, tok_iffalse = -105, tok_goto = -106,
+    tok_dec = -104, tok_iffalse = -105, tok_goto = -106, tok_nop = -107,
 };
 
 class token{
@@ -115,6 +115,7 @@ public:
 	case tok_dec: lexeme_ = "dec"; break;
 	case tok_iffalse: lexeme_ = "iffalse"; break;
 	case tok_goto: lexeme_ = "goto"; break;
+	case tok_nop: lexeme_ = "nop"; break;
 	case tok_err: lexeme_ = Lex; break;
 	default: // no throwing error - counter to "Effective C++" (ctor)
 	    break;
@@ -135,7 +136,9 @@ extern int line_No;
 extern int col_No;
 extern int last_Char; // not ideal, but nice to be able to access elsewhere
 extern int errorIn_Progress;
+extern token next_Token;
 
+token getNextToken(void);
 token getTok(void);
 int getNext(void);
 void putBack(char);

@@ -575,11 +575,14 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 ***************************************/
 class If_AST: public Stmt_AST{
 public:
-If_AST(Expr_AST* Expr, StmtList_AST* Block)
-    : Stmt_AST(Expr, Block)
+If_AST(Expr_AST* Expr, StmtList_AST* Block, int EOB = 0)
+    : Stmt_AST(Expr, Block), endOf_Block_(EOB)
     {
 	std::cout << "\tcreated If_AST\n";
     }
+
+//    void setEOB(void) { endOf_Block_ = 1; }
+    int isEOB(void) { return endOf_Block_; }
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -587,6 +590,9 @@ If_AST(Expr_AST* Expr, StmtList_AST* Block)
 	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
+
+private:
+    int endOf_Block_;
 };
 
 class Else_AST: public Stmt_AST{

@@ -14,9 +14,6 @@ extern Node_AST* pFirst_Node;
 
 extern int frame_Depth;
 
-extern token next_Token;
-token getNextToken(void);
-
 Expr_AST* parseExpr(int Infix);
 Block_AST* parseBlock(void);
 int match(int, tokenType, int);

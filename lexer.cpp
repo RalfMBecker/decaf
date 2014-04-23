@@ -33,7 +33,7 @@ int col_No = 0;
 int last_Char = ' ';
 int errorIn_Progress = 0;
 
-extern token next_Token;
+token next_Token;
 
 int
 getNext(void)
@@ -57,6 +57,9 @@ putBack(char c)
     col_No--;
     input->putback(c);
 }
+
+token
+getNextToken(void) { return (next_Token = getTok()); }
 
 token
 checkReserved(std::string Str)

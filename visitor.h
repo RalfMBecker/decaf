@@ -12,29 +12,45 @@
 #include <string>
 #include <sstream>
 
+#include "lexer.h"
 #include "ast.h"
 #include "tables.h"
 #include "ir.h"
 
-// ** TO DO: use this class better 
+class MakeIR_Visitor: public AST_Visitor{
+public:
+
 // label mgmt per frame helper class: when entering new scope in any context
-// that might modify lable, save state, then retrieve upon return
+// that might modify labels, save state, then retrieve upon return
 class Label_State{
 public:
 Label_State(std::string Frame, std::string If_Next="", std::string If_Done="")
-    : frame_(Frame), if_Next_(If_Next), if_Done_(If_Done) {}
+    : frame_(Frame), ifNext_(If_Next), ifDone_(If_Done)
+    {
+	all_Labels_ = std::vector<std::string>();
+	all_Labels_.push_back(If_Next);
+	all_Labels_.push_back(If_Done);
 
-    std::string IfNext(void) const { return if_Next_; };
-    std::string IfDone(void) const { return if_Done_; };
+	MakeIR_Visitor::if_Next_ = "";
+	MakeIR_Visitor::if_Done_ = "";
+    }
+
+    std::vector<std::string> getLabels(void) const { return all_Labels_; }
+
+    void Restore(void) const
+    {
+	MakeIR_Visitor::if_Next_ = ifNext_;
+	MakeIR_Visitor::if_Done_ = ifDone_;
+    }
 
 private:
     std::string frame_;
-    std::string if_Next_;
-    std::string if_Done_;
+    std::string ifNext_;
+    std::string ifDone_;
+
+    std::vector<std::string> all_Labels_;
 };
 
-class MakeIR_Visitor: public AST_Visitor{
-public:
     // address-less objects
     void visit(Node_AST* V) { return; }
     void visit(Expr_AST* V) { return; }
@@ -264,6 +280,10 @@ public:
 	    return;
 
 	std::vector<std::string> labels;
+	if ( ("" != if_Next_) ){
+	    labels.push_back(if_Next_);
+	    if_Next_ = "";
+	}
 	if ( ("" != if_Done_) ){
 	    labels.push_back(if_Done_);
 	    if_Done_ = "";
@@ -279,10 +299,13 @@ public:
 	insertLine(line);
     }
 
-    // **TO DO: currently only handles easiest case: stmt, no nested scopes
+    // **TO DO: (1) more testing for correct if scope mgmt
+    //          (2) label mgmt for non-if stmts
     void visit(If_AST* V)
     {
 	std::vector<std::string> labels;
+	// **TO DO: when fully figured out, make following 2 paragraphs 
+	//          helper functions instead
 	// label appropriately
 	if ( ("" != if_Next_) ) 
 	    labels.push_back(if_Next_);
@@ -306,12 +329,8 @@ public:
 
 	// make stmt (block) SSA entry (entries)
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	if_Next_ = if_Done_ = "";
-  	if (dynamic_cast<Stmt_AST*>(V->RChild()))
-	    V->RChild()->accept(this);
-	if_Next_ = pLabels->IfNext();
-	if_Done_ = pLabels->IfDone();
-	delete pLabels;
+	V->RChild()->accept(this);
+	pLabels->Restore();
 
 	// make goto SSA entry
 	labels.clear();
@@ -320,6 +339,17 @@ public:
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
+
+	// If this is not followed by a statement, we would miss printing
+	// out remaining target labels. Take care of that.
+	if ( (V->isEOB()) ){
+	    labels = pLabels->getLabels();
+	    Op = token(tok_nop);
+	    target = LHS = RHS = "";
+	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	    insertLine(line);
+	    delete pLabels;
+	}
     }
 
     void visit(Else_AST* V)
@@ -348,4 +378,6 @@ static int count_Lab_;
 
 static std::string if_Next_;
 static std::string if_Done_;
+
+static std::vector<std::string> remaining_Labels_;
 };
