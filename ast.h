@@ -41,6 +41,8 @@ class StmtList_AST;
 class Stmt_AST;
 class VarDecl_AST;
 class Assign_AST;
+class If_AST;
+class Else_AST;
 
 class AST_Visitor{
 public: 
@@ -67,6 +69,8 @@ public:
     virtual void visit(Stmt_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
+    virtual void visit(If_AST*) = 0;
+    virtual void visit(Else_AST*) = 0;
 
     ~AST_Visitor();
 };
@@ -166,8 +170,8 @@ StmtList_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
 
 class Stmt_AST: public StmtList_AST{
 public:
-    Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
-	: StmtList_AST(LC, RC) 
+Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
+    : StmtList_AST(LC, RC)
     {
 	std::cout << "\tcreated a Stmt_AST\n";
     }
@@ -187,7 +191,6 @@ public:
 /***************************************
 * Expression parent class
 ***************************************/
-
 // arithmetic, logical, basic, and access (array) types
 class Expr_AST: public Stmt_AST{
 public:
@@ -250,7 +253,6 @@ protected:
 /***************************************
 * Expression terminals
 ***************************************/
-
 class Tmp_AST: public Expr_AST{
 public:
 Tmp_AST(token Type)
@@ -332,7 +334,6 @@ FltExpr_AST(token Op)
 /***************************************
 * Expression Non-logical children
 ***************************************/
-
 // Upon creating this object, LHS->TypeP() == RHS->TypeP()
 // Pre recommendation of Effective C++, don't throw error in ctor, though.
 class ArithmExpr_AST: public Expr_AST{
@@ -422,7 +423,6 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
 /***************************************
 * Expression Logical children
 ***************************************/
-
 class LogicalExpr_AST: public Expr_AST{
 public:
 LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
@@ -526,12 +526,11 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 /***************************************
 * Non-logical or procedural statements
 ***************************************/
-
 // ***To DO:  give array declarations their own class (?)***
 class VarDecl_AST: public Stmt_AST{
 public:
-    VarDecl_AST(IdExpr_AST* Id)
-	: Stmt_AST(Id, 0), type_(Id->Type())
+VarDecl_AST(IdExpr_AST* Id)
+    : Stmt_AST(Id, 0), type_(Id->Type())
     {
 	setAddr(Id->Op().Lex());
 	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n";
@@ -554,11 +553,11 @@ private:
 // ***To DO:  give array declarations their own class (?)***
 class Assign_AST: public Stmt_AST{
 public:
-    Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
-	: Stmt_AST(Id, Expr)
+Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
+    : Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";;
+	std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -567,6 +566,41 @@ public:
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+/***************************************
+* Logical and procedural statements
+***************************************/
+class If_AST: public Stmt_AST{
+public:
+If_AST(Expr_AST* Expr, StmtList_AST* Block)
+    : Stmt_AST(Expr, Block)
+    {
+	std::cout << "\tcreated If_AST\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
+class Else_AST: public Stmt_AST{
+public:
+Else_AST(StmtList_AST* Block)
+    : Stmt_AST(Block, 0)
+    {
+	std::cout << "\tcreated Else_AST \n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 };

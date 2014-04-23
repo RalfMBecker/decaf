@@ -28,10 +28,10 @@ extern int errorIn_Progress;
 
 int frame_Depth = 0; // track depth of scope nesting
 
+
 /***************************************
 *  Helper functions
 ***************************************/
-
 // used in error handling (fed by rv of panicModeFwd())
 void
 adjScopeLevel(int N)
@@ -83,9 +83,8 @@ match(int update_Prior, tokenType t, int update_Post)
 }
 
 /***************************************
-*  Primary expressions
+*  Primary expressions (- switch board)
 ***************************************/
-
 // int -> <integer value>
 Expr_AST*
 parseIntExpr(void)
@@ -157,6 +156,9 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
     return new CoercedExpr_AST(pTmp, Expr);
 }
 
+/***********************************************
+* Expressions functions (+ primary switchboard)
+***********************************************/
 Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseInfixRHS(int, Expr_AST*);
 int logOp_Tot = 0;
@@ -215,6 +217,7 @@ dispatchExpr(void)
 //         prec_3: precedence of '*'      precedence of '-'
 // The way we track recursion, could go bad for deeply recursive infix.
 // Should be added to a full description of the compiler/language.
+
 Expr_AST* 
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
@@ -307,10 +310,14 @@ parseParensExpr(void)
 {
     std::cout << "parsing a ParensExpr...\n";
 
+    if ( (-1 == match(0, tok_rdopen, 1)) ){
+	punctError(')', 0);
+	errorIn_Progress = 1;
+	return 0;
+    }
+
     int oldLogic_Status = logOp_Tot;
     logOp_Tot = 0;
-    getNextToken(); // create ready-state
-    if (errorIn_Progress) return 0;
     Expr_AST* E = dispatchExpr();
 
     if ( (-1 == match(0, tok_rdclosed, 1)) ){
@@ -350,6 +357,50 @@ parsePrimaryExpr(void)
     return 0;
 }
 
+/***************************************
+*  Statement parsing functions
+***************************************/
+StmtList_AST* parseBlock();
+Stmt_AST* parseStmt();
+
+// (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
+// if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
+// invariant: - upon entry, points at tok_if
+If_AST* 
+parseIfStmt(void)
+{
+    std::cout << "parsing an if statement...\n";
+
+    if ( (-1 == match(0, tok_if, 1)) ){
+	parseError(next_Token.Lex(), "expected if");
+	errorIn_Progress = 1;
+	return 0;
+    }
+    Expr_AST* expr = parseParensExpr();
+
+    // handle [ stmt | block ]
+    StmtList_AST* stmt;
+    if ( (0 == match(0, tok_paropen, 0)) ){
+	getNextToken();
+	if (errorIn_Progress) return 0;
+	stmt = parseBlock();
+	if (errorIn_Progress) return 0;
+	if ( (-1 == match(0, tok_parclosed, 1)) ){
+	    parseError(next_Token.Lex(), "expected \'}\'");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+    }
+    else{
+	stmt = parseStmt();
+	if (errorIn_Progress) return 0;
+    }
+    If_AST* pIf = new If_AST(expr, stmt);
+
+    return pIf;
+}
+
+
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
 // Shadowing: allowed
@@ -362,7 +413,7 @@ parseVarDecl(token Type)
     std::cout << "parsing a var declaration...\n";
     // access error (allow for shadowing)
     if ( (tok_ID != next_Token.Tok()) ){
-	parseError(next_Token.Lex(), "exptected primary identifier");
+	parseError(next_Token.Lex(), "expected primary identifier");
 	errorIn_Progress = 1;
 	return 0;
     }
@@ -490,6 +541,9 @@ parseStmt(void)
     case tok_ID: 
 	ret = parseAssign();
 	break;
+    case tok_if:
+	ret = parseIfStmt();
+	break;
     default: // assume empty expression
 	parseWarning("", "unused expression");
 	dispatchExpr(); // parse and discard
@@ -507,7 +561,7 @@ parseStmt(void)
 }
 
 StmtList_AST* parseStmtList(void);
-StmtList_AST* parseStmtListCtd(StmtList_AST* LHS);
+StmtList_AST* parseStmtListCtd(StmtList_AST*);
 
 // **TO DO: problem if the following combination: (a) 1-line stmtList (if we 
 //  have several stmts with no {}, this applies to them all, and (2) var
@@ -536,20 +590,23 @@ parseBlock(void)
     // TO DO: more thinking about this once integrated higher
     if ( (0 < frame_Depth) ){ // could have been reduced in error handling
 	int test;
-	if ( (-1 == (test = match(0, tok_parclosed, 1))) ){
+	if ( (-1 == (test = match(0, tok_parclosed, 0))) ){
 	    punctError('}', 0);
 	    // errorIn_Progress = 1; **TO DO: handle later
-	    return 0;
+	    pSL = 0;
 	}
 	else if ( (-2 == test) ){
 	    // errorIn_Progress = 1; **TO DO: handle later
-	    return 0;
+	    pSL = 0;
 	}
 	else{
 	    top_Env = top_Env->getPrior();
 	    frame_Depth--;
 	}
     }
+
+    if ( (tok_eof != next_Token.Tok()) ) getNextToken();
+    if (errorIn_Progress) return 0;
 
     return pSL;
 }

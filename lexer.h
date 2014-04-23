@@ -42,7 +42,7 @@ enum tokenType{
     tok_rdclosed = ')', tok_paropen = '{', tok_parclosed = '}',
     // AST types and actions
     tok_err = -100, tok_ID = -101, tok_tmp = -102, tok_cast = -103, 
-    tok_dec = -104,
+    tok_dec = -104, tok_iffalse = -105, tok_goto = -106,
 };
 
 class token{
@@ -113,6 +113,8 @@ public:
 	    break;
 
 	case tok_dec: lexeme_ = "dec"; break;
+	case tok_iffalse: lexeme_ = "iffalse"; break;
+	case tok_goto: lexeme_ = "goto"; break;
 	case tok_err: lexeme_ = Lex; break;
 	default: // no throwing error - counter to "Effective C++" (ctor)
 	    break;
