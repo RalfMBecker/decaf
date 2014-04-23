@@ -16,6 +16,23 @@
 #include "tables.h"
 #include "ir.h"
 
+// ** TO DO: use this class better 
+// label mgmt per frame helper class: when entering new scope in any context
+// that might modify lable, save state, then retrieve upon return
+class Label_State{
+public:
+Label_State(std::string Frame, std::string If_Next="", std::string If_Done="")
+    : frame_(Frame), if_Next_(If_Next), if_Done_(If_Done) {}
+
+    std::string IfNext(void) const { return if_Next_; };
+    std::string IfDone(void) const { return if_Done_; };
+
+private:
+    std::string frame_;
+    std::string if_Next_;
+    std::string if_Done_;
+};
+
 class MakeIR_Visitor: public AST_Visitor{
 public:
     // address-less objects
@@ -287,14 +304,14 @@ public:
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	std::string tmpIf_Next = if_Next_; // to suppress label printing 
-	std::string tmpIf_Done = if_Done_; // in stmt(s) to follow
-	if_Next_ = if_Done_ = "";
 	// make stmt (block) SSA entry (entries)
+	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
+	if_Next_ = if_Done_ = "";
   	if (dynamic_cast<Stmt_AST*>(V->RChild()))
 	    V->RChild()->accept(this);
-	if_Next_ = tmpIf_Next;
-	if_Done_ = tmpIf_Done;
+	if_Next_ = pLabels->IfNext();
+	if_Done_ = pLabels->IfDone();
+	delete pLabels;
 
 	// make goto SSA entry
 	labels.clear();
