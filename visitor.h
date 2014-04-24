@@ -4,8 +4,6 @@
 * Note: abstract base class defined in ast.h to break dependency
 *       cycle
 *
-* TO DO: add visitor class deleting the AST nodes
-*
 ********************************************************************/
 
 #include <vector>
@@ -28,8 +26,8 @@ Label_State(std::string Frame, std::string If_Next="", std::string If_Done="")
     : frame_(Frame), ifNext_(If_Next), ifDone_(If_Done)
     {
 	all_Labels_ = std::vector<std::string>();
-	all_Labels_.push_back(If_Next);
-	all_Labels_.push_back(If_Done);
+	if ( ("" != If_Next) ) all_Labels_.push_back(If_Next);
+	if ( ("" != If_Done) ) all_Labels_.push_back(If_Done);
 
 	MakeIR_Visitor::if_Next_ = "";
 	MakeIR_Visitor::if_Done_ = "";
@@ -66,10 +64,6 @@ private:
     void visit(ArithmExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -86,10 +80,6 @@ private:
     void visit(CoercedExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -111,10 +101,6 @@ private:
     void visit(UnaryArithmExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -133,10 +119,6 @@ private:
 	    return;
 
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = V->LChild()->Addr();
 
@@ -154,10 +136,6 @@ private:
     void visit(LogicalExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -174,10 +152,6 @@ private:
     void visit(OrExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -194,10 +168,6 @@ private:
     void visit(AndExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -230,10 +200,6 @@ private:
     void visit(NotExpr_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -253,14 +219,7 @@ private:
     void visit(VarDecl_AST* V)
     {
 	std::vector<std::string> labels;
-	if ( ("" != if_Next_) ){
-	    labels.push_back(if_Next_);
-	    if_Next_ = "";
-	}
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = V->LChild()->Addr();
 
@@ -280,14 +239,7 @@ private:
 	    return;
 
 	std::vector<std::string> labels;
-	if ( ("" != if_Next_) ){
-	    labels.push_back(if_Next_);
-	    if_Next_ = "";
-	}
-	if ( ("" != if_Done_) ){
-	    labels.push_back(if_Done_);
-	    if_Done_ = "";
-	}
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = V->LChild()->Addr();
 
@@ -303,20 +255,10 @@ private:
     //          (2) label mgmt for non-if stmts
     void visit(If_AST* V)
     {
-	std::vector<std::string> labels;
-	// **TO DO: when fully figured out, make following 2 paragraphs 
-	//          helper functions instead
 	// label appropriately
-	if ( ("" != if_Next_) ) 
-	    labels.push_back(if_Next_);
-	else if ( ("" != if_Done_) ) // this if is a leader if 
-	    labels.push_back(if_Done_);
+	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 1, V->hasElse());
 
-	// update labels
-	if_Next_ = makeLabel();
-	if ( ("" == if_Done_) )
-	    if_Done_ = makeLabel();
-	
 	// make iffalse SSA entry
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
@@ -333,12 +275,14 @@ private:
 	pLabels->Restore();
 
 	// make goto SSA entry
-	labels.clear();
-	Op = token(tok_goto);
-	target = if_Done_;
-	LHS = RHS = "";
-	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	if (V->hasElse()){
+	    labels.clear();
+	    Op = token(tok_goto);
+	    target = if_Done_;
+	    LHS = RHS = "";
+	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	    insertLine(line);
+	}
 
 	// If this is not followed by a statement, we would miss printing
 	// out remaining target labels. Take care of that.
@@ -348,13 +292,32 @@ private:
 	    target = LHS = RHS = "";
 	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	    insertLine(line);
-	    delete pLabels;
 	}
+
+	delete pLabels;
     }
 
     void visit(Else_AST* V)
     {
 	return;
+    }
+
+    void handleLeading_Labels(std::vector<std::string>& Labels, int is_If, 
+			      int has_Else)
+    {
+	if ( ("" != if_Next_) )
+	    Labels.push_back(if_Next_);
+	else if ( ("" != if_Done_) ) // **TO DO: monitor 
+	    Labels.push_back(if_Done_);
+
+	// update labels
+	if ( (is_If) ){
+	    if_Next_ = makeLabel();
+	    if ( ("" == if_Done_) && (has_Else) )
+		if_Done_ = makeLabel();
+	}
+	else // **TO DO: monitor (adjust if_Done_?)
+	    if_Next_ = "";
     }
 
     std::string makeTmp(void)
@@ -378,6 +341,4 @@ static int count_Lab_;
 
 static std::string if_Next_;
 static std::string if_Done_;
-
-static std::vector<std::string> remaining_Labels_;
 };

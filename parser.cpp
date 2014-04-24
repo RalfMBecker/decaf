@@ -366,12 +366,11 @@ parseIfStmt(void)
 {
     std::cout << "parsing an if statement...\n";
 
-    if ( (-1 == match(0, tok_if, 1)) ){
-	parseError(next_Token.Lex(), "expected if");
-	errorIn_Progress = 1;
-	return 0;
-    }
+    if ( (-1 == match(0, tok_if, 1)) )
+	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
+
     Expr_AST* expr = parseParensExpr();
+    if (errorIn_Progress) return 0;
 
     // handle [ stmt | block ]
     StmtList_AST* stmt;
@@ -386,10 +385,13 @@ parseIfStmt(void)
 	if (errorIn_Progress) return 0;
     }
 
+    int hasElse = 0;
     int endBlock_Marker = 0;
-    if ( (tok_parclosed == next_Token.Tok()) )
+    if ( (tok_else == next_Token.Tok()) )
+	hasElse = 1;
+    else if ( (tok_parclosed == next_Token.Tok()) )
 	endBlock_Marker = 1;
-    If_AST* pIf = new If_AST(expr, stmt, endBlock_Marker);
+    If_AST* pIf = new If_AST(expr, stmt, hasElse, endBlock_Marker);
 
     return pIf;
 }
