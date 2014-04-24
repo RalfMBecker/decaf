@@ -575,13 +575,40 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 ***************************************/
 class If_AST: public Stmt_AST{
 public:
-If_AST(Expr_AST* Expr, StmtList_AST* Block, int HasElse = 0, int EOB = 0)
-    : Stmt_AST(Expr, Block), has_Else_(HasElse), endOf_Block_(EOB)
+If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
+    : Stmt_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
+	endOf_Block_(EOB)
     {
 	std::cout << "\tcreated If_AST\n";
     }
 
+    int isElseIf(void) const { return isElse_If_; }
     int hasElse(void) const { return has_Else_; }
+    int isEOB(void) const { return endOf_Block_; }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+//	if ( (0!= this->lChild_) )
+//	    this->lChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
+private:
+    int isElse_If_;
+    int has_Else_;
+    int endOf_Block_;
+};
+
+// we need an Else stmt object as a wrapper around the block (or stmt) 
+// the object actually embodies
+class Else_AST: public Stmt_AST{
+public:
+Else_AST(Block_AST* Block, int EOB = 0)
+    : Stmt_AST(Block, 0), endOf_Block_(EOB)
+    {
+	std::cout << "\tcreated Else_AST \n";
+    }
+
     int isEOB(void) const { return endOf_Block_; }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -590,26 +617,8 @@ If_AST(Expr_AST* Expr, StmtList_AST* Block, int HasElse = 0, int EOB = 0)
 	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
-
 private:
-    int has_Else_;
     int endOf_Block_;
-};
-
-class Else_AST: public Stmt_AST{
-public:
-Else_AST(StmtList_AST* Block)
-    : Stmt_AST(Block, 0)
-    {
-	std::cout << "\tcreated Else_AST \n";
-    }
-
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
 };
 
 #endif

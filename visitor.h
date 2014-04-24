@@ -64,6 +64,7 @@ private:
     void visit(ArithmExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -80,6 +81,7 @@ private:
     void visit(CoercedExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -101,6 +103,7 @@ private:
     void visit(UnaryArithmExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -119,6 +122,7 @@ private:
 	    return;
 
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = V->LChild()->Addr();
 
@@ -152,6 +156,7 @@ private:
     void visit(OrExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -184,6 +189,7 @@ private:
     void visit(RelExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -200,6 +206,7 @@ private:
     void visit(NotExpr_AST* V)
     {
 	std::vector<std::string> labels;
+	handleLeading_Labels(labels, 0, 0);
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -221,6 +228,8 @@ private:
 	std::vector<std::string> labels;
 	handleLeading_Labels(labels, 0, 0);
 
+//	if_Done_ = ""; ** TO DO
+
 	std::string target = V->LChild()->Addr();
 
 	token Op = token(tok_dec);
@@ -241,6 +250,8 @@ private:
 	std::vector<std::string> labels;
 	handleLeading_Labels(labels, 0, 0);
 
+//	if_Done_ = ""; ** TO DO
+
 	std::string target = V->LChild()->Addr();
 
 	token Op = token(tok_eq);
@@ -255,9 +266,13 @@ private:
     //          (2) label mgmt for non-if stmts
     void visit(If_AST* V)
     {
-	// label appropriately
+	V->LChild()->accept(this);
+
 	std::vector<std::string> labels;
-	handleLeading_Labels(labels, 1, V->hasElse());
+	if ( !(V->isElseIf()) )
+	    handleLeading_Labels(labels, 1, V->hasElse());
+	else
+	    if_Next_ = makeLabel();
 
 	// make iffalse SSA entry
 	token Op = token(tok_iffalse);
@@ -292,6 +307,7 @@ private:
 	    target = LHS = RHS = "";
 	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	    insertLine(line);
+	    if_Next_ = if_Done_ = "";
 	}
 
 	delete pLabels;
@@ -299,7 +315,19 @@ private:
 
     void visit(Else_AST* V)
     {
-	return;
+	// c. If_AST* visitor for the below
+	if ( (V->isEOB()) ){
+	    std::vector<std::string> labels;
+	    if ( ("" != if_Next_) ) labels.push_back(if_Next_);
+	    if ( ("" != if_Done_) ) labels.push_back(if_Done_);
+	    token Op = token(tok_nop);
+	    std::string tmp = "";
+	    Env* pFrame = V->getEnv();
+	    std::string frame_Str = pFrame->getTableName();
+	    IR_Line* line = new SSA_Entry(labels, Op, tmp, tmp, tmp, frame_Str);
+	    insertLine(line);
+	    if_Next_ = if_Done_ = "";
+	}
     }
 
     void handleLeading_Labels(std::vector<std::string>& Labels, int is_If, 

@@ -26,6 +26,7 @@ extern std::istream* input;
 extern int errorIn_Progress;
 
 int frame_Depth = 0; // track depth of scope nesting
+int if_Active = 0;
 
 /***************************************
 *  Helper functions
@@ -358,11 +359,32 @@ parsePrimaryExpr(void)
 StmtList_AST* parseBlock();
 Stmt_AST* parseStmt();
 
+Block_AST*
+dispatchStmt(void)
+{
+    Block_AST* stmt;
+    if ( (0 == match(0, tok_paropen, 0)) ){
+	stmt = parseBlock();
+	if (errorIn_Progress) stmt = 0;
+    }
+    else{
+	top_Env = addEnv(top_Env);
+	frame_Depth++;
+	stmt = parseStmt();
+	top_Env = top_Env->getPrior();
+	frame_Depth--;
+	if (errorIn_Progress) stmt = 0;
+    }
+
+    return stmt;
+}
+
 // (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
 // if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
 // invariant: - upon entry, points at tok_if
+// Type: 0 - leading if; 1 - else if
 If_AST* 
-parseIfStmt(void)
+parseIfStmt(int Type)
 {
     std::cout << "parsing an if statement...\n";
 
@@ -373,25 +395,18 @@ parseIfStmt(void)
     if (errorIn_Progress) return 0;
 
     // handle [ stmt | block ]
-    StmtList_AST* stmt;
-    if ( (0 == match(0, tok_paropen, 0)) ){
-	stmt = parseBlock();
-	if (errorIn_Progress) return 0;
-    }
-    else{
-	top_Env = addEnv(top_Env);
-	stmt = parseStmt();
-	top_Env = top_Env->getPrior();
-	if (errorIn_Progress) return 0;
-    }
+    Block_AST* block = dispatchStmt();
+    if (errorIn_Progress) return 0;
 
     int hasElse = 0;
     int endBlock_Marker = 0;
     if ( (tok_else == next_Token.Tok()) )
 	hasElse = 1;
-    else if ( (tok_parclosed == next_Token.Tok()) )
+    else if ( (tok_parclosed == next_Token.Tok()) ){
+	if_Active -= (if_Active > 0)?1:0;
 	endBlock_Marker = 1;
-    If_AST* pIf = new If_AST(expr, stmt, hasElse, endBlock_Marker);
+    }
+    If_AST* pIf = new If_AST(expr, block, Type, hasElse, endBlock_Marker);
 
     return pIf;
 }
@@ -528,17 +543,41 @@ parseStmt(void)
 	getNextToken();
 	if (errorIn_Progress) return errorResetStmt();
 	ret = parseVarDecl(token(tok_int));
+	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_double:
 	getNextToken();
 	if (errorIn_Progress) return errorResetStmt();
 	ret = parseVarDecl(token(tok_double));
+	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_ID: 
 	ret = parseAssign();
+	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_if:
-	ret = parseIfStmt();
+	ret = parseIfStmt(0);
+	if (errorIn_Progress) return errorResetStmt();
+	if_Active++;
+	break;
+    case tok_else:
+	if ( (-1 == match(1, tok_if, 0)) ){ // terminating else case
+	    if_Active--;
+	    if (errorIn_Progress) return errorResetStmt();
+	    Block_AST* tmp = dispatchStmt();
+	    if (errorIn_Progress) return 0;
+	    int endBlock_Marker = 0;
+	    if ( (tok_parclosed == next_Token.Tok()) ){
+		if_Active -= (if_Active > 0)?1:0;
+		endBlock_Marker = 1;
+	    }
+	    ret = new Else_AST(tmp, endBlock_Marker);
+	}
+	else{ // else if case (no impact on if_Active level)
+	    if (errorIn_Progress) return errorResetStmt();
+	    ret = parseIfStmt(1);
+	    if (errorIn_Progress) return errorResetStmt();
+	}
 	break;
     default: // assume empty expression
 	parseWarning("", "unused expression");
@@ -552,7 +591,6 @@ parseStmt(void)
 	break;
     }
 
-    if (errorIn_Progress) return errorResetStmt();
     return ret;
 }
 
