@@ -579,7 +579,9 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
     : Stmt_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
 	endOf_Block_(EOB)
     {
-	std::cout << "\tcreated If_AST\n";
+	std::cout << "\tcreated If_AST, type ";
+	if (ElseIf) std::cout << "else if\n";
+	else std::cout << "leading if\n";
     }
 
     int isElseIf(void) const { return isElse_If_; }
@@ -599,8 +601,8 @@ private:
     int endOf_Block_;
 };
 
-// we need an Else stmt object as a wrapper around the block (or stmt) 
-// the object actually embodies
+// We need an Else stmt object as a wrapper around the block (or stmt) 
+// the object actually embodies, for unified treatment in visitor
 class Else_AST: public Stmt_AST{
 public:
 Else_AST(Block_AST* Block, int EOB = 0)
@@ -613,8 +615,8 @@ Else_AST(Block_AST* Block, int EOB = 0)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
+//	if ( (0!= this->lChild_) )
+//	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 private:

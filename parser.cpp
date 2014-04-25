@@ -130,6 +130,8 @@ parseIdExpr(std::string Name)
 	; // TO DO: this can catch arrays
     else
 	return pId;
+    if (errorIn_Progress) return 0;
+
     return 0; // to suppress gcc warning
 }
 
@@ -211,8 +213,8 @@ dispatchExpr(void)
 //         prec_1: precedence of LHS      prec_2 + 1
 //         prec_2: precedence of '+'      precedence of '*' (changed role)
 //         prec_3: precedence of '*'      precedence of '-'
-// The way we track recursion, could go bad for deeply recursive infix.
-// Should be added to a full description of the compiler/language.
+// The way we track recursion, could go bad for deeply recursive infix (> 99).
+// Restriction should be added to a full description of the compiler/language.
 
 Expr_AST* 
 parseInfixRHS(int prec_1, Expr_AST* LHS)
@@ -561,6 +563,12 @@ parseStmt(void)
 	if_Active++;
 	break;
     case tok_else:
+	if ( !(if_Active) ){
+	    parseError(next_Token.Lex(), "else without prior if");
+	    errorResetStmt(); //**TO DO: can be handled better
+	    return 0;
+	}
+
 	if ( (-1 == match(1, tok_if, 0)) ){ // terminating else case
 	    if_Active--;
 	    if (errorIn_Progress) return errorResetStmt();

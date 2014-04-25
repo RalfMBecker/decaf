@@ -1,3 +1,6 @@
+#ifndef ENAME_H_
+#define ENAME_H_
+
 static const char *ename[] = {
     /*   0 */ "", 
     /*   1 */ "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", 
@@ -33,3 +36,5 @@ static const char *ename[] = {
 };
 
 #define MAX_ENAME 133
+
+#endif
