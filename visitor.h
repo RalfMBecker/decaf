@@ -70,10 +70,9 @@ private:
     void visit(ArithmExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -90,10 +89,9 @@ private:
     void visit(CoercedExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -115,10 +113,9 @@ private:
     void visit(UnaryArithmExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -137,10 +134,9 @@ private:
 	    return;
 
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = V->LChild()->Addr();
@@ -158,10 +154,9 @@ private:
     void visit(LogicalExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -178,10 +173,9 @@ private:
     void visit(OrExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -198,10 +192,9 @@ private:
     void visit(AndExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -218,10 +211,9 @@ private:
     void visit(RelExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -238,10 +230,9 @@ private:
     void visit(NotExpr_AST* V)
     {
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = makeTmp();
@@ -263,21 +254,9 @@ private:
     {
 	label_Vec labels;
 
-	std::cout << "[debug] visitor vardecl for " << V->LChild()->Addr() << ", labelL_SSA_ = " << labelLeading_SSA_ << "\n";
-	if (active_Labels_.empty())
-	    std::cout << "active_Labels_ is empty\n";
-	else{
-	    label_Vec::const_iterator iter;
-	    label_Vec t = active_Labels_;
-	    std::cout << "active_Labels_ contains: ";
-	    for (iter = t.begin(); iter != t.end(); iter++)
-		std::cout << "\t" << *iter << "\n";
-	}
-
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = V->LChild()->Addr();
@@ -297,10 +276,9 @@ private:
 	    return;
 
 	label_Vec labels;
-	if (labelLeading_SSA_){
+	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
-	    labelLeading_SSA_ = 0;
-	    active_Labels_ = label_Vec();
+	    active_Labels_.clear();
 	}
 
 	std::string target = V->LChild()->Addr();
@@ -311,22 +289,15 @@ private:
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
 	insertLine(line);
     }
-
+	// we will need labels in a different member; save for called member
     void visit(If_AST* V)
     {
-	// dispatch expr - label mgmt makes this tricky
-	label_Vec labels, tmp;
-	// we will need labels in a different member; save for called member
-	if (V->isElseIf()) 
-	    active_Labels_ = processLabelsElse(labels, V->hasElse());
-	else
-	    active_Labels_ = processLabels(labels, V->hasElse());
-	labelLeading_SSA_ = 1; // only label 1st in series of SSA; reset
-                               // by called visitor
+	// dispatch expr - labels handled through global active_Labels_
 	V->LChild()->accept(this);
 
 	// make iffalse SSA entry
-	labels.clear();
+	makeLabelsIf(!(V->isElseIf()), V->hasElse());
+	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
 	std::string LHS = "goto";
@@ -361,9 +332,11 @@ private:
 	    insertLine(line);
 	    if_Next_ = if_Done_ = "";
 	}
-	else if ( !(V->hasElse()) ){ // if no else following, but a stmt/expr A 
-	    active_Labels_.push_back(if_Done_); //in THIS scope, label A, noting
-            labelLeading_SSA_ = 1;              // that only is_Done_ is left
+	else if ( (V->hasElse()) )
+	    active_Labels_.push_back(if_Next_);
+	else{
+	    active_Labels_ = pLabels->getLabels();
+	    if_Next_ = if_Done_ = "";
 	}
 
 	delete pLabels;
@@ -376,57 +349,29 @@ private:
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	V->RChild()->accept(this);
+	V->LChild()->accept(this);
 	pLabels->Restore();
 
 	// ensure label is printed in next line (always after else type)
 	if ( (V->isEOB()) ){
-	    label_Vec labels;
-	    if ( ("" != if_Next_) ) labels.push_back(if_Next_);
-	    if ( ("" != if_Done_) ) labels.push_back(if_Done_);
+	    label_Vec labels = pLabels->getLabels();
 	    token Op = token(tok_nop);
 	    std::string tmp = "";
-	    Env* pFrame = V->getEnv();
-	    std::string frame_Str = pFrame->getTableName();
 	    IR_Line* line = new SSA_Entry(labels, Op, tmp, tmp, tmp, frame_Str);
 	    insertLine(line);
 	    if_Next_ = if_Done_ = "";
 	}
 	else{ // as we cannot have else else, in the same scope, at end, asjut 
 	    active_Labels_.push_back(if_Done_); // handling from 'if' visitor
-            labelLeading_SSA_ = 1;
+	    if_Next_ = if_Done_ = "";
 	}
     }
 
-    // for all types but else if/else ** TO DO: update
-    label_Vec processLabels(label_Vec& Labels, int Has_Else)
+    void makeLabelsIf(int Is_LeadingIf, int Has_Else)
     {
-	if ( ("" != if_Next_) )
-	    Labels.push_back(if_Next_);
-	else if ( ("" != if_Done_) )
-	    Labels.push_back(if_Done_);
-
-	// update labels
 	if_Next_ = makeLabel();
-	if (Has_Else && if_Done_ == "")
+	if (Has_Else && Is_LeadingIf)
 	    if_Done_ = makeLabel();
-
-	return Labels;
-    }
-
-    // else if and else label mgmt (if_Done_ neither printed, nor adjusted)
-    label_Vec processLabelsElse(label_Vec& Labels, int Has_Else)    
-    {
-	if ( ("" == if_Next_) ) // compiler writer error
-	    errExit(0, "logical flaw in processing if [else if]* else\n");
-	else
-	    Labels.push_back(if_Next_);
-
-	// update labels
-	if ( (Has_Else) )
-	    if_Next_ = makeLabel();
-
-	return Labels;
     }
 
     std::string makeTmp(void)
@@ -450,7 +395,6 @@ static int count_Lab_;
 
 static std::string if_Next_;
 static std::string if_Done_;
-static int labelLeading_SSA_;
 static label_Vec active_Labels_;
 };
 

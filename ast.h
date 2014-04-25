@@ -590,8 +590,6 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-//	if ( (0!= this->lChild_) )
-//	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 
@@ -615,8 +613,6 @@ Else_AST(Block_AST* Block, int EOB = 0)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-//	if ( (0!= this->lChild_) )
-//	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 private:
