@@ -471,7 +471,7 @@ parseAssign(void)
 }
 
 Block_AST* dispatchStmtIf(void);
-StmtList_AST* parseIfCtd(StmtList_AST*);
+IfType_AST* parseIfCtd(IfType_AST*);
 
 // (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
 // if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
@@ -493,13 +493,10 @@ parseIfStmt(int Type)
     Block_AST* LHS = dispatchStmtIf();
     if (errorIn_Progress) return 0;
 
-    std::cout << "\t\t[debug] parse if, next Token = " << next_Token.Lex() << "\n";
-
     if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
 	getNextToken();
 	if (errorIn_Progress) return 0;
-	StmtList_AST* RHS = parseIfCtd(dynamic_cast<StmtList_AST*>(LHS));
-	LHS = new StmtList_AST(LHS, RHS);
+	LHS = parseIfCtd(dynamic_cast<IfType_AST*>(LHS));
     }
 
     // will only matter if dispatched 'stmt' was, in fact, a block
@@ -513,14 +510,11 @@ parseIfStmt(int Type)
 
 /*
     if ( (tok_else == next_Token.Tok()) ){
-
-	std::cout << "\t\t[debg] if stmt, found 'else'\n";
-
 	getNextToken();
 	if (errorIn_Progress) return 0;
-	StmtList_AST* RHS = parseIfCtd(pIf);
-	LHS = new StmtList_AST(pIf, RHS);
-	pIf = new IfList_AST(LHS);
+	pIf = parseIfCtd(pIf);
+	//RHS = new StmtList_AST(pIf, RHS);
+	//pIf = new IfList_AST(LHS);
     }
 */
     return pIf;
@@ -536,7 +530,6 @@ parseStmt(void)
     std::cout << "parsing a statement...\n";
 
     Stmt_AST* ret;
-
     switch(next_Token.Tok()){
     case tok_int:
 	getNextToken();
@@ -558,7 +551,7 @@ parseStmt(void)
 	ret = parseIfStmt(0);
 	if (errorIn_Progress) return errorResetStmt();
 	break;
-    case tok_else:
+    case tok_else: // ** TO DO: consider relocating inside parseIfStmt
 	if ( !(if_Active) ){
 	    parseError(next_Token.Lex(), "else without prior if");
 	    errorResetStmt(); // **TO DO: can be handled better
@@ -732,11 +725,12 @@ dispatchStmtIf(void)
 }
 
 // **TO DO: error handling
+// Handle nested if (expr) stmt cases, where stmt = if, but no block object
 // Invariant: points to after 'else' upon entry
-StmtList_AST* 
-parseIfCtd(StmtList_AST* LHS)
+IfType_AST* 
+parseIfCtd(IfType_AST* LHS)
 {
-    StmtList_AST* RHS;
+    IfType_AST* RHS;
     if ( (tok_if == next_Token.Tok()) ){
 	RHS = parseIfStmt(1);
 	if (errorIn_Progress) return 0;
@@ -759,6 +753,6 @@ parseIfCtd(StmtList_AST* LHS)
 	RHS = new Else_AST(tmp, endBlock_Marker);
     }
 
-    LHS = new StmtList_AST(LHS, RHS);
+    LHS = new IfType_AST(LHS, RHS);
     return LHS;
 }

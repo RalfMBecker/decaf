@@ -624,10 +624,10 @@ public:
 
 // We need an Else stmt object as a wrapper around the block (or stmt) 
 // the object actually embodies, for unified treatment in visitor
-class Else_AST: public Stmt_AST{
+class Else_AST: public IfType_AST{
 public:
 Else_AST(Block_AST* Block, int EOB = 0)
-    : Stmt_AST(Block, 0), endOf_Block_(EOB)
+    : IfType_AST(Block, 0), endOf_Block_(EOB)
     {
 	std::cout << "\tcreated Else_AST \n";
     }
