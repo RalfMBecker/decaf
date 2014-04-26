@@ -42,6 +42,7 @@ class Stmt_AST;
 class VarDecl_AST;
 class Assign_AST;
 class If_AST;
+class IfList_AST;
 class Else_AST;
 
 class AST_Visitor{
@@ -70,6 +71,7 @@ public:
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
     virtual void visit(If_AST*) = 0;
+    virtual void visit(IfList_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
 
     ~AST_Visitor();
@@ -573,10 +575,18 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 /***************************************
 * Logical and procedural statements
 ***************************************/
-class If_AST: public Stmt_AST{
+class IfType_AST: public Stmt_AST{
+public:
+    IfType_AST(Node_AST* LHS, Node_AST* RHS)
+	: Stmt_AST(LHS, RHS) {}
+
+    ~IfType_AST() {}
+};
+
+class If_AST: public IfType_AST{
 public:
 If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
-    : Stmt_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
+    : IfType_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
 	endOf_Block_(EOB)
     {
 	std::cout << "\tcreated If_AST, type ";
@@ -597,6 +607,19 @@ private:
     int isElse_If_;
     int has_Else_;
     int endOf_Block_;
+};
+
+class IfList_AST: public IfType_AST{
+public:
+    IfList_AST(Block_AST* LHS)
+	: IfType_AST(LHS, 0) {}
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+//	Visitor->visit(this);
+    }
 };
 
 // We need an Else stmt object as a wrapper around the block (or stmt) 

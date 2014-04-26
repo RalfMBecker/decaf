@@ -358,62 +358,6 @@ parsePrimaryExpr(void)
 /***************************************
 *  Statement parsing functions
 ***************************************/
-StmtList_AST* parseBlock();
-Stmt_AST* parseStmt();
-
-Block_AST*
-dispatchStmt(void)
-{
-    Block_AST* stmt;
-    if ( (0 == match(0, tok_paropen, 0)) ){
-	stmt = parseBlock();
-	if (errorIn_Progress) stmt = 0;
-    }
-    else{
-	top_Env = addEnv(top_Env);
-	frame_Depth++;
-	stmt = parseStmt();
-	top_Env = top_Env->getPrior();
-	frame_Depth--;
-	if (errorIn_Progress) stmt = 0;
-    }
-
-    return stmt;
-}
-
-// (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
-// if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
-// invariant: - upon entry, points at tok_if
-// Type: 0 - leading if; 1 - else if
-If_AST* 
-parseIfStmt(int Type)
-{
-    std::cout << "parsing an if statement...\n";
-
-    if ( (-1 == match(0, tok_if, 1)) )
-	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
-
-    Expr_AST* expr = parseParensExpr();
-    if (errorIn_Progress) return 0;
-
-    // handle [ stmt | block ]
-    Block_AST* block = dispatchStmt();
-    if (errorIn_Progress) return 0;
-
-    int hasElse = 0;
-    int endBlock_Marker = 0;
-    if ( (tok_else == next_Token.Tok()) )
-	hasElse = 1;
-    else if ( (tok_parclosed == next_Token.Tok()) ){
-	if_Active -= (if_Active > 0)?1:0;
-	endBlock_Marker = 1;
-    }
-    If_AST* pIf = new If_AST(expr, block, Type, hasElse, endBlock_Marker);
-
-    return pIf;
-}
-
-
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
 // Shadowing: allowed
@@ -425,11 +369,8 @@ parseVarDecl(token Type)
 {
     std::cout << "parsing a var declaration...\n";
     // access error (allow for shadowing)
-    if ( (tok_ID != next_Token.Tok()) ){
-	parseError(next_Token.Lex(), "expected primary identifier");
-	errorIn_Progress = 1;
-	return 0;
-    }
+    if ( (tok_ID != next_Token.Tok()) )
+	errExit(0, "parseVarDecl should be called pointing at tok_id\n");
     Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
     if ( (prior_Env == top_Env) ){
 	varAccessError(next_Token.Lex(), 1);
@@ -529,6 +470,62 @@ parseAssign(void)
     return ret;
 }
 
+Block_AST* dispatchStmtIf(void);
+StmtList_AST* parseIfCtd(StmtList_AST*);
+
+// (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
+// if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
+// invariant: - upon entry, points at tok_if
+// Type: 0 - leading if; 1 - else if
+IfType_AST* 
+parseIfStmt(int Type)
+{
+    std::cout << "parsing an if statement...\n";
+
+    if ( (-1 == match(0, tok_if, 1)) )
+	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
+
+    if_Active++;
+    Expr_AST* expr = parseParensExpr();
+    if (errorIn_Progress) return 0;
+
+    // handle [ stmt | block ]
+    Block_AST* LHS = dispatchStmtIf();
+    if (errorIn_Progress) return 0;
+
+    std::cout << "\t\t[debug] parse if, next Token = " << next_Token.Lex() << "\n";
+
+    if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
+	getNextToken();
+	if (errorIn_Progress) return 0;
+	StmtList_AST* RHS = parseIfCtd(dynamic_cast<StmtList_AST*>(LHS));
+	LHS = new StmtList_AST(LHS, RHS);
+    }
+
+    // will only matter if dispatched 'stmt' was, in fact, a block
+    int hasElse = 0;
+    int endBlock_Marker = 0;
+    if ( (tok_else == next_Token.Tok()) )
+	hasElse = 1;
+    else if ( (tok_parclosed == next_Token.Tok()) )
+	endBlock_Marker = 1;
+    IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
+
+/*
+    if ( (tok_else == next_Token.Tok()) ){
+
+	std::cout << "\t\t[debg] if stmt, found 'else'\n";
+
+	getNextToken();
+	if (errorIn_Progress) return 0;
+	StmtList_AST* RHS = parseIfCtd(pIf);
+	LHS = new StmtList_AST(pIf, RHS);
+	pIf = new IfList_AST(LHS);
+    }
+*/
+    return pIf;
+}
+
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
 // invariant -> leaving, guarantees a ';' has been found where needed;
 //              entering, next_Token=first token of stmt, which is
@@ -560,19 +557,17 @@ parseStmt(void)
     case tok_if:
 	ret = parseIfStmt(0);
 	if (errorIn_Progress) return errorResetStmt();
-	if_Active++;
 	break;
     case tok_else:
 	if ( !(if_Active) ){
 	    parseError(next_Token.Lex(), "else without prior if");
-	    errorResetStmt(); //**TO DO: can be handled better
+	    errorResetStmt(); // **TO DO: can be handled better
 	    return 0;
 	}
 
 	if ( (-1 == match(1, tok_if, 0)) ){ // terminating else case
-	    if_Active--;
 	    if (errorIn_Progress) return errorResetStmt();
-	    Block_AST* tmp = dispatchStmt();
+	    Block_AST* tmp = dispatchStmtIf();
 	    if (errorIn_Progress) return 0;
 	    int endBlock_Marker = 0;
 	    if ( (tok_parclosed == next_Token.Tok()) ){
@@ -605,10 +600,6 @@ parseStmt(void)
 StmtList_AST* parseStmtList(void);
 StmtList_AST* parseStmtListCtd(StmtList_AST*);
 
-// **TO DO: problem if the following combination: (a) 1-line stmtList (if we 
-//  have several stmts with no {}, this applies to them all, and (2) var
-//  declarations in those lines, used later in the line (no new scope prepared
-//  in current drafting)
 // block -> { [stmtList | { stmtList }]* } 
 // invariants -> entering, point at '{', if any
 StmtList_AST*
@@ -634,11 +625,11 @@ parseBlock(void)
 	int test;
 	if ( (-1 == (test = match(0, tok_parclosed, 0))) ){
 	    punctError('}', 0);
-	    // errorIn_Progress = 1; **TO DO: handle later
+	    //errorIn_Progress = 1;
 	    pSL = 0;
 	}
 	else if ( (-2 == test) ){
-	    // errorIn_Progress = 1; **TO DO: handle later
+	    //errorIn_Progress = 1;
 	    pSL = 0;
 	}
 	else{
@@ -667,10 +658,14 @@ parseStmtList(void)
 	return LHS;
 }
 
-// for logic, compare parseInfixExpr() - similar, with path determined by
-// hitting '{' and '}'
-// invariant: - upon entry, we point onto the first token of the next stmt
+// Invariant: - upon entry, we point onto the first token of the next stmt
 //            - upon return, points to '}'
+// Logic: Once we see '}', we unroll from the right. As we don't read any new
+//        tokens until done, each unrolled pass through the loop back sees
+//        the same terminating '}', and keeps unrolling, until 
+//        return LHS links back to the caller parserStmtList().
+// Note: the eternal loop logic works (only) because '}' serves as a
+//       terminator that doesn't have an object creation action attached.  
 StmtList_AST*
 parseStmtListCtd(StmtList_AST* LHS)
 {
@@ -707,4 +702,63 @@ parseStmtListCtd(StmtList_AST* LHS)
       //                                         LHS_b   RHS (compound)
 
     return 0; // to suppress gcc warning
+}
+
+StmtList_AST* parseIfCtd(StmtList_AST*); 
+
+// Even with no brackets, an if can 'make a stmtList': as long as an else
+// follows, same "stmt"
+// **TO DO: monitor reported frame depth
+Block_AST*
+dispatchStmtIf(void)
+{
+    Block_AST* LHS;
+    if ( (0 == match(0, tok_paropen, 0)) ){
+	LHS = parseBlock();
+	if (errorIn_Progress) LHS = 0;
+    }
+    else{
+	top_Env = addEnv(top_Env);
+	frame_Depth++;
+
+	LHS = parseStmt();
+	if (errorIn_Progress) return 0;
+
+ 	top_Env = top_Env->getPrior();
+	frame_Depth--;
+    }
+
+    return LHS;
+}
+
+// **TO DO: error handling
+// Invariant: points to after 'else' upon entry
+StmtList_AST* 
+parseIfCtd(StmtList_AST* LHS)
+{
+    StmtList_AST* RHS;
+    if ( (tok_if == next_Token.Tok()) ){
+	RHS = parseIfStmt(1);
+	if (errorIn_Progress) return 0;
+	if ( (tok_else == next_Token.Tok()) ){
+	    getNextToken();
+	    if (errorIn_Progress) return 0;
+	    RHS = parseIfCtd(RHS);
+	    if (errorIn_Progress) return 0;
+	    getNextToken();
+	    if (errorIn_Progress) return 0;
+	}
+    }
+    else{ // terminating else
+	if_Active--;
+	Block_AST* tmp = dispatchStmtIf();
+	if (errorIn_Progress) return 0;
+	int endBlock_Marker = 0;
+	if ( (tok_parclosed == next_Token.Tok()) )
+	    endBlock_Marker = 1;
+	RHS = new Else_AST(tmp, endBlock_Marker);
+    }
+
+    LHS = new StmtList_AST(LHS, RHS);
+    return LHS;
 }

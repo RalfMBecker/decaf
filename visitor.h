@@ -20,8 +20,6 @@
 
 typedef std::vector<std::string> label_Vec;
 
-// ** TO DO: which visitors really need label mgmt handling?
-
 class MakeIR_Visitor: public AST_Visitor{
 public:
 // label mgmt per frame helper class: when entering new scope in any context
@@ -289,14 +287,14 @@ private:
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
 	insertLine(line);
     }
-	// we will need labels in a different member; save for called member
+
     void visit(If_AST* V)
     {
 	// dispatch expr - labels handled through global active_Labels_
 	V->LChild()->accept(this);
 
 	// make iffalse SSA entry
-	makeLabelsIf(!(V->isElseIf()), V->hasElse());
+	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
 	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
@@ -342,6 +340,8 @@ private:
 	delete pLabels;
     }
 
+    void visit(IfList_AST* V) { return; }
+
     // c. If_AST* visitor for logic
     void visit(Else_AST* V)
     {
@@ -352,19 +352,19 @@ private:
 	V->LChild()->accept(this);
 	pLabels->Restore();
 
-	// ensure label is printed in next line (always after else type)
+	// Ensure remaining labels are printed in next line (always after 
+	// else type). ** TO DO: revisit when more labels are produced
 	if ( (V->isEOB()) ){
 	    label_Vec labels = pLabels->getLabels();
 	    token Op = token(tok_nop);
 	    std::string tmp = "";
 	    IR_Line* line = new SSA_Entry(labels, Op, tmp, tmp, tmp, frame_Str);
 	    insertLine(line);
-	    if_Next_ = if_Done_ = "";
 	}
-	else{ // as we cannot have else else, in the same scope, at end, asjut 
-	    active_Labels_.push_back(if_Done_); // handling from 'if' visitor
-	    if_Next_ = if_Done_ = "";
-	}
+	else 
+	    active_Labels_.push_back(if_Done_);
+
+	if_Next_ = if_Done_ = "";
     }
 
     void makeLabelsIf(int Is_LeadingIf, int Has_Else)
