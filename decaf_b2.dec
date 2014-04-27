@@ -1,19 +1,12 @@
 {
     int a;
-    int b = 2;
-    3 + 2 < -!(a + b);
-    {
-	a = 1 + 5*b;
-	b = b + a;
-	b = a = 4 < (a = 7);
-	{ 
-	    a = 1;
-	    int d;
-	    double a;
-	    a = 2;
-	}
-    }
+    if (a < 0) a = 2;
 
-    double c = 3.14;
-    a = b + 4*c;
+    int b;
+    if (b == 0){
+	int c;
+	c = a + b;
+	if (a == 0) a = 1;
+	a = 4;
+    }
 }
