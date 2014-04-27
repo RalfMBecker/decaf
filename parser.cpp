@@ -185,7 +185,10 @@ parseExpr(int Type)
 	ptmp_AST = LHS;
 
     if (errorIn_Progress) return 0;
-    return parseInfixRHS(0, ptmp_AST);
+    if ( (tok_parclosed == next_Token.Tok()) || (tok_semi == next_Token.Tok()) )
+	return ptmp_AST;
+    else
+	return parseInfixRHS(0, ptmp_AST);
 }
 
 Expr_AST* 
@@ -235,7 +238,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	Expr_AST* RHS = parsePrimaryExpr();
-	if ( (!RHS) || (errorIn_Progress) ){ // double check not necessary
+	if ( (!RHS) || (errorIn_Progress) ){
 	    parseError(next_Token.Lex(), err_Msg);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -493,11 +496,15 @@ parseIfStmt(int Type)
     Block_AST* LHS = dispatchStmtIf();
     if (errorIn_Progress) return 0;
 
-    if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
-	getNextToken();
-	if (errorIn_Progress) return 0;
-	LHS = parseIfCtd(dynamic_cast<IfType_AST*>(LHS));
+    if (LHS){ // could be empty statment
+	if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
+	    getNextToken();
+	    if (errorIn_Progress) return 0;
+	    LHS = parseIfCtd(dynamic_cast<IfType_AST*>(LHS));
+	}
     }
+    next_Token.Tok();
+    if (errorIn_Progress) return 0;
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int hasElse = 0;
@@ -506,17 +513,8 @@ parseIfStmt(int Type)
 	hasElse = 1;
     else if ( (tok_parclosed == next_Token.Tok()) )
 	endBlock_Marker = 1;
-    IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
 
-/*
-    if ( (tok_else == next_Token.Tok()) ){
-	getNextToken();
-	if (errorIn_Progress) return 0;
-	pIf = parseIfCtd(pIf);
-	//RHS = new StmtList_AST(pIf, RHS);
-	//pIf = new IfList_AST(LHS);
-    }
-*/
+    IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
     return pIf;
 }
 

@@ -295,6 +295,7 @@ private:
 
 	// make iffalse SSA entry
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
+
 	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
@@ -305,9 +306,19 @@ private:
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// make stmt (block) SSA entry (entries)
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	V->RChild()->accept(this);
+	// make stmt (block) SSA entry (entries), if there is at least one
+	if ( (0 != V->RChild()) ){ 
+	    V->RChild()->accept(this);
+	    // Unhandled labels remaining; happens when, at end of inner scope,
+	    //               if [- else if]* [else if | end] 
+	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec).
+	    if ( !(active_Labels_.empty()) ){
+		labels = active_Labels_;
+		insertNOP(labels, frame_Str);
+		active_Labels_.clear();
+	    }
+	}
 	pLabels->Restore();
 
 	// make goto SSA entry
@@ -323,15 +334,13 @@ private:
 	// If this is not followed by a statement, we would miss printing
 	// out remaining target labels. Take care of that.
 	if ( (V->isEOB()) ){
-	    labels = pLabels->getLabels();
-	    Op = token(tok_nop);
-	    target = LHS = RHS = "";
-	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	    insertLine(line);
+	    insertNOP(pLabels->getLabels(), frame_Str);
 	    if_Next_ = if_Done_ = "";
 	}
-	else if ( (V->hasElse()) )
+	else if ( (V->hasElse()) ){
 	    active_Labels_.push_back(if_Next_);
+	    if_Next_ = "";
+	}
 	else{
 	    active_Labels_ = pLabels->getLabels();
 	    if_Next_ = if_Done_ = "";
@@ -372,6 +381,13 @@ private:
 	if_Next_ = makeLabel();
 	if (Has_Else && Is_LeadingIf)
 	    if_Done_ = makeLabel();
+    }
+
+    void insertNOP(label_Vec const& Labels, std::string Env)
+    {
+	token Op = token(tok_nop);
+	IR_Line* line = new SSA_Entry(Labels, Op, "", "", "", Env);
+	insertLine(line);
     }
 
     std::string makeTmp(void)
