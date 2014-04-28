@@ -306,6 +306,7 @@ private:
     }
 
     void visit(IfType_AST* V) { return; }
+    void visit(IfList_AST* V) { return; }
 
     void visit(If_AST* V)
     {

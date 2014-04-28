@@ -515,8 +515,8 @@ parseIfStmt(int Type)
     if (LHS){ // could be empty statement
 	// handle nested if's by dispatching to separate recursive handler
 	if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
-	    getNextToken();
-	    if (errorIn_Progress) return 0;
+	    //getNextToken();
+	    //if (errorIn_Progress) return 0;
 	    LHS = parseIfCtd(dynamic_cast<IfType_AST*>(LHS));
 	}
     }
@@ -534,6 +534,8 @@ parseIfStmt(int Type)
     IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
     return pIf;
 }
+
+IfType_AST* parseIfType(void);
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
 // invariant -> leaving, guarantees a ';' has been found where needed;
@@ -560,7 +562,8 @@ parseStmt(void)
 	ret = parseAssign();
 	break;
     case tok_if:
-	ret = parseIfStmt(0);
+//	ret = parseIfStmt(0);
+	ret = parseIfType();
 	break;
     case tok_else: // initial scope 'if -elsif - else' semantic handled here
                    // (c. also comment in parseIfStmt())
@@ -727,7 +730,11 @@ dispatchStmtIf(void)
 	top_Env = addEnv(top_Env);
 	frame_Depth++;
 
-	LHS = parseStmt();
+//	LHS = parseStmt();
+	if ( (tok_if == next_Token.Tok()) )
+	    LHS = parseIfStmt(0);
+	else
+	    LHS = parseStmt();
 	if (errorIn_Progress) return 0;
 
  	top_Env = top_Env->getPrior();
@@ -737,24 +744,52 @@ dispatchStmtIf(void)
     return LHS;
 }
 
+IfType_AST*
+parseIfType(void)
+{
+    if (option_Debug) std::cout << "parsing an ItType...\n";
+
+    IfType_AST* LHS = parseIfStmt(0);
+    if (errorIn_Progress) return 0;
+
+    if ( (0 < frame_Depth) && (tok_else == next_Token.Tok()) )
+	return parseIfCtd(LHS); // points ahead
+    else
+	return LHS;
+}
+
 // Handle nested if (expr) stmt cases, where stmt = if, but no block object
 // Invariant: points to after 'else' upon entry
+// *****CURRENTLY POINTS TO ELSE************
 IfType_AST* 
 parseIfCtd(IfType_AST* LHS)
 {
     if (option_Debug) std::cout << "entering parseIfCtd...\n";
+
+    getNextToken();
+//error
+
 
     IfType_AST* RHS;
     if ( (tok_if == next_Token.Tok()) ){
 	RHS = parseIfStmt(1);
 	if (errorIn_Progress) return 0;
 	if ( (tok_else == next_Token.Tok()) ){
-	    getNextToken();
-	    if (errorIn_Progress) return 0;
+	    //  getNextToken();
+	    // if (errorIn_Progress) return 0;
 	    RHS = parseIfCtd(RHS);
 	    if (errorIn_Progress) return 0;
 	    getNextToken();
 	    if (errorIn_Progress) return 0;
+
+
+
+/*
+	if ( (tok_if == next_Token.Tok()) )
+	    RHS = parseIfCtd(LHS);
+	else
+	    RHS = new Else_AST(dispatchStmtIf());
+*/
 	}
     }
     else{ // terminating else
