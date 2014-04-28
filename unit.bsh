@@ -46,6 +46,7 @@ do
       if [ ! -e $OPTARG ]
       then
          echo $0": Error - $OPTARG does not exist."
+         echo "     (did you forget to specify full path to file?)"
          exit 1;
       elif [ ! -f $OPTARG ] 
       then
@@ -76,22 +77,20 @@ do
       cp __OUT $FROM
       rm __OUT
       exit 0 ;;
-   l) read FILE
-      while [ $? -eq 0 ]
+   l) for FILE in `cat $FROM`
       do
          echo $FILE
-         read FILE
       done
       exit 0 ;;
    m) __FOUND=`grep ^$OPTARG$ $FROM`
       if [ -z $__FOUND ]
       then
          echo $0": Error - $OPTARG is not in file list.txt."
-         echo "(did you forget to specify full path to file?)"
+         echo "     (did you forget to specify full path to file?)"
          exit 1;
       fi
       NEW_UNIT=$OPTARG
-      OUT_NAME=`echo $NEW_UNIT | sed 's/\.dec/\.u/;'`
+      OUT_NAME="`echo $NEW_UNIT | sed 's/\.dec/\.u/;'`"
       echo "making new unit "$OUT_NAME"..."
      `./a.out $NEW_UNIT > $OUT_NAME 2>&1`
       exit 0 ;;
@@ -104,7 +103,7 @@ echo "Performing unit tests..."
 exec > $TO 2>&1
 i=0
 read CURRENT
-while [[ $CURRENT != '' ]]
+while [[ "$CURRENT" != '' ]]
 do
    if [ -f $CURRENT ]
    then
@@ -119,10 +118,9 @@ do
       else
           echo "unit testing "`basename $UNIT_NAME`
           echo "------------------------------"
-          `diff $UNIT_NAME $TMP_NAME`
-#          `diff $UNIT_NAME $TMP_NAME`
-          echo 
-      i=$[ $i + 1 ]
+          echo "`diff $UNIT_NAME $TMP_NAME`"
+          echo "------------------------------"
+          i=$[ $i + 1 ]
       fi
    else
       echo $0": skipping "$CURRENT" in list.txt - not a file."

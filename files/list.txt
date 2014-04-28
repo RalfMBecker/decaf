@@ -3,6 +3,7 @@
 ./files/decaf_03.dec
 ./files/decaf_b1.dec
 ./files/decaf_b2.dec
+./files/decaf_b3.dec
 ./files/decaf_b4.dec
 ./files/decaf_b5.dec
 ./files/decaf_b6.dec

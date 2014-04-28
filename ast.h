@@ -1,4 +1,5 @@
 /********************************************************************
+
 * ast.h - AST for Decaf
 *
 ********************************************************************/
@@ -38,6 +39,7 @@ class AndExpr_AST;
 class RelExpr_AST;
 class NotExpr_AST;
 
+class NOP_AST;
 class Block_AST;
 class StmtList_AST;
 class Stmt_AST;
@@ -67,6 +69,7 @@ public:
     virtual void visit(RelExpr_AST*) = 0;
     virtual void visit(NotExpr_AST*) = 0;
 
+    virtual void visit(NOP_AST*) = 0;
     virtual void visit(Block_AST*) = 0;
     virtual void visit(StmtList_AST*) = 0;
     virtual void visit(Stmt_AST*) = 0;
@@ -268,7 +271,7 @@ Tmp_AST(token Type)
 	tmp << "t" << ++count_;
 	setAddr(tmp.str());
 	op_.SetTokenLex(addr_);
-	std::cout << "\tcreated tmp = " << addr_ << "\n";
+	if (option_Debug) std::cout << "\tcreated tmp = " << addr_ << "\n";
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -337,6 +340,21 @@ FltExpr_AST(token Op)
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
+
+class NOP_AST: public Expr_AST{
+public:
+NOP_AST(void)
+    : Expr_AST(token(tok_nop), token(tok_nop), 0, 0) 
+ 
+    {
+	if (option_Debug)
+	    std::cout << "\tcreated NOP \n";
+    }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+};
+
+
 
 // ******TO DO: STRING (etc.)********************
 

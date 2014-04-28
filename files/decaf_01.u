@@ -2,8 +2,7 @@
 code generated for ./files/decaf_01.dec
 -----------------------------------------------
 Error near 3:37: token (1111111111111111111111111111111) longer than MAX_LIT (32)
-Error near 6:3: Syntax error - missing token (;)
-	created tmp = t1
+Error near 6:4: Syntax error - missing token (;)
 Error near 10:37: token (111111111111.111111111111111111) longer than MAX_LIT (32)
 Error near 13:33: token (99.99e+999999999999999999) float - strtod: Numerical result out of range
 Error near 16:31: token (99999999999999999999999) integer - strtol: Numerical result out of range

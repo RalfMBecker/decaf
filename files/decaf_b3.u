@@ -1,0 +1,63 @@
+-----------------------------------------------
+code generated for ./files/decaf_b3.dec
+-----------------------------------------------
+Warning near 11:6: unused expression
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env6
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env7
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                          >:        t1,         a,         0  (Env1)
+    3                    iffalse:        t1,      goto,        L1  (Env1)
+    4                          =:         a,         1             (Env2)
+    5                       goto:        L2                        (Env1)
+    6             L1:        nop:                                   (n/a)
+    7                    iffalse:         a,      goto,        L3  (Env1)
+    8                       goto:        L2                        (Env1)
+    9             L3:        nop:                                   (n/a)
+   10                    iffalse:         1,      goto,        L4  (Env4)
+   11                          =:         a,         3             (Env5)
+   12                       goto:        L5                        (Env4)
+   13             L4:        nop:                                   (n/a)
+   14                    iffalse:         2,      goto,        L6  (Env4)
+   15                        nop:                                   (n/a)
+   16                       goto:        L5                        (Env4)
+   17             L6:          =:         a,         1             (Env7)
+   18             L5:        nop:                                  (Env4)
+   19             L2:          =:         a,         0             (Env1)

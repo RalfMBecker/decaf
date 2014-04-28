@@ -56,7 +56,7 @@ private:
 
     // address-less objects
     void visit(Node_AST* V) { return; }
-    void visit(Expr_AST* V) { return; }
+    void visit(Expr_AST* V){ return; }
 
     // objects with address set by default ctor
     void visit(Tmp_AST* V) { return; }
@@ -64,6 +64,25 @@ private:
     void visit(IdArrayExpr_AST* V) { return; }
     void visit(IntExpr_AST* V) { return; }
     void visit(FltExpr_AST* V) { return; }
+
+    void visit(NOP_AST* V)
+    {
+	label_Vec labels;
+	if ( !(active_Labels_.empty()) ){
+	    labels = active_Labels_;
+	    active_Labels_.clear();
+	}
+
+	std::string frame_Str;
+	if ( (0 == V) ) // only when dispatched from visitor if
+	    frame_Str = " n/a";
+	else{
+	    Env* pFrame = V->getEnv();
+	    std::string frame_Str = pFrame->getTableName();
+	}
+
+	insertNOP(labels, "n/a");
+    }
 
     // objects needing addr update
     void visit(ArithmExpr_AST* V)
@@ -292,7 +311,12 @@ private:
     void visit(If_AST* V)
     {
 	// dispatch expr - labels handled through global active_Labels_
-	V->LChild()->accept(this);
+	if ( (1 == checkExprTarget(V->LChild())) )
+	    V->LChild()->accept(this);
+	else{
+	    NOP_AST* dummy = 0;
+	    visit(dummy);
+	}
 
 	// make iffalse SSA entry
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
@@ -382,6 +406,18 @@ private:
 	if_Next_ = makeLabel();
 	if (Has_Else && Is_LeadingIf)
 	    if_Done_ = makeLabel();
+    }
+
+    // helper to make sure a target line for labels is emitted always
+    int checkExprTarget(Node_AST* E)
+    {
+	// **TO DO: evaluate later if also: (dynamic_cast<IdArrayExpr_AST*>(E))
+	// expressions whose visitors produce no IR line
+	if ( (dynamic_cast<Tmp_AST*>(E)) || (dynamic_cast<IdExpr_AST*>(E)) ||  
+	     (dynamic_cast<IntExpr_AST*>(E))||(dynamic_cast<FltExpr_AST*>(E)))
+	    return 0;
+	else
+	    return 1;
     }
 
     void insertNOP(label_Vec const& Labels, std::string Env)

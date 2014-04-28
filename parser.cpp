@@ -184,12 +184,17 @@ parseExpr(int Type)
 	ptmp_AST = new NotExpr_AST(token(tok_log_not), LHS);
     else
 	ptmp_AST = LHS;
-
     if (errorIn_Progress) return 0;
+
+    Expr_AST* ret;
     if ( (tok_parclosed == next_Token.Tok()) || (tok_semi == next_Token.Tok()) )
-	return ptmp_AST;
+	ret = ptmp_AST;
     else
-	return parseInfixRHS(0, ptmp_AST);
+	ret = parseInfixRHS(0, ptmp_AST);
+
+    if ( (0 == ret) )
+	ret = new NOP_AST();
+    return ret;
 }
 
 Expr_AST* 
@@ -197,18 +202,30 @@ dispatchExpr(void)
 {
     if (errorIn_Progress) return 0;
 
+    Expr_AST* ret;
     switch(next_Token.Tok()){
     case '!': 
 	getNextToken(); 
 	if (errorIn_Progress) return 0;
-	return parseExpr(2);
+	ret = parseExpr(2);
+	if ( (0 == ret) )
+	    ret = new NOP_AST();
+	break;
     case '-':
 	getNextToken();
 	if (errorIn_Progress) return 0;
-	return parseExpr(1);
+	ret = parseExpr(1);
+	if ( (0 == ret) )
+	    ret = new NOP_AST();
+	break;
     default:
-	return parseExpr(0);
+	ret = parseExpr(0);
+	if ( (0 == ret) )
+	    ret = new NOP_AST();
+	break;
     }
+
+    return ret;
 }
 
 // Dijkstra shunting algorithm
@@ -219,7 +236,6 @@ dispatchExpr(void)
 //         prec_3: precedence of '*'      precedence of '-'
 // The way we track recursion, could go bad for deeply recursive infix (> 99).
 // Restriction should be added to a full description of the compiler/language.
-
 Expr_AST* 
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
@@ -271,11 +287,11 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	int tmp = checkForCoercion(LHS, RHS);
 	if ( (1 == tmp) && !(is_Assign) ){
-	    std::cout << "coercing LHS...\n";
+	    if (option_Debug) std::cout << "coercing LHS...\n";
 	    LHS = parseCoercion(LHS, RHS->Type().Tok());
 	}
 	else if ( (2 == tmp) || ( (1 == tmp) && (is_Assign) ) ){
-	    std::cout << "coercing RHS...\n";
+	    if (option_Debug) std::cout << "coercing RHS...\n";
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
 	} 
 
@@ -314,11 +330,8 @@ parseParensExpr(void)
 {
     if (option_Debug) std::cout << "parsing a ParensExpr...\n";
 
-    if ( (-1 == match(0, tok_rdopen, 1)) ){
-	punctError(')', 0);
-	errorIn_Progress = 1;
-	return 0;
-    }
+    if ( (-1 == match(0, tok_rdopen, 1)) )
+	errExit(0, "invalid call of function parseParensExpr()");
 
     int oldLogic_Status = logOp_Tot;
     logOp_Tot = 0;
@@ -502,7 +515,7 @@ parseIfStmt(int Type)
     Block_AST* LHS = dispatchStmtIf();
     if (errorIn_Progress) return 0;
 
-    if (LHS){ // could be empty statment
+    if (LHS){ // could be empty statement
 	if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
 	    getNextToken();
 	    if (errorIn_Progress) return 0;
@@ -566,6 +579,7 @@ parseStmt(void)
 	    if (errorIn_Progress) return errorResetStmt();
 	    Block_AST* tmp = dispatchStmtIf();
 	    if (errorIn_Progress) return 0;
+
 	    int endBlock_Marker = 0;
 	    if ( (tok_parclosed == next_Token.Tok()) ){
 		if_Active -= (if_Active > 0)?1:0;
@@ -587,7 +601,7 @@ parseStmt(void)
 	    punctError(';', 0);
 	    return errorResetStmt();
 	}
-	return 0;
+	ret = new NOP_AST();
 	break;
     }
 
@@ -709,6 +723,8 @@ StmtList_AST* parseIfCtd(StmtList_AST*);
 Block_AST*
 dispatchStmtIf(void)
 {
+    if (option_Debug) std::cout << "entering dispatchStmtIf()...\n";
+
     Block_AST* LHS;
     if ( (0 == match(0, tok_paropen, 0)) ){
 	LHS = parseBlock();
@@ -734,6 +750,8 @@ dispatchStmtIf(void)
 IfType_AST* 
 parseIfCtd(IfType_AST* LHS)
 {
+    if (option_Debug) std::cout << "entering parseIfCtd...\n";
+
     IfType_AST* RHS;
     if ( (tok_if == next_Token.Tok()) ){
 	RHS = parseIfStmt(1);
