@@ -490,7 +490,6 @@ parseAssign(void)
 }
 
 Block_AST* dispatchStmtIf(void);
-IfType_AST* parseIfCtd(IfType_AST*);
 
 // (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
 // if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
@@ -512,17 +511,6 @@ parseIfStmt(int Type)
     Block_AST* LHS = dispatchStmtIf();
     if (errorIn_Progress) return 0;
 
-    if (LHS){ // could be empty statement
-	// handle nested if's by dispatching to separate recursive handler
-	if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
-	    //getNextToken();
-	    //if (errorIn_Progress) return 0;
-	    LHS = parseIfCtd(dynamic_cast<IfType_AST*>(LHS));
-	}
-    }
-    next_Token.Tok();
-    if (errorIn_Progress) return 0;
-
     // will only matter if dispatched 'stmt' was, in fact, a block
     int hasElse = 0;
     int endBlock_Marker = 0;
@@ -533,6 +521,87 @@ parseIfStmt(int Type)
 
     IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
     return pIf;
+}
+
+StmtList_AST* parseBlock(void);
+Stmt_AST* parseStmt(void);
+IfType_AST* parseIfType(void);
+
+// Even with no brackets, an if can 'make a stmtList': as long as an else
+// follows, same "stmt." This function handles that case.
+Block_AST*
+dispatchStmtIf(void)
+{
+    if (option_Debug) std::cout << "entering dispatchStmtIf()...\n";
+
+    Block_AST* LHS;
+    if ( (0 == match(0, tok_paropen, 0)) ){
+	LHS = parseBlock();
+	if (errorIn_Progress) LHS = 0;
+    }
+    else{
+	top_Env = addEnv(top_Env);
+	frame_Depth++;
+
+	if ( (tok_if == next_Token.Tok()) )
+	    LHS = parseIfType();
+	else
+	    LHS = parseStmt();
+	if (errorIn_Progress) return 0;
+
+ 	top_Env = top_Env->getPrior();
+	frame_Depth--;
+    }
+
+    return LHS;
+}
+
+IfType_AST* parseIfCtd(IfType_AST*); 
+
+IfType_AST*
+parseIfType(void)
+{
+    if (option_Debug) std::cout << "parsing an ItType...\n";
+
+    IfType_AST* LHS = parseIfStmt(0);
+    if (errorIn_Progress) return 0;
+
+    if ( (0 < frame_Depth) && (tok_else == next_Token.Tok()) )
+	return parseIfCtd(LHS); // points ahead
+    else
+	return LHS;
+}
+
+// Handle nested if (expr) stmt cases, where stmt = if, but no block object
+// Invariant: points to 'else' upon entry
+IfType_AST* 
+parseIfCtd(IfType_AST* LHS)
+{
+    if (option_Debug) std::cout << "entering parseIfCtd...\n";
+
+    getNextToken();
+    if (errorIn_Progress) return 0;
+
+    IfType_AST* RHS;
+    if ( (tok_if == next_Token.Tok()) ){ // else if case
+	RHS = parseIfStmt(1);
+	if (errorIn_Progress) return 0;
+	if ( (tok_else == next_Token.Tok()) ){
+	    RHS = parseIfCtd(RHS);
+	    if (errorIn_Progress) return 0;
+	}
+    }
+    else{ // terminating else
+	Block_AST* tmp = dispatchStmtIf();
+	if (errorIn_Progress) return 0;
+	int endBlock_Marker = 0;
+	if ( (tok_parclosed == next_Token.Tok()) )
+	    endBlock_Marker = 1;
+	RHS = new Else_AST(tmp, endBlock_Marker);
+    }
+
+    LHS = new IfType_AST(LHS, RHS);
+    return LHS;
 }
 
 IfType_AST* parseIfType(void);
@@ -562,32 +631,7 @@ parseStmt(void)
 	ret = parseAssign();
 	break;
     case tok_if:
-//	ret = parseIfStmt(0);
 	ret = parseIfType();
-	break;
-    case tok_else: // initial scope 'if -elsif - else' semantic handled here
-                   // (c. also comment in parseIfStmt())
-	if ( !(if_Active) ){
-	    parseError(next_Token.Lex(), "else without prior if");
-	    break;
-	}
-
-	if ( (-1 == match(1, tok_if, 0)) ){ // terminating else case
-	    if_Active--;
-	    if (errorIn_Progress) break;
-	    Block_AST* tmp = dispatchStmtIf();
-	    if (errorIn_Progress) break;
-
-	    int endBlock_Marker = 0;
-	    if ( (tok_parclosed == next_Token.Tok()) )
-		endBlock_Marker = 1;
-	    ret = new Else_AST(tmp, endBlock_Marker);
-	}
-
-	else{ // else if case
-	    if (errorIn_Progress) break;
-	    ret = parseIfStmt(1);
-	}
 	break;
     default: // assume empty expression
 	parseWarning("", "unused expression");
@@ -710,97 +754,4 @@ parseStmtListCtd(StmtList_AST* LHS)
       //                                         LHS_b   RHS (compound)
 
     return 0; // to suppress gcc warning
-}
-
-StmtList_AST* parseIfCtd(StmtList_AST*); 
-
-// Even with no brackets, an if can 'make a stmtList': as long as an else
-// follows, same "stmt." This function handles that case.
-Block_AST*
-dispatchStmtIf(void)
-{
-    if (option_Debug) std::cout << "entering dispatchStmtIf()...\n";
-
-    Block_AST* LHS;
-    if ( (0 == match(0, tok_paropen, 0)) ){
-	LHS = parseBlock();
-	if (errorIn_Progress) LHS = 0;
-    }
-    else{
-	top_Env = addEnv(top_Env);
-	frame_Depth++;
-
-//	LHS = parseStmt();
-	if ( (tok_if == next_Token.Tok()) )
-	    LHS = parseIfStmt(0);
-	else
-	    LHS = parseStmt();
-	if (errorIn_Progress) return 0;
-
- 	top_Env = top_Env->getPrior();
-	frame_Depth--;
-    }
-
-    return LHS;
-}
-
-IfType_AST*
-parseIfType(void)
-{
-    if (option_Debug) std::cout << "parsing an ItType...\n";
-
-    IfType_AST* LHS = parseIfStmt(0);
-    if (errorIn_Progress) return 0;
-
-    if ( (0 < frame_Depth) && (tok_else == next_Token.Tok()) )
-	return parseIfCtd(LHS); // points ahead
-    else
-	return LHS;
-}
-
-// Handle nested if (expr) stmt cases, where stmt = if, but no block object
-// Invariant: points to after 'else' upon entry
-// *****CURRENTLY POINTS TO ELSE************
-IfType_AST* 
-parseIfCtd(IfType_AST* LHS)
-{
-    if (option_Debug) std::cout << "entering parseIfCtd...\n";
-
-    getNextToken();
-//error
-
-
-    IfType_AST* RHS;
-    if ( (tok_if == next_Token.Tok()) ){
-	RHS = parseIfStmt(1);
-	if (errorIn_Progress) return 0;
-	if ( (tok_else == next_Token.Tok()) ){
-	    //  getNextToken();
-	    // if (errorIn_Progress) return 0;
-	    RHS = parseIfCtd(RHS);
-	    if (errorIn_Progress) return 0;
-	    getNextToken();
-	    if (errorIn_Progress) return 0;
-
-
-
-/*
-	if ( (tok_if == next_Token.Tok()) )
-	    RHS = parseIfCtd(LHS);
-	else
-	    RHS = new Else_AST(dispatchStmtIf());
-*/
-	}
-    }
-    else{ // terminating else
-	Block_AST* tmp = dispatchStmtIf();
-	if (errorIn_Progress) return 0;
-	int endBlock_Marker = 0;
-	if ( (tok_parclosed == next_Token.Tok()) )
-	    endBlock_Marker = 1;
-	RHS = new Else_AST(tmp, endBlock_Marker);
-    }
-
-    LHS = new IfType_AST(LHS, RHS);
-    return LHS;
 }
