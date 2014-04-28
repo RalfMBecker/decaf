@@ -34,7 +34,6 @@ extern int option_Debug;
 int
 main(int argc, char* argv[])
 {
-
     std::string name_Str;
     switch(argc){
 /*    case 1:

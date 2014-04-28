@@ -145,6 +145,7 @@ private:
 	insertLine(new SSA_Entry(labels, Op, target, "0", RHS, Frame));
     }
 
+    // no address update needed, but kept among expression visitor types
     void visit(AssignExpr_AST* V)
     {
 	// empty assignment?
@@ -255,7 +256,6 @@ private:
 
 	std::string target = makeTmp();
 	V->setAddr(target);
-
 	token Op = V->Op();
 	std::string LHS = V->LChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
@@ -271,12 +271,10 @@ private:
     void visit(VarDecl_AST* V)
     {
 	label_Vec labels;
-
 	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
 	    active_Labels_.clear();
 	}
-
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_dec);
 	std::string LHS = V->Type().Lex();
@@ -298,7 +296,6 @@ private:
 	    labels = active_Labels_;
 	    active_Labels_.clear();
 	}
-
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_eq);
 	std::string LHS = V->RChild()->Addr();
@@ -308,9 +305,12 @@ private:
 	insertLine(line);
     }
 
+    void visit(IfType_AST* V) { return; }
+
     void visit(If_AST* V)
     {
-	// dispatch expr - labels handled through global active_Labels_
+	// Dispatch expr - labels handled through global active_Labels_.
+	// Ff the expression is "empty", put label in front of a nop SSA.
 	if ( (1 == checkExprTarget(V->LChild())) )
 	    V->LChild()->accept(this);
 	else{
@@ -318,9 +318,9 @@ private:
 	    visit(dummy);
 	}
 
-	// make iffalse SSA entry
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
 
+	// make iffalse SSA entry
 	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
@@ -337,7 +337,8 @@ private:
 	    V->RChild()->accept(this);
 	    // Unhandled labels remaining; happens when, at end of inner scope,
 	    //               if [- else if]* [else if | end] 
-	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec).
+	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec - 
+	    // statement triggering this is else if (a > 0) ).
 	    if ( !(active_Labels_.empty()) ){
 		labels = active_Labels_;
 		insertNOP(labels, frame_Str);
@@ -374,8 +375,6 @@ private:
 	delete pLabels;
     }
 
-    void visit(IfList_AST* V) { return; }
-
     // c. If_AST* visitor for logic
     void visit(Else_AST* V)
     {
@@ -383,21 +382,21 @@ private:
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	V->LChild()->accept(this);
-	pLabels->Restore();
+	V->LChild()->accept(this); // this does not mirror treatment in if
+	pLabels->Restore();        // visitor (go through logic)
 
 	// Ensure remaining labels are printed in next line (always after 
-	// else type). ** TO DO: revisit when more labels are produced
+	// else type).
 	if ( (V->isEOB()) ){
-	    label_Vec labels = pLabels->getLabels();
-	    token Op = token(tok_nop);
-	    std::string tmp = "";
-	    IR_Line* line = new SSA_Entry(labels, Op, tmp, tmp, tmp, frame_Str);
-	    insertLine(line);
+	    insertNOP(pLabels->getLabels(), frame_Str);
+	    if_Next_ = if_Done_ = "";
 	}
-	else 
-	    active_Labels_.push_back(if_Done_);
+	else{
+	    active_Labels_ = pLabels->getLabels();
+	    if_Next_ = if_Done_ = "";
+	}
 
+	delete pLabels;
 	if_Next_ = if_Done_ = "";
     }
 
@@ -442,7 +441,7 @@ private:
     }
 
 private:
-// making use-vars all static allows us to re-use across visitor calls
+// **TO DO: for now and simplicity, make all private vars static
 static int count_Tmp_;
 static int count_Lab_;
 

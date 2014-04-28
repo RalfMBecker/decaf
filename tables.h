@@ -32,7 +32,6 @@ void addToWidthTable(std::string Name, int Width);
 int typePriority(std::string const&);
 int typeWidth(std::string const&);
 int opPriority(token t);
-int isLogicalAdd(token t);
 
 // compile time static declaration check
 class Env;

@@ -106,7 +106,6 @@ errExit(int pError, const char* format, ...)
 /***************************************
 *  Lexer-level error functions
 ***************************************/
-
 // Type: 0 - regular; 1 - toolong/strtonum
 void
 lexerError(int Type, std::string const& Name, std::string const& Second)
@@ -158,7 +157,6 @@ strToNumError(std::string const& Name, std::string const& Type, char C)
 /***************************************
 *  Parser-level error functions
 ***************************************/
-
 // Type: 0 - not defined; 1 - attempt to redefine
 void
 varAccessError(std::string Name, int Type)

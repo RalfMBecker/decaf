@@ -131,5 +131,5 @@ do
 done
    
 `rm ./files/*.tmp`
-echo "Done. Successfully unit tested "$i" files."
+echo "Done. Successfully tested "$i" units."
 exit 0

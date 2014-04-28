@@ -11,8 +11,7 @@
 #include "error.h"
 #include "tables.h"
 #include "parser.h"
-#include "ir.h" // included through visitor.h (if not excluded, 
-//                   IR_LIST is twice in same file (erro)
+#include "ir.h"
 #include "visitor.h"
 
 extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity

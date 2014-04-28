@@ -3,8 +3,6 @@
 *
 ********************************************************************/
 
-#include <vector>
-#include <string>
 #include "visitor.h"
 
 int MakeIR_Visitor::count_Tmp_ = 0;

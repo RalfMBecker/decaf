@@ -9,7 +9,7 @@
 #include <sstream>
 #include <ostream>
 #include <string>
-#include <map> // not the ideal container. Think.
+#include <map>
 #include <vector>
 #include <iostream>
 #include <cstdio>
@@ -35,7 +35,6 @@ extern std::map<int, IR_Line*> iR_List;
 void printIR_List(void);
 void insertLine(IR_Line*);
 
-// assume for now short variable names; worry about properness later
 class SSA_Entry: public IR_Line{
 public: 
 SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target, 

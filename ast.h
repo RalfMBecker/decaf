@@ -45,8 +45,8 @@ class StmtList_AST;
 class Stmt_AST;
 class VarDecl_AST;
 class Assign_AST;
+class IfType_AST;
 class If_AST;
-class IfList_AST;
 class Else_AST;
 
 class AST_Visitor{
@@ -75,8 +75,8 @@ public:
     virtual void visit(Stmt_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
+    virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
-    virtual void visit(IfList_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
 
     ~AST_Visitor();
@@ -341,6 +341,10 @@ FltExpr_AST(token Op)
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
+// Class is useful in case of semantically important 'empty expressions';
+// e.g., in if (expr) stmt clauses, to ease emitting jump lables to expr.
+// It is probably not necessary for empty statements, but sometimes emitted
+// if we find one (it cannot hurt).
 class NOP_AST: public Expr_AST{
 public:
 NOP_AST(void)
@@ -362,7 +366,7 @@ NOP_AST(void)
 * Expression Non-logical children
 ***************************************/
 // Upon creating this object, LHS->TypeP() == RHS->TypeP()
-// Pre recommendation of Effective C++, don't throw error in ctor, though.
+// Per recommendation of Effective C++, don't throw error in ctor, though.
 class ArithmExpr_AST: public Expr_AST{
 public:
 ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
@@ -619,6 +623,15 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 /***************************************
 * Logical and procedural statements
 ***************************************/
+// Wrapper function helping with the fact that if in an 'if' clause the 
+// statement is itself an if clause. As we keep going on the inner scope
+// level as long as we see a pattern 
+//              if [else if]* [else]?
+// the inner scope statement list above is treated as if it were a single
+// statement (stmt) in the semantic pattern 
+//              if (expr) stmt
+// Using the below object, we can create a statement list, then wrap it into 
+// an IfType_AST (which is a statement by inheritance) child.
 class IfType_AST: public Stmt_AST{
 public:
     IfType_AST(Node_AST* LHS, Node_AST* RHS)
@@ -653,19 +666,6 @@ private:
     int isElse_If_;
     int has_Else_;
     int endOf_Block_;
-};
-
-class IfList_AST: public IfType_AST{
-public:
-    IfList_AST(Block_AST* LHS)
-	: IfType_AST(LHS, 0) {}
-
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-//	Visitor->visit(this);
-    }
 };
 
 // We need an Else stmt object as a wrapper around the block (or stmt) 

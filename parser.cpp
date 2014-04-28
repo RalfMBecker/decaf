@@ -26,8 +26,8 @@ extern std::istream* input;
 extern int errorIn_Progress;
 
 extern int option_Debug;
-int frame_Depth = 0; // track depth of scope nesting
-int if_Active = 0;
+int frame_Depth = 0; // track depth of scope nesting (used in error handling)
+int if_Active = 0; // ensuring that else has a leading if (first level only)
 
 /***************************************
 *  Helper functions
@@ -66,7 +66,6 @@ int
 match(int update_Prior, tokenType t, int update_Post)
 {
     if (option_Debug) std::cout << "matching...\n";
-    if (errorIn_Progress) return -2;
 
     if (update_Prior) getNextToken();
     if (errorIn_Progress) return -2;
@@ -156,7 +155,7 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 }
 
 /***********************************************
-* Expressions functions (+ primary switchboard)
+* Expression parsers (+ primary switchboard)
 ***********************************************/
 Expr_AST* parsePrimaryExpr(void);
 Expr_AST* parseInfixRHS(int, Expr_AST*);
@@ -200,7 +199,7 @@ parseExpr(int Type)
 Expr_AST* 
 dispatchExpr(void)
 {
-    if (errorIn_Progress) return 0;
+    if (option_Debug) std::cout << "dispatching an expression...\n";
 
     Expr_AST* ret;
     switch(next_Token.Tok()){
@@ -256,7 +255,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	Expr_AST* RHS = parsePrimaryExpr();
-	if ( (!RHS) || (errorIn_Progress) ){
+	if ( (!RHS) ){
 	    parseError(next_Token.Lex(), err_Msg);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -270,7 +269,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	//       '!'), this handles a prefix expr following fine.
 	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
 	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
-	    if ( (!RHS) || (errorIn_Progress) ){
+	    if ( (!RHS) ){
 		parseError(next_Token.Lex(), err_Msg);
 		errorIn_Progress = 1;
 		return 0;
@@ -354,8 +353,6 @@ parsePrimaryExpr(void)
     if (option_Debug)
 	std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
 
-    if (errorIn_Progress) return 0;
-
     switch(next_Token.Tok()){
     case tok_ID: // coming here, ID should be in symbol table
 	return parseIdExpr(next_Token.Lex());
@@ -376,9 +373,9 @@ parsePrimaryExpr(void)
     return 0;
 }
 
-/***************************************
-*  Statement parsing functions
-***************************************/
+/*********************************
+*  Statement parsers
+*********************************/
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
 // Shadowing: allowed
@@ -516,6 +513,7 @@ parseIfStmt(int Type)
     if (errorIn_Progress) return 0;
 
     if (LHS){ // could be empty statement
+	// handle nested if's by dispatching to separate recursive handler
 	if ( (dynamic_cast<If_AST*>(LHS)) && (tok_else == next_Token.Tok()) ){
 	    getNextToken();
 	    if (errorIn_Progress) return 0;
@@ -550,61 +548,57 @@ parseStmt(void)
     switch(next_Token.Tok()){
     case tok_int:
 	getNextToken();
-	if (errorIn_Progress) return errorResetStmt();
+	if (errorIn_Progress) break;
 	ret = parseVarDecl(token(tok_int));
-	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_double:
 	getNextToken();
-	if (errorIn_Progress) return errorResetStmt();
+	if (errorIn_Progress) break;
 	ret = parseVarDecl(token(tok_double));
-	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_ID: 
 	ret = parseAssign();
-	if (errorIn_Progress) return errorResetStmt();
 	break;
     case tok_if:
 	ret = parseIfStmt(0);
-	if (errorIn_Progress) return errorResetStmt();
 	break;
-    case tok_else: // ** TO DO: consider relocating inside parseIfStmt
+    case tok_else: // initial scope 'if -elsif - else' semantic handled here
+                   // (c. also comment in parseIfStmt())
 	if ( !(if_Active) ){
 	    parseError(next_Token.Lex(), "else without prior if");
-	    errorResetStmt(); // **TO DO: can be handled better
-	    return 0;
+	    break;
 	}
 
 	if ( (-1 == match(1, tok_if, 0)) ){ // terminating else case
-	    if (errorIn_Progress) return errorResetStmt();
+	    if_Active--;
+	    if (errorIn_Progress) break;
 	    Block_AST* tmp = dispatchStmtIf();
-	    if (errorIn_Progress) return 0;
+	    if (errorIn_Progress) break;
 
 	    int endBlock_Marker = 0;
-	    if ( (tok_parclosed == next_Token.Tok()) ){
-		if_Active -= (if_Active > 0)?1:0;
+	    if ( (tok_parclosed == next_Token.Tok()) )
 		endBlock_Marker = 1;
-	    }
 	    ret = new Else_AST(tmp, endBlock_Marker);
 	}
-	else{ // else if case (no impact on if_Active level)
-	    if (errorIn_Progress) return errorResetStmt();
+
+	else{ // else if case
+	    if (errorIn_Progress) break;
 	    ret = parseIfStmt(1);
-	    if (errorIn_Progress) return errorResetStmt();
 	}
 	break;
     default: // assume empty expression
 	parseWarning("", "unused expression");
 	dispatchExpr(); // parse and discard
-	if (errorIn_Progress) return errorResetStmt();
+	if (errorIn_Progress) break;
 	if ( (-1 == match(0, tok_semi, 1)) ){
 	    punctError(';', 0);
-	    return errorResetStmt();
+	    break;
 	}
 	ret = new NOP_AST();
 	break;
     }
 
+    if (errorIn_Progress) return errorResetStmt();
     return ret;
 }
 
@@ -636,11 +630,11 @@ parseBlock(void)
 	int test;
 	if ( (-1 == (test = match(0, tok_parclosed, 0))) ){
 	    punctError('}', 0);
-	    //errorIn_Progress = 1;
+	    errorIn_Progress = 1;
 	    pSL = 0;
 	}
 	else if ( (-2 == test) ){
-	    //errorIn_Progress = 1;
+	    errorIn_Progress = 1;
 	    pSL = 0;
 	}
 	else{
@@ -718,8 +712,7 @@ parseStmtListCtd(StmtList_AST* LHS)
 StmtList_AST* parseIfCtd(StmtList_AST*); 
 
 // Even with no brackets, an if can 'make a stmtList': as long as an else
-// follows, same "stmt"
-// **TO DO: monitor reported frame depth
+// follows, same "stmt." This function handles that case.
 Block_AST*
 dispatchStmtIf(void)
 {
@@ -744,7 +737,6 @@ dispatchStmtIf(void)
     return LHS;
 }
 
-// **TO DO: error handling
 // Handle nested if (expr) stmt cases, where stmt = if, but no block object
 // Invariant: points to after 'else' upon entry
 IfType_AST* 
@@ -766,7 +758,6 @@ parseIfCtd(IfType_AST* LHS)
 	}
     }
     else{ // terminating else
-	if_Active--;
 	Block_AST* tmp = dispatchStmtIf();
 	if (errorIn_Progress) return 0;
 	int endBlock_Marker = 0;
