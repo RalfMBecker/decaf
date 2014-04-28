@@ -15,11 +15,13 @@
 //                   IR_LIST is twice in same file (erro)
 #include "visitor.h"
 
-extern std::istream* input;
 extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity
 
 extern int no_lex_Errors;
 extern int no_par_Errors;
+
+std::istream* input;
+int option_Debug = 0;
 
 void
 initFrontEnd(std::string Str)
@@ -46,13 +48,6 @@ startParse(void)
 {
     getNextToken();
     pFirst_Node = parseBlock();
-    if ( (0 != pFirst_Node) ){
-	printSTInfo();
-	pFirst_Node->accept(new MakeIR_Visitor);
-	printIR_List();
-    }
-    else
-	std::cerr << "---no valid statements found---\n";
 
     std::string plural;
     if (no_lex_Errors){
@@ -62,8 +57,16 @@ startParse(void)
     }
     if (no_par_Errors){
 	std::cerr << "found "<< no_par_Errors << " syntactic/semantic error";
-	plural = ( (1 < no_par_Errors) )?"s\n":"\n";
+	plural = ( (1 < no_par_Errors) )?"s\n\n":"\n\n";
 	std::cerr << plural;
     }
+
+    if ( (0 != pFirst_Node) ){
+	printSTInfo();
+	pFirst_Node->accept(new MakeIR_Visitor);
+	printIR_List();
+    }
+    else
+	std::cerr << "---no valid statements found---\n";
 }
 

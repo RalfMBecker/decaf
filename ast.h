@@ -11,6 +11,8 @@
 #include <sstream>
 #include "lexer.h"
 
+extern int option_Debug;
+
 // forward declarations
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
@@ -135,7 +137,7 @@ public:
 Block_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
     : Node_AST(LHS, RHS)
     {
-	std::cout << "\tcreated a Block_AST\n";
+	if (option_Debug) std::cout << "\tcreated a Block_AST\n";
     }
 
     ~Block_AST() {} 
@@ -155,7 +157,7 @@ public:
 StmtList_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
     : Block_AST(LHS, RHS)
     {
-	std::cout << "\tcreated a StmtList_AST\n";
+	if (option_Debug) std::cout << "\tcreated a StmtList_AST\n";
     }
 
     ~StmtList_AST() {} 
@@ -175,7 +177,7 @@ public:
 Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
     : StmtList_AST(LC, RC)
     {
-	std::cout << "\tcreated a Stmt_AST\n";
+	if (option_Debug) std::cout << "\tcreated a Stmt_AST\n";
     }
  
     ~Stmt_AST() {}
@@ -206,8 +208,10 @@ Expr_AST(token Type=token(), token OpTor=token(),
 	}
 	else
 	    typeW_ = typeP_ = -1;
-	std::cout << "\tcreated Expr with op = " << op_.Lex();
-	std::cout << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated Expr with op = " << op_.Lex();
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     ~Expr_AST() {}
@@ -280,7 +284,7 @@ IdExpr_AST(token Type, token Op)
     : Expr_AST(Type, Op, 0, 0) 
     { 
 	setAddr(Op.Lex());
-	std::cout << "\tcreated an Id = " << addr_ << "\n";
+	if (option_Debug) std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -296,7 +300,8 @@ public:
     {
 	if ( (-1 != typeW_) )
 	    typeW_ *= size_;
-	std::cout << "\tcreated an array with Id = " << addr_  << "\n";
+	if (option_Debug)
+	    std::cout << "\tcreated an array with Id = " << addr_  << "\n";
     }
 
     int Size(void) const { return size_; }
@@ -313,7 +318,8 @@ IntExpr_AST(token Op)
     : Expr_AST(token(tok_int), Op, 0, 0) 
     {
 	setAddr(Op.Lex());
-	std::cout << "\tcreated IntExpr with value = " << addr_ << "\n";
+	if (option_Debug)
+	    std::cout << "\tcreated IntExpr with value = " << addr_ << "\n";
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -325,7 +331,8 @@ FltExpr_AST(token Op)
     : Expr_AST(token(tok_double), Op, 0, 0) 
     {
 	setAddr(Op.Lex()); 
-	std::cout << "\tcreated FltExpr with value = " << addr_ << "\n";
+	if (option_Debug)
+	    std::cout << "\tcreated FltExpr with value = " << addr_ << "\n";
     }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -343,8 +350,10 @@ public:
 ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
     {
-	std::cout << "\tcreated ArithmExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated ArithmExpr with op = " << op_.Lex(); 
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -364,8 +373,10 @@ CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
     : Expr_AST(token(TMP->Type()), token(tok_eof), TMP, Expr),
 	from_(Expr->Type().Tok()), to_(TMP->Type().Tok())
     {
-	std::cout << "\tcreated CoercedExpr with type = " 
-		  << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated CoercedExpr with type = "; 
+	    std::cout << type_.Lex() << "\n";
+	}
     }
 
     tokenType From() const { return from_; }
@@ -390,8 +401,10 @@ public:
 UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
     : Expr_AST(token(RHS->Type()), Op, 0, RHS)
     {
-	std::cout << "\tcreated Unary ArithmExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated Unary ArithmExpr with op = " << op_.Lex(); 
+	    std::cout  << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -409,7 +422,8 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
     : Expr_AST(token(Id->Type()), token(tok_eq), Id, Expr) 
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated AssignExpr_AST with LHS = " << addr_ << "\n";
+	if (option_Debug)
+	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -430,8 +444,10 @@ public:
 LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
     {
-	std::cout << "\tcreated LogicalExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated LogicalExpr with op = " << op_.Lex(); 
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     ~LogicalExpr_AST() {}
@@ -452,8 +468,10 @@ public:
 OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
     : LogicalExpr_AST(token(tok_log_or), LHS, RHS) 
     {
-	std::cout << "\tcreated OrExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated OrExpr with op = " << op_.Lex();
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -473,8 +491,10 @@ public:
 AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
     : LogicalExpr_AST(token(tok_log_and), LHS, RHS) 
     {
-	std::cout << "\tcreated AndExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated AndExpr with op = " << op_.Lex(); 
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -493,8 +513,10 @@ public:
 RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
     : LogicalExpr_AST(Op, LHS, RHS) 
     {
-	std::cout << "\tcreated RelExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated RelExpr with op = " << op_.Lex(); 
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -513,8 +535,10 @@ public:
 NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
     : LogicalExpr_AST(token(tok_log_not), LHS, 0)
     {
-	std::cout << "\tcreated NotExpr with op = " << op_.Lex() 
-		  << ", type = " << type_.Lex() << "\n";
+	if (option_Debug){
+	    std::cout << "\tcreated NotExpr with op = " << op_.Lex(); 
+	    std::cout << ", type = " << type_.Lex() << "\n";
+	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -535,7 +559,8 @@ VarDecl_AST(IdExpr_AST* Id)
     : Stmt_AST(Id, 0), type_(Id->Type())
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Decl_AST with addr = " << addr_ << "\n";
+	if (option_Debug)
+	    std::cout<< "\tcreated Decl_AST with addr = " << addr_ << "\n";
     }
 
     token Type(void) const { return type_; }
@@ -559,7 +584,8 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
     : Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
-	std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";
+	if (option_Debug)
+	    std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";
     }
 
     virtual void accept(AST_Visitor* Visitor)
@@ -589,9 +615,11 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
     : IfType_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
 	endOf_Block_(EOB)
     {
-	std::cout << "\tcreated If_AST, type ";
-	if (ElseIf) std::cout << "else if\n";
-	else std::cout << "leading if\n";
+	if (option_Debug){
+	    std::cout << "\tcreated If_AST, type ";
+	    if (ElseIf) std::cout << "else if\n";
+	    else std::cout << "leading if\n";
+	}
     }
 
     int isElseIf(void) const { return isElse_If_; }
@@ -629,7 +657,7 @@ public:
 Else_AST(Block_AST* Block, int EOB = 0)
     : IfType_AST(Block, 0), endOf_Block_(EOB)
     {
-	std::cout << "\tcreated Else_AST \n";
+	if (option_Debug) std::cout << "\tcreated Else_AST \n";
     }
 
     int isEOB(void) const { return endOf_Block_; }

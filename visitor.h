@@ -19,6 +19,7 @@
 #include "ir.h"
 
 typedef std::vector<std::string> label_Vec;
+extern int option_Debug;
 
 class MakeIR_Visitor: public AST_Visitor{
 public:

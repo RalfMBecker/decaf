@@ -1,0 +1,75 @@
+Warning near 4:5: unused expression
+-----------
+code generated for ./files/decaf_b1.dec
+-----------------------------------------------
+	created tmp = t1
+coercing LHS...
+	created tmp = t2
+coercing LHS...
+	created tmp = t3
+	created tmp = t4
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 16
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+c	Type: double
+	MemType: stack
+	Offset: 8
+	Width: 8
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 12
+                     heap: 0
+
+a	Type: double
+	MemType: stack
+	Offset: 4
+	Width: 8
+
+d	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                          =:         b,         2             (Env1)
+    4                          *:        t1,         5,         b  (Env2)
+    5                          +:        t2,         1,        t1  (Env2)
+    6                          =:         a,        t2             (Env2)
+    7                          +:        t3,         b,         a  (Env2)
+    8                          =:         b,        t3             (Env2)
+    9                          =:         a,         7             (Env2)
+   10                          <:        t4,         4,         a  (Env2)
+   11                          =:         a,        t4             (Env2)
+   12                          =:         b,         a             (Env2)
+   13                          =:         a,         1             (Env3)
+   14                        dec:         d,       int             (Env3)
+   15                        dec:         a,    double             (Env3)
+   16                       cast:        t5,         2,    double  (Env3)
+   17                          =:         a,        t5             (Env3)
+   18                        dec:         c,    double             (Env1)
+   19                          =:         c,      3.14             (Env1)
+   20                       cast:        t6,         b,    double  (Env1)
+   21                       cast:        t7,         4,    double  (Env1)
+   22                          *:        t8,        t7,         c  (Env1)
+   23                          +:        t9,        t6,        t8  (Env1)
+   24                       cast:       t10,        t9,       int  (Env1)
+   25                          =:         a,       t10             (Env1)

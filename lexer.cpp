@@ -22,10 +22,11 @@
 #include <sstream>
 #include <cctype>
 
-#include "compiler.h" // words directly with stream input
+#include "compiler.h"
 #include "lexer.h"
 #include "error.h"
 
+extern int option_Debug;
 extern std::istream* input;
 
 int line_No = 1;

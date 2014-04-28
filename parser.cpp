@@ -25,6 +25,7 @@ Node_AST* pFirst_Node;
 extern std::istream* input;
 extern int errorIn_Progress;
 
+extern int option_Debug;
 int frame_Depth = 0; // track depth of scope nesting
 int if_Active = 0;
 
@@ -64,7 +65,7 @@ errorResetStmt(void)
 int
 match(int update_Prior, tokenType t, int update_Post)
 {
-    std::cout << "matching...\n";
+    if (option_Debug) std::cout << "matching...\n";
     if (errorIn_Progress) return -2;
 
     if (update_Prior) getNextToken();
@@ -85,7 +86,7 @@ match(int update_Prior, tokenType t, int update_Post)
 Expr_AST*
 parseIntExpr(void)
 {
-    std::cout << "parsing an int...\n";
+    if (option_Debug) std::cout << "parsing an int...\n";
 
     Expr_AST* res = new IntExpr_AST(next_Token);
     getNextToken();
@@ -97,7 +98,7 @@ parseIntExpr(void)
 Expr_AST*
 parseFltExpr(void)
 {
-    std::cout << "parsing a flt...\n";
+    if (option_Debug) std::cout << "parsing a flt...\n";
 
     Expr_AST* res = new FltExpr_AST(next_Token);
     getNextToken();
@@ -112,7 +113,7 @@ parseFltExpr(void)
 Expr_AST*
 parseIdExpr(std::string Name)
 {
-    std::cout << "\tparsing (retrieving) an Id...\n";
+    if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
 
     // TO DO: once we also catch arrays/fcts, might need change
     Expr_AST* pId;
@@ -169,7 +170,7 @@ int logOp_Tot = 0;
 Expr_AST* 
 parseExpr(int Type)
 {
-    std::cout << "parsing an expr...\n";
+    if (option_Debug) std::cout << "parsing an expr...\n";
 
     logOp_Tot = 0;
     Expr_AST* LHS = parsePrimaryExpr();
@@ -222,14 +223,15 @@ dispatchExpr(void)
 Expr_AST* 
 parseInfixRHS(int prec_1, Expr_AST* LHS)
 { 
-    std::cout << "entering parseInfixRHS...\n";
+    if (option_Debug) std::cout << "entering parseInfixRHS...\n";
 
     std::string const err_Msg = "Expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
     std::string const err_Msg3 = "illegal assignment: lvalue expected";
     for (;;){
 	int prec_2 = opPriority(next_Token.Tok());
-	std::cout << "current token (1) = " << next_Token.Lex() << "\n";
+	if (option_Debug)
+	    std::cout << "current token (1) = " << next_Token.Lex() << "\n";
 
 	if ( (prec_2 < prec_1) )
 	    return LHS;
@@ -245,7 +247,8 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	}
 
 	int prec_3 = opPriority(next_Token.Tok());
-	std::cout << "current token (2) = " << next_Token.Lex() << "\n";
+	if (option_Debug)
+	    std::cout << "current token (2) = " << next_Token.Lex() << "\n";
 
 	// Note: as we next read a Primary_Expr (which dispatches '-', 
 	//       '!'), this handles a prefix expr following fine.
@@ -258,7 +261,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    }
 	}
 
-	std::cout << "binOp1.Lex() = " << binOp1.Lex() << "\n";
+	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
 	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
 	if ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ){
 	    parseError(next_Token.Lex(), err_Msg3);
@@ -309,7 +312,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 Expr_AST*
 parseParensExpr(void)
 {
-    std::cout << "parsing a ParensExpr...\n";
+    if (option_Debug) std::cout << "parsing a ParensExpr...\n";
 
     if ( (-1 == match(0, tok_rdopen, 1)) ){
 	punctError(')', 0);
@@ -335,7 +338,9 @@ parseParensExpr(void)
 Expr_AST*
 parsePrimaryExpr(void)
 {
-    std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
+    if (option_Debug)
+	std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
+
     if (errorIn_Progress) return 0;
 
     switch(next_Token.Tok()){
@@ -370,7 +375,8 @@ parsePrimaryExpr(void)
 VarDecl_AST* 
 parseVarDecl(token Type)
 {
-    std::cout << "parsing a var declaration...\n";
+    if (option_Debug) std::cout << "parsing a var declaration...\n";
+
     // access error (allow for shadowing)
     if ( (tok_ID != next_Token.Tok()) )
 	errExit(0, "parseVarDecl should be called pointing at tok_id\n");
@@ -421,7 +427,7 @@ parseVarDecl(token Type)
 Assign_AST* 
 parseAssign(void)
 {
-    std::cout << "parsing an assignment...\n";
+    if (option_Debug) std::cout << "parsing an assignment...\n";
 
     // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
@@ -483,7 +489,7 @@ IfType_AST* parseIfCtd(IfType_AST*);
 IfType_AST* 
 parseIfStmt(int Type)
 {
-    std::cout << "parsing an if statement...\n";
+    if (option_Debug) std::cout << "parsing an if statement...\n";
 
     if ( (-1 == match(0, tok_if, 1)) )
 	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
@@ -525,7 +531,7 @@ parseIfStmt(int Type)
 Stmt_AST*
 parseStmt(void)
 {
-    std::cout << "parsing a statement...\n";
+    if (option_Debug) std::cout << "parsing a statement...\n";
 
     Stmt_AST* ret;
     switch(next_Token.Tok()){
@@ -596,7 +602,7 @@ StmtList_AST* parseStmtListCtd(StmtList_AST*);
 StmtList_AST*
 parseBlock(void)
 {
-    std::cout << "parsing a block...\n";
+    if (option_Debug) std::cout << "parsing a block...\n";
 
     StmtList_AST* pSL;
     if ( (-1 == match(0, tok_paropen, 1)) )
@@ -640,7 +646,7 @@ parseBlock(void)
 StmtList_AST*
 parseStmtList(void)
 {
-    std::cout << "parsing a stmtList...\n";
+    if (option_Debug) std::cout << "parsing a stmtList...\n";
 
     Stmt_AST* LHS = parseStmt();
     if ( (0 < frame_Depth) ) // could be less if error
@@ -660,7 +666,7 @@ parseStmtList(void)
 StmtList_AST*
 parseStmtListCtd(StmtList_AST* LHS)
 {
-    std::cout << "entering parseStmtListCtd...\n";
+    if (option_Debug) std::cout << "entering parseStmtListCtd...\n";
 
     if ( (1 > frame_Depth) || (tok_eof == next_Token.Tok()) )
 	errExit(0, "missing \'}\' - symbol table corrupted");

@@ -20,6 +20,7 @@
 
 #include <string>
 #include <cstdarg>
+#include <cstring>
 
 #include "compiler.h"
 #include "driver.h"
@@ -27,7 +28,8 @@
 // forward declaration
 void errExit(int pError, const char* msg, ...);
 
-std::istream* input;
+extern std::istream* input;
+extern int option_Debug;
 
 int
 main(int argc, char* argv[])
@@ -35,18 +37,24 @@ main(int argc, char* argv[])
 
     std::string name_Str;
     switch(argc){
-    case 1:
+/*    case 1:
 	input = &std::cin;
 	name_Str = "std::cin";
-	break;
+	break; */
     case 2: 
+    case 3:
 	input = new std::ifstream(argv[1]);
 	if ( !(input->good()) )
-	    errExit(1, "can't open file <%s>", argv[1]);
+	    errExit(1, "%s: can't open file <%s>", argv[0], argv[1]);
 	name_Str = argv[1];
+
+	if ( (3 == argc) ){ // ** TO DO: extend on options (meh as is)
+	    if ( (0 == strcmp("-d", argv[2])) )
+		option_Debug = 1;
+	}
 	break;
     default:
-	errExit(0, "Error: # of args (%d). Usage: <program> <file>\n", argc);
+	errExit(0, "Error: # of args (%d). Usage: <program> <file>", argc);
     }
 
     // relegate execution to a driver module
@@ -54,7 +62,7 @@ main(int argc, char* argv[])
     collectParts();
     startParse();
 
-    if ( !(&std::cin == input) )
-	delete input;
+/*    if ( !(&std::cin == input) )
+	delete input; */
     return 0;
 }

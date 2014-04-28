@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# *************************************************************************
+# Unit testing framework for Decaf compiler
+#
+# Note: script assumes that compiler is compiled to './a.out'
+#
+# Directory: ./files
+#            list.txt has the files to compile & compare (.dec extension)
+#            units compared to: same file name (.u extension)
+#
+# Output: unit test results saved to results_<date>.txt
+#
+# Options: None - perform test on files in list.txt
+#          -a: add <name>.dec to list.txt
+#          -r: remove <name>.dec from list.txt
+#          -l: print list of files currently in list.txt
+#          -m: make new baseline for file <name>.dec (makes <name>.u)
+#
+#          - only 0 or 1 option is valid -
+#
+# *************************************************************************
+
+# make sure what we need exists
+if [ ! -e ./files ]
+then 
+   mkdir files
+fi
+
+if [ ! -e ./files/list.txt ]
+then
+   touch ./files/list.txt
+fi
+
+#gather info, and set up
+TODAY=`date +%D | sed 's/\///g'`
+TO="results_"$TODAY".unit"
+FROM=./files/list.txt
+exec < $FROM
+
+#process options, if any
+while getopts :a:r:m:l OPTIONS
+do
+   case "$OPTIONS" in
+   a) TMP=`basename $OPTARG`
+      if [ ! -e $OPTARG ]
+      then
+         echo $0": Error - $OPTARG does not exist."
+         exit 1;
+      elif [ ! -f $OPTARG ] 
+      then
+         echo $0": Error - $OPTARG is no file."
+         exit 1;
+      elif [ $TMP = $OPTARG ]
+      then
+         echo $0": Error - specify $OPTARG with an absolute path to its file."
+         exit 1;
+      else
+         echo "Adding "$OPTARG" to file list.txt ..."
+         echo $OPTARG >> $FROM
+         sort $FROM | uniq > __OUT
+         cp __OUT $FROM
+         rm __OUT
+         exit 0 ;
+      fi ;;
+   r) __FOUND=`grep ^$OPTARG$ $FROM`
+      if [ -z $__FOUND ]
+      then
+         echo $0": Error - $OPTARG is not in config file."
+         exit 1;
+      fi
+      echo "Removing "$OPTARG" from config file..."
+      # be mindful that paths are separated by '/'
+      __TMP=`echo $OPTARG | sed 's/\//:/g'`
+      cat $FROM | sed 's/\//:/g; /^'$__TMP'$/ d; s/:/\//g;' > __OUT
+      cp __OUT $FROM
+      rm __OUT
+      exit 0 ;;
+   l) read FILE
+      while [ $? -eq 0 ]
+      do
+         echo $FILE
+         read FILE
+      done
+      exit 0 ;;
+   m) __FOUND=`grep ^$OPTARG$ $FROM`
+      if [ -z $__FOUND ]
+      then
+         echo $0": Error - $OPTARG is not in file list.txt."
+         echo "(did you forget to specify full path to file?)"
+         exit 1;
+      fi
+      NEW_UNIT=$OPTARG
+      OUT_NAME=`echo $NEW_UNIT | sed 's/\.dec/\.u/;'`
+      echo "making new unit "$OUT_NAME"..."
+     `./a.out $NEW_UNIT > $OUT_NAME 2>&1`
+      exit 0 ;;
+   *) echo $0": Invalid option"
+      exit 1 ;;
+   esac
+done
+
+echo "Performing unit tests..."
+exec > $TO 2>&1
+i=0
+read CURRENT
+while [[ $CURRENT != '' ]]
+do
+   if [ -f $CURRENT ]
+   then
+      TMP_NAME=`echo $CURRENT | sed 's/\.dec/\.tmp/;'`
+      `./a.out $CURRENT > $TMP_NAME 2>&1`
+
+      UNIT_NAME=`echo $CURRENT | sed 's/\.dec/\.u/;'`
+      if [ ! -e $UNIT_NAME ]
+      then
+          echo "base line unit "$UNIT_NAME" does not exist. skipping."
+          echo
+      else
+          echo "unit testing "`basename $UNIT_NAME`
+          echo "------------------------------"
+          `diff $UNIT_NAME $TMP_NAME`
+#          `diff $UNIT_NAME $TMP_NAME`
+          echo 
+      i=$[ $i + 1 ]
+      fi
+   else
+      echo $0": skipping "$CURRENT" in list.txt - not a file."
+      echo $0"list.txt no longer matches test files in directory."
+      echo
+   fi
+   read CURRENT
+done
+   
+`rm ./files/*.tmp`
+echo "Done. Successfully unit tested "$i" files."
+exit 0
