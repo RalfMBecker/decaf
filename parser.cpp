@@ -27,7 +27,6 @@ extern int errorIn_Progress;
 
 extern int option_Debug;
 int frame_Depth = 0; // track depth of scope nesting (used in error handling)
-int if_Active = 0; // ensuring that else has a leading if (first level only)
 
 /***************************************
 *  Helper functions
@@ -339,8 +338,8 @@ parseParensExpr(void)
     if ( (-1 == match(0, tok_rdclosed, 1)) ){
 	punctError(')', 0);
 	errorIn_Progress = 1;
-	return 0;
     }
+    if (errorIn_Progress) return 0;
     logOp_Tot = oldLogic_Status;
 
     return E;
@@ -364,7 +363,7 @@ parsePrimaryExpr(void)
     case '!': 
 	return dispatchExpr();
     case ';': // might terminate an empty expression; don't forward
-	return 0; // caller must handle properly
+	return 0; // caller must handle properly (warning emitted elsewhere)
     default: // reporting handled by caller 
 	// parseError(next_Token.Lex(), "expected primary expression");
 	errorIn_Progress = 1; // fall through for return
@@ -403,6 +402,8 @@ parseVarDecl(token Type)
 	if (errorIn_Progress) return 0;
 	; // ****TO DO: this can catch arrays****
     }
+    if (errorIn_Progress) return 0;
+
 
     // declare new Id object even if we later see a syntax error (this is fine)
     IdExpr_AST* new_Id;
@@ -451,6 +452,7 @@ parseAssign(void)
     Expr_AST* RHS;
     switch(next_Token.Tok()){
     case ';': 
+	parseWarning("", "unused statement");
 	RHS = 0;
 	break;
     case '=':
@@ -503,7 +505,6 @@ parseIfStmt(int Type)
     if ( (-1 == match(0, tok_if, 1)) )
 	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
 
-    if_Active++;
     Expr_AST* expr = parseParensExpr();
     if (errorIn_Progress) return 0;
 
@@ -567,7 +568,7 @@ parseIfType(void)
     if (errorIn_Progress) return 0;
 
     if ( (0 < frame_Depth) && (tok_else == next_Token.Tok()) )
-	return parseIfCtd(LHS); // points ahead
+	return parseIfCtd(LHS);
     else
 	return LHS;
 }
@@ -579,7 +580,8 @@ parseIfCtd(IfType_AST* LHS)
 {
     if (option_Debug) std::cout << "entering parseIfCtd...\n";
 
-    getNextToken();
+    if ( (-1 == match(0, tok_else, 1)) )
+	errExit(0, "parseIfCtd should be called pointing at tok_else\n");
     if (errorIn_Progress) return 0;
 
     IfType_AST* RHS;
@@ -603,8 +605,6 @@ parseIfCtd(IfType_AST* LHS)
     LHS = new IfType_AST(LHS, RHS);
     return LHS;
 }
-
-IfType_AST* parseIfType(void);
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
 // invariant -> leaving, guarantees a ';' has been found where needed;
@@ -633,11 +633,17 @@ parseStmt(void)
     case tok_if:
 	ret = parseIfType();
 	break;
+	// illegals reserved words that should not be found here
+	// ** TO DO: monitor and update
+    case tok_else:
+	parseError(next_Token.Lex(), "illegal in context");
+	ret = 0;
+	break;
     default: // assume empty expression
 	parseWarning("", "unused expression");
 	dispatchExpr(); // parse and discard
 	if (errorIn_Progress) break;
-	if ( (-1 == match(0, tok_semi, 1)) ){
+	if ( (0 != match(0, tok_semi, 1)) ){
 	    punctError(';', 0);
 	    break;
 	}
@@ -675,12 +681,8 @@ parseBlock(void)
     // TO DO: more thinking about this once integrated higher
     if ( (0 < frame_Depth) ){ // could have been reduced in error handling
 	int test;
-	if ( (-1 == (test = match(0, tok_parclosed, 0))) ){
+	if ( (0 != (test = match(0, tok_parclosed, 0))) ){
 	    punctError('}', 0);
-	    errorIn_Progress = 1;
-	    pSL = 0;
-	}
-	else if ( (-2 == test) ){
 	    errorIn_Progress = 1;
 	    pSL = 0;
 	}

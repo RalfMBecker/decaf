@@ -47,7 +47,6 @@ class VarDecl_AST;
 class Assign_AST;
 class IfType_AST;
 class If_AST;
-class IfList_AST;
 class Else_AST;
 
 class AST_Visitor{
@@ -78,7 +77,6 @@ public:
     virtual void visit(Assign_AST*) = 0;
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
-    virtual void visit(IfList_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
 
     ~AST_Visitor();
@@ -669,22 +667,6 @@ private:
     int has_Else_;
     int endOf_Block_;
 };
-
-
-class IfList_AST: public IfType_AST{
-public:
-    IfList_AST(Node_AST* LHS)
-	: IfType_AST(LHS, 0) {}
-
-    ~IfList_AST() {}
-
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-    }
-};
-
 
 // We need an Else stmt object as a wrapper around the block (or stmt) 
 // the object actually embodies, for unified treatment in visitor

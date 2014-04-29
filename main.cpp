@@ -27,6 +27,7 @@
 
 // forward declaration
 void errExit(int pError, const char* msg, ...);
+void usageErr(std::string);
 
 extern std::istream* input;
 extern int option_Debug;
@@ -34,34 +35,38 @@ extern int option_Debug;
 int
 main(int argc, char* argv[])
 {
-    std::string name_Str;
-    switch(argc){
-/*    case 1:
-	input = &std::cin;
-	name_Str = "std::cin";
-	break; */
-    case 2: 
-    case 3:
-	input = new std::ifstream(argv[1]);
-	if ( !(input->good()) )
-	    errExit(1, "%s: can't open file <%s>", argv[0], argv[1]);
-	name_Str = argv[1];
+    int opt;
+    std::string err = "unexpected error while processing command line options";
+    std::string opt_Str = ":d"; 
 
-	if ( (3 == argc) ){ // ** TO DO: extend on options (meh as is)
-	    if ( (0 == strcmp("-d", argv[2])) )
-		option_Debug = 1;
+    while ( (-1 != (opt = getopt(argc, argv, opt_Str.c_str()))) ){
+	if ( ('?' == opt) || (':' == opt) ){
+	    std::cerr << argv[0] << ": error - invalid option - ";
+	    std::cerr << "offending character \'";
+	    std::cerr << static_cast<char>(optopt) << "\'\n";
+	    usageErr(argv[0]);
 	}
-	break;
-    default:
-	errExit(0, "Error: # of args (%d). Usage: <program> <file>", argc);
+
+	switch(opt){
+	case 'd': option_Debug = 1; break;
+	default: 
+	    errExit(0, err.c_str());
+	    break;
+	}
     }
+
+    if ( (0 == argv[optind]) )
+	errExit(0, "%s: Error - no file to compile specified\n", argv[0]);
+    std::string name_Str = argv[optind];
+    input = new std::ifstream(name_Str.c_str());
+    if ( !(input->good()) )
+	errExit(1, "%s: can't open file <%s>", argv[0], argv[optind]);
 
     // relegate execution to a driver module
     initFrontEnd(name_Str);
     collectParts();
     startParse();
 
-/*    if ( !(&std::cin == input) )
-	delete input; */
-    return 0;
+    delete input;
+    exit(EXIT_SUCCESS);
 }

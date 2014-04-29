@@ -6,7 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <cstring>
-
+#include <cstdlib> // exit(); EXIT_FAILURE/EXIT_SUCCESS
 #include "ename.h"
 #include "lexer.h"
 #include "parser.h"
@@ -51,6 +51,17 @@ panicModeFwd(void)
     else
 	errExit(0, "end of file reached while processing error");
     return -1; // == tok_eof
+}
+
+#ifdef __GNUC__
+__attribute__ ((__noreturn__)) // in case of being called from
+#endif                        // non-void function
+void
+usageErr(std::string Name)
+{
+    std::cerr << "Usage: " << Name << ": ";
+    std::cerr << "[-d] <file_Name.dec>\n";
+    exit(EXIT_FAILURE);
 }
 
 // is_Error: 0 - warning, 1 - error

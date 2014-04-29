@@ -306,12 +306,11 @@ private:
     }
 
     void visit(IfType_AST* V) { return; }
-    void visit(IfList_AST* V) { return; }
 
     void visit(If_AST* V)
     {
 	// Dispatch expr - labels handled through global active_Labels_.
-	// Ff the expression is "empty", put label in front of a nop SSA.
+	// If the expression is "empty", put label in front of a nop SSA.
 	if ( (1 == checkExprTarget(V->LChild())) )
 	    V->LChild()->accept(this);
 	else{
@@ -388,14 +387,10 @@ private:
 
 	// Ensure remaining labels are printed in next line (always after 
 	// else type).
-	if ( (V->isEOB()) ){
+	if ( (V->isEOB()) )
 	    insertNOP(pLabels->getLabels(), frame_Str);
-	    if_Next_ = if_Done_ = "";
-	}
-	else{
+	else
 	    active_Labels_ = pLabels->getLabels();
-	    if_Next_ = if_Done_ = "";
-	}
 
 	delete pLabels;
 	if_Next_ = if_Done_ = "";

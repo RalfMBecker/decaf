@@ -9,6 +9,10 @@
 
 #include <fstream>     // file streams and operations
 #include <iostream>    // cin, cout, cerr, etc.
+#include <unistd.h>    // getopt; optarg, optind, opterr, optopt
+                       // assumes _POSIX_C_SOURCE >= 2 feature test
+                       // (unchecked)
+#include <cstdlib>     // exit(); EXIT_FAILURE/EXIT_SUCCESS
 
 // consider change to const ints
 #define MAX_ID 31

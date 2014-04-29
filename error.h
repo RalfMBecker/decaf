@@ -37,6 +37,7 @@ extern int no_par_Errors;
 
 int panicModeFwd(void);
 void errExit(int pError, const char* format, ...);
+void usageErr(std::string);
 
 void lexerError(int Type, std::string const& Name, std::string const& Second);
 void tooLongError(std::string const& Name,std::string const& type_Str,int Type);
