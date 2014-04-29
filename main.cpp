@@ -56,7 +56,7 @@ main(int argc, char* argv[])
     }
 
     if ( (0 == argv[optind]) )
-	errExit(0, "%s: Error - no file to compile specified\n", argv[0]);
+	errExit(0, "%s: Error - no file to compile specified", argv[0]);
     std::string name_Str = argv[optind];
     input = new std::ifstream(name_Str.c_str());
     if ( !(input->good()) )

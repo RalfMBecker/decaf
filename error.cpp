@@ -29,7 +29,7 @@ panicModeFwd(void)
     int adj(0);
 
     if ( (EOF != last_Char) ){
-	if ( (';' != last_Char) ){
+	if ( (';' != last_Char) && (tok_semi != next_Token.Tok()) ){
 	    while( (EOF != (c = getNext())) && (';' != c) ){
 		if ( ('{' == c) )
 		    adj++;

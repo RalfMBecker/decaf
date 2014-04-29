@@ -56,6 +56,8 @@ adjScopeLevel(int N)
 Stmt_AST*
 errorResetStmt(void)
 {
+    if (option_Debug) std::cerr << "\trecovering from error...\n";
+
     adjScopeLevel(panicModeFwd());
     errorIn_Progress = 0;
     return 0;
@@ -190,6 +192,7 @@ parseExpr(int Type)
     else
 	ret = parseInfixRHS(0, ptmp_AST);
 
+    if (errorIn_Progress) return 0;
     if ( (0 == ret) )
 	ret = new NOP_AST();
     return ret;
@@ -203,7 +206,9 @@ dispatchExpr(void)
     Expr_AST* ret;
     switch(next_Token.Tok()){
     case '!': 
-	getNextToken(); 
+	getNextToken();
+	if ( (';' == next_Token.Tok()) )
+	    errorIn_Progress = 1;
 	if (errorIn_Progress) return 0;
 	ret = parseExpr(2);
 	if ( (0 == ret) )
@@ -211,6 +216,8 @@ dispatchExpr(void)
 	break;
     case '-':
 	getNextToken();
+	if ( (';' == next_Token.Tok()) )
+	    errorIn_Progress = 1;
 	if (errorIn_Progress) return 0;
 	ret = parseExpr(1);
 	if ( (0 == ret) )
@@ -218,7 +225,7 @@ dispatchExpr(void)
 	break;
     default:
 	ret = parseExpr(0);
-	if ( (0 == ret) )
+	if ( (0 == ret) && !(errorIn_Progress) )
 	    ret = new NOP_AST();
 	break;
     }
@@ -334,6 +341,7 @@ parseParensExpr(void)
     int oldLogic_Status = logOp_Tot;
     logOp_Tot = 0;
     Expr_AST* E = dispatchExpr();
+    if (errorIn_Progress) return 0;
 
     if ( (-1 == match(0, tok_rdclosed, 1)) ){
 	punctError(')', 0);
@@ -507,6 +515,8 @@ parseIfStmt(int Type)
 
     Expr_AST* expr = parseParensExpr();
     if (errorIn_Progress) return 0;
+    if ( dynamic_cast<AssignExpr_AST*>(expr) )
+	parseWarning("", "'=' in if-conditional - did you mean '=='?");
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmtIf();
@@ -548,7 +558,6 @@ dispatchStmtIf(void)
 	    LHS = parseIfType();
 	else
 	    LHS = parseStmt();
-	if (errorIn_Progress) return 0;
 
  	top_Env = top_Env->getPrior();
 	frame_Depth--;
@@ -562,7 +571,7 @@ IfType_AST* parseIfCtd(IfType_AST*);
 IfType_AST*
 parseIfType(void)
 {
-    if (option_Debug) std::cout << "parsing an ItType...\n";
+    if (option_Debug) std::cout << "parsing an IfType...\n";
 
     IfType_AST* LHS = parseIfStmt(0);
     if (errorIn_Progress) return 0;
@@ -637,6 +646,7 @@ parseStmt(void)
 	// ** TO DO: monitor and update
     case tok_else:
 	parseError(next_Token.Lex(), "illegal in context");
+	getNextToken();
 	ret = 0;
 	break;
     default: // assume empty expression
