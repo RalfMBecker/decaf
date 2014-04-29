@@ -53,6 +53,8 @@ startParse(void)
 	plural = ( (1 < no_lex_Errors) )?"s\n":"\n";
 	std::cerr << plural;
     }
+    else
+	std::cerr << "\n";
     if (no_par_Errors){
 	std::cerr << "found "<< no_par_Errors << " syntactic/semantic error";
 	plural = ( (1 < no_par_Errors) )?"s\n\n":"\n\n";
