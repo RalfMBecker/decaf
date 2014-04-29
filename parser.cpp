@@ -520,7 +520,12 @@ parseIfStmt(int Type)
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmtIf();
-    if (errorIn_Progress) return 0;
+    if (errorIn_Progress) {
+	if (dynamic_cast<IfType_AST*>(LHS))
+	    return dynamic_cast<IfType_AST*>(LHS);
+	else
+	    return 0;
+    }
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int hasElse = 0;
@@ -574,7 +579,7 @@ parseIfType(void)
     if (option_Debug) std::cout << "parsing an IfType...\n";
 
     IfType_AST* LHS = parseIfStmt(0);
-    if (errorIn_Progress) return 0;
+    if (errorIn_Progress) return LHS;
 
     if ( (0 < frame_Depth) && (tok_else == next_Token.Tok()) )
 	return parseIfCtd(LHS);
@@ -596,19 +601,21 @@ parseIfCtd(IfType_AST* LHS)
     IfType_AST* RHS;
     if ( (tok_if == next_Token.Tok()) ){ // else if case
 	RHS = parseIfStmt(1);
-	if (errorIn_Progress) return 0;
-	if ( (tok_else == next_Token.Tok()) ){
+	if (errorIn_Progress) RHS = 0 ;
+	if ( !(errorIn_Progress) && (tok_else == next_Token.Tok()) ){
 	    RHS = parseIfCtd(RHS);
-	    if (errorIn_Progress) return 0;
+	    if (errorIn_Progress) RHS = 0;
 	}
     }
     else{ // terminating else
 	Block_AST* tmp = dispatchStmtIf();
-	if (errorIn_Progress) return 0;
-	int endBlock_Marker = 0;
-	if ( (tok_parclosed == next_Token.Tok()) )
-	    endBlock_Marker = 1;
-	RHS = new Else_AST(tmp, endBlock_Marker);
+	if (errorIn_Progress) RHS = 0;
+	if ( !(errorIn_Progress) ){
+	    int endBlock_Marker = 0;
+	    if ( (tok_parclosed == next_Token.Tok()) )
+		endBlock_Marker = 1;
+	    RHS = new Else_AST(tmp, endBlock_Marker);
+	}
     }
 
     LHS = new IfType_AST(LHS, RHS);
@@ -647,6 +654,7 @@ parseStmt(void)
     case tok_else:
 	parseError(next_Token.Lex(), "illegal in context");
 	getNextToken();
+//	errorIn_Progress = 1;
 	ret = 0;
 	break;
     default: // assume empty expression
@@ -661,7 +669,13 @@ parseStmt(void)
 	break;
     }
 
-    if (errorIn_Progress) return errorResetStmt();
+    // cases to improve error handling in case of errors in nested if's
+    if (errorIn_Progress){
+	if (dynamic_cast<IfType_AST*>(ret))
+	    errorResetStmt();
+	else
+	    return errorResetStmt();
+    }
     return ret;
 }
 
@@ -705,6 +719,7 @@ parseBlock(void)
     if ( (tok_eof != next_Token.Tok()) ) getNextToken();
     if (errorIn_Progress) return 0;
 
+    if (option_Debug) std::cout << "parsed a block...\n"; 
     return pSL;
 }
 
