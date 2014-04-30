@@ -9,3 +9,4 @@
 ./files/decaf_b4.dec
 ./files/decaf_b5.dec
 ./files/decaf_b6.dec
+./files/decaf_b7.dec

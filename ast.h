@@ -476,10 +476,6 @@ LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 };
@@ -493,15 +489,14 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	if (option_Debug){
 	    std::cout << "\tcreated OrExpr with op = " << op_.Lex();
 	    std::cout << ", type = " << type_.Lex() << "\n";
+	    int t =  (0 != dynamic_cast<OrExpr_AST*>(LHS));
+	std::cout << "\t[debug] (LChild == OrExpr_AST) = " << t << "\n"; 
+
 	}
     }
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 };
@@ -521,10 +516,6 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 };

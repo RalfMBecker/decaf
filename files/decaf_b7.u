@@ -1,0 +1,30 @@
+-----------------------------------------------
+code generated for ./files/decaf_b7.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 8
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                    iffalse:         a,      goto,        L1  (Env1)
+    4                          =:        t1,         a             (Env1)
+    5                       goto:        L2                        (Env1)
+    6             L1:          =:        t1,         1             (Env1)
+    7                    iffalse:        t1,      goto,        L3  (Env1)
+    8                          =:        t2,        t1             (Env1)
+    9                       goto:        L2                        (Env1)
+   10             L3:          =:        t2,         b             (Env1)
+   11             L2:          =:         a,        t2             (Env1)
