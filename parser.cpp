@@ -16,6 +16,7 @@
 ********************************************************************/
 // **TO DO: consider keeping debugging output with a -v (verbose) switch
 
+#include <vector>
 #include "lexer.h"
 #include "ast.h"
 #include "error.h"
@@ -159,79 +160,7 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 * Expression parsers (+ primary switchboard)
 ***********************************************/
 Expr_AST* parsePrimaryExpr(void);
-Expr_AST* parseInfixRHS(int, Expr_AST*);
 int logOp_Tot = 0;
-
-// expr -> prim op expr | -expr | !expr | prim | epsilon
-// op -> +, -, *, /, %, ||, &&, op1
-// op1 -> ==, !=, <, <=, >, >= 
-// Type: 0 - infix; 1 - arithm prefix (-); 2 - logical prefix (!)
-// logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
-Expr_AST* 
-parseExpr(int Type)
-{
-    if (option_Debug) std::cout << "parsing an expr...\n";
-
-    logOp_Tot = 0;
-    Expr_AST* LHS = parsePrimaryExpr();
-    if ( !LHS )
-	return 0; // handled by caller
-
-    Expr_AST* ptmp_AST = 0;
-    if ( (1 == Type) )
-	ptmp_AST = new UnaryArithmExpr_AST(token(tok_minus), LHS);
-    else if ( (2 == Type) )
-	ptmp_AST = new NotExpr_AST(token(tok_log_not), LHS);
-    else
-	ptmp_AST = LHS;
-    if (errorIn_Progress) return 0;
-
-    Expr_AST* ret;
-    if ( (tok_parclosed == next_Token.Tok()) || (tok_semi == next_Token.Tok()) )
-	ret = ptmp_AST;
-    else
-	ret = parseInfixRHS(0, ptmp_AST);
-
-    if (errorIn_Progress) return 0;
-    if ( (0 == ret) )
-	ret = new NOP_AST();
-    return ret;
-}
-
-Expr_AST* 
-dispatchExpr(void)
-{
-    if (option_Debug) std::cout << "dispatching an expression...\n";
-
-    Expr_AST* ret;
-    switch(next_Token.Tok()){
-    case '!': 
-	getNextToken();
-	if ( (';' == next_Token.Tok()) )
-	    errorIn_Progress = 1;
-	if (errorIn_Progress) return 0;
-	ret = parseExpr(2);
-	if ( (0 == ret) )
-	    ret = new NOP_AST();
-	break;
-    case '-':
-	getNextToken();
-	if ( (';' == next_Token.Tok()) )
-	    errorIn_Progress = 1;
-	if (errorIn_Progress) return 0;
-	ret = parseExpr(1);
-	if ( (0 == ret) )
-	    ret = new NOP_AST();
-	break;
-    default:
-	ret = parseExpr(0);
-	if ( (0 == ret) && !(errorIn_Progress) )
-	    ret = new NOP_AST();
-	break;
-    }
-
-    return ret;
-}
 
 // Dijkstra shunting algorithm
 // Example to illustrate variable usage: LHS + b * c - d
@@ -329,6 +258,131 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
     }
 }
 
+//Expr_AST* parseInfixRHS(int, Expr_AST*);
+
+Expr_AST*
+parseInfixList(Expr_AST* LHS)
+{
+    if (option_Debug) std::cout << "parsing an InfixList...\n";
+
+    Expr_AST* ret;
+    if ( (tok_parclosed == next_Token.Tok()) || (tok_semi == next_Token.Tok()) )
+	ret = LHS;
+    else
+	ret = parseInfixRHS(0, LHS);
+
+    if (errorIn_Progress) return 0;
+    if ( (0 == ret) )
+	ret = new NOP_AST();
+
+    return ret;
+}
+
+// expr -> prim op expr | -expr | !expr | prim | epsilon
+// op -> +, -, *, /, %, ||, &&, op1
+// op1 -> ==, !=, <, <=, >, >= 
+// Prefix handled separately (dispatched by parsePrimaryExpr)
+// logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
+// Function proper handles only non-prefix expressions
+Expr_AST* 
+parseExpr(void)
+{
+    if (option_Debug) std::cout << "parsing an expr...\n";
+
+    Expr_AST* LHS = parsePrimaryExpr();
+    if ( !LHS )
+	return new NOP_AST(); // handled by caller
+    if (errorIn_Progress) return 0; // ** TO DO CHECK
+
+    return LHS;
+}
+
+Expr_AST* dispatchPrefixExpr(token t);
+
+// entry point (head) of expression parsing
+Expr_AST* 
+dispatchExpr(void)
+{
+    if (option_Debug) std::cout << "dispatching an expression...\n";
+
+    logOp_Tot = 0;
+    Expr_AST* ret;
+    switch(next_Token.Tok()){
+    case '!': case '-': 
+	ret = dispatchPrefixExpr(next_Token);
+	if ( (0 == ret) && !(errorIn_Progress) )
+	    ret = new NOP_AST();
+	break;
+    default:
+	ret = parseExpr();
+	if ( (0 == ret) && !(errorIn_Progress) )
+	    ret = new NOP_AST();
+	break;
+    }
+
+    if (errorIn_Progress) ret = 0; // ** TO DO
+    else ret = parseInfixList(ret);
+    return ret;
+}
+
+int
+validInPrefix(token t)
+{
+    switch(t.Tok()){
+    case tok_rdopen: case tok_minus: case tok_log_not:
+    case tok_ID: case tok_int: case tok_double:
+	return 0;
+    default:
+	return -1;
+    }
+}
+
+Expr_AST* parseParensExpr(void);
+
+Expr_AST*
+dispatchPrefixExpr(token t)
+{
+    if (option_Debug) std::cout << "parsing a Prefixexpr...\n"; 
+
+    Expr_AST* ret;
+    std::string err_Msg = "expected infix operator or primary expression";
+    // collect legal prefixes
+    std::vector<token> tok_Vec;
+    while ( (tok_minus == t.Tok()) || (tok_log_not == t.Tok()) ) {
+	if ( (-1 == validInPrefix(t)) ){
+	    parseError(next_Token.Lex(), err_Msg);
+	    errorIn_Progress = 1;
+	}
+	tok_Vec.push_back(token(t));
+	t = getNextToken();
+	if (errorIn_Progress) break;
+    }
+    if (errorIn_Progress) return 0; // ***********
+
+    // process legal expression types prefix(es) operate on
+    switch(next_Token.Tok()){
+    case tok_ID: ret = parseIdExpr(next_Token.Lex()); break;
+    case tok_intV: ret = parseIntExpr(); break;
+    case tok_doubleV: ret = parseFltExpr(); break;
+    case tok_rdopen: ret = parseParensExpr(); break;
+    default:
+	parseError(next_Token.Lex(), "expected primary expression");
+	errorIn_Progress = 1;
+	return 0; // **************
+	break;
+    }
+
+    // apply prefixes successively
+    std::vector<token>::const_reverse_iterator iter;
+    for (iter = tok_Vec.rbegin(); iter != tok_Vec.rend(); iter++)
+	ret = new UnaryArithmExpr_AST(*iter, ret);
+
+    if (errorIn_Progress) return 0; // ****TO DO
+    if ( !ret )
+	return new NOP_AST(); // handled by caller
+    return ret;
+}
+
 // (expr) -> expr
 Expr_AST*
 parseParensExpr(void)
@@ -366,10 +420,10 @@ parsePrimaryExpr(void)
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
     case '(': return parseParensExpr(); 
-    case '=':
+    case '=': return dispatchExpr(); // ****TO DO - change ??
     case '-':
     case '!': 
-	return dispatchExpr();
+	return dispatchPrefixExpr(next_Token);
     case ';': // might terminate an empty expression; don't forward
 	return 0; // caller must handle properly (warning emitted elsewhere)
     default: // reporting handled by caller 

@@ -3,11 +3,12 @@ code generated for ./files/decaf_04.dec
 -----------------------------------------------
 Error near 3:13: Syntax error ()) - Expected primary expression
 Error near 5:8: Syntax error (else) - illegal in context
+Error near 6:7: Syntax error (;) - expected primary expression
 Error near 6:7: Syntax error (;) - invalid assignment
 Warning near 8:2: '=' in if-conditional - did you mean '=='?
 Warning near 10:2: unused expression
 
-found 3 syntactic/semantic errors
+found 4 syntactic/semantic errors
 
 Info for table Env1
 ---------------------------------------------------
