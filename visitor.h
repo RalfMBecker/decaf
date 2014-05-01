@@ -139,10 +139,10 @@ private:
 	std::string target = makeTmp();
 	V->setAddr(target);
 	token Op = V->Op();
-	std::string RHS = V->RChild()->Addr();
+	std::string LHS = V->LChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	insertLine(new SSA_Entry(labels, Op, target, "0", RHS, Frame));
+	insertLine(new SSA_Entry(labels, Op, target, LHS, "", Frame));
     }
 
     // no address update needed, but kept among expression visitor types

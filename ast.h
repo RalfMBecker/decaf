@@ -420,8 +420,8 @@ private:
 
 class UnaryArithmExpr_AST: public Expr_AST{
 public:
-UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
-    : Expr_AST(token(RHS->Type()), Op, 0, RHS)
+UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
+    : Expr_AST(token(LHS->Type()), Op, LHS, 0)
     {
 	if (option_Debug){
 	    std::cout << "\tcreated Unary ArithmExpr with op = " << op_.Lex(); 
@@ -431,8 +431,8 @@ UnaryArithmExpr_AST(token Op, Expr_AST* RHS)
 
     virtual void accept(AST_Visitor* Visitor)
     {
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
 	Visitor->visit(this);
     }
 };

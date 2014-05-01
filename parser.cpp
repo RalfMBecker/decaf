@@ -258,8 +258,8 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
     }
 }
 
-//Expr_AST* parseInfixRHS(int, Expr_AST*);
-
+// After 1 infix or prefix expression has been read, dispatch an infix list,
+// if appropriate.
 Expr_AST*
 parseInfixList(Expr_AST* LHS)
 {
@@ -278,12 +278,7 @@ parseInfixList(Expr_AST* LHS)
     return ret;
 }
 
-// expr -> prim op expr | -expr | !expr | prim | epsilon
-// op -> +, -, *, /, %, ||, &&, op1
-// op1 -> ==, !=, <, <=, >, >= 
-// Prefix handled separately (dispatched by parsePrimaryExpr)
-// logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
-// Function proper handles only non-prefix expressions
+// Handle the LHS (which is not a prefix expr) of a possible expr-list
 Expr_AST* 
 parseExpr(void)
 {
@@ -300,6 +295,11 @@ parseExpr(void)
 Expr_AST* dispatchPrefixExpr(token t);
 
 // entry point (head) of expression parsing
+// expr -> prim op expr | -expr | !expr | prim | epsilon
+// op -> +, -, *, /, %, ||, &&, op1
+// op1 -> ==, !=, <, <=, >, >= 
+// logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
+// Function proper handles only non-prefix expressions
 Expr_AST* 
 dispatchExpr(void)
 {
@@ -339,6 +339,9 @@ validInPrefix(token t)
 
 Expr_AST* parseParensExpr(void);
 
+// Handle the LHS (which is a prefix) of a possible expr-list.
+// Self-contained, so can be called from within infix-list parsing
+// without logical errors/pollution.
 Expr_AST*
 dispatchPrefixExpr(token t)
 {
@@ -420,7 +423,6 @@ parsePrimaryExpr(void)
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
     case '(': return parseParensExpr(); 
-    case '=': return dispatchExpr(); // ****TO DO - change ??
     case '-':
     case '!': 
 	return dispatchPrefixExpr(next_Token);
