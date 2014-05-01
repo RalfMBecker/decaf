@@ -1,5 +1,5 @@
 -----------------------------------------------
-code generated for ./files/decaf_b7.dec
+code generated for ./files/decaf_b8.dec
 -----------------------------------------------
 
 Info for table Env1
@@ -27,23 +27,23 @@ Memory allocation - stack: 0
     3                          -:        t2,         a,         1  (Env1)
     4                          <:        t3,        t2,         6  (Env1)
     5                          =:        t1,        t3             (Env1)
-    6                    iffalse:        t1,      goto,        L2  (Env1)
+    6                     iftrue:        t1,      goto,        L2  (Env1)
     7                       goto:        L1                        (Env1)
     8             L2:          =:        t1,         1             (Env1)
-    9                    iffalse:        t1,      goto,        L3  (Env1)
+    9                     iftrue:        t1,      goto,        L3  (Env1)
    10                       goto:        L1                        (Env1)
    11             L3:          !:        t4,         a             (Env1)
    12                          -:        t5,        t4             (Env1)
    13                          +:        t6,        t5,         2  (Env1)
    14                          =:         b,        t6             (Env1)
    15                          =:        t1,         b             (Env1)
-   16                    iffalse:        t1,      goto,        L4  (Env1)
+   16                     iftrue:        t1,      goto,        L4  (Env1)
    17                       goto:        L1                        (Env1)
    18             L4:          =:        t1,         2             (Env1)
    19             L1:          =:         a,        t1             (Env1)
    20                          +:        t8,         a,         2  (Env1)
    21                          =:        t7,        t8             (Env1)
-   22                    iffalse:        t7,      goto,        L6  (Env1)
+   22                     iftrue:        t7,      goto,        L6  (Env1)
    23                       goto:        L5                        (Env1)
    24             L6:          -:        t9,         b             (Env1)
    25                          !:       t10,        t9             (Env1)
