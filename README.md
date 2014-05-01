@@ -10,10 +10,7 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 
 (5) type bool currently disallowed,  
  
-(6) evaluation of logical expressions similar to C (1 - true; 0 - false),  
-
-(7) there are 2 prefix operators (-, !); we disallow: (a) twice the same 
-    in a row, and (b) 3 in a row (could easily be added).
+(6) evaluation of logical expressions similar to C (1 - true; 0 - false).
 
 Eventually, the compiler will have multiple parse rounds, probably refining first the AST, and then the generated SSA-style IR, using a Visitor Pattern to manage at least AST parsing but probably also the DAG implied by the IR.
 
