@@ -167,6 +167,7 @@ private:
 	insertLine(line);
     }
 
+
     // Even if different objects have the same code, must implement
     // separately for each. There is certainly a way around this using
     // another indirection; but we did not pursue it.
@@ -190,78 +191,90 @@ private:
     }
 
     // Evaluate a sequence e1 || e2 [|| e3]* left to right.
-    // As soon as any e_i evaluates to true, set addr = e_i, and exit (this
-    // properly represents the truth value of the sequence). 
+    // As soon as any e_i evaluates to true, set addr = e_i, and jump to exit 
+    // (this properly represents the truth value of the sequence). 
     // If we reach the last e_k, the whole sequence is true/false depending 
     // only on e_k; so set addr = e_k.
+    // Note that tree of a sequence of || expressions looks like:
+    //                     Or
+    //                   Or  RC
+    //                 Or  RC
+    //               LC RC                => unroll first to get right labels
     void visit(OrExpr_AST* V)
     {
-	// - Jump to exit once true; hence, if your LChild was already an
-	// OrExpr_AST (cond_Second_ != ""), a jump target label already exists.
-	// - Create tmp variable holding final result, and remember it
-	int startNewOrSeq = ("" == cond_Second_); // ***
-	makeLabelsCond(startNewOrSeq);
-	if (startNewOrSeq) V->setAddr(cond_Res_);
+	std::string cond_Res = makeTmp();
+	std::string cond_End = makeLabel();
 
-	// do expr 1
-	// **TO DO: do we need to handle separately 0 pointer in children?
-	V->LChild()->accept(this);
+	// get to bottom left
+	while ( (dynamic_cast<OrExpr_AST*>(V->LChild())) )
+	    V = dynamic_cast<OrExpr_AST*>(V->LChild());
 
-	// make iffalse SSA entry
+	// handle expr1...
 	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){ // visiting expr1 might not have
-	    labels = active_Labels_;      // printed labels (e.g., IdExpr)
+	if ( !(active_Labels_.empty()) ){ 
+	    labels = active_Labels_;      
 	    active_Labels_.clear();
 	}
-	token Op = token(tok_iffalse);
-	std::string target;
-	if ( ("" != V->LChild()->Addr()) )
-	    target = V->LChild()->Addr();
-	else
-	    target = cond_Res_;
-	std::string LHS = "goto";
-	std::string RHS = cond_First_;
+	V->LChild()->accept(this);
+
+	// ...and assign its result to the status variable (cond_Res)
+	token Op = token(tok_eq);
+	std::string target = cond_Res;
+	std::string LHS = V->LChild()->Addr();
+	std::string RHS = "";
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// assign addr(expr 1) to result of or, if it didn't happen 
-	// already above
-	labels.clear();
-	if ( (cond_Res_ != target) ){
-	    Op = token(tok_eq);
-	    LHS = V->LChild()->Addr();
-	    RHS = "";
-	    line = new SSA_Entry(labels, Op, cond_Res_, target, RHS, frame_Str);
-	    insertLine(line);
-	}
+	doOr(V, cond_Res, cond_End);
+	active_Labels_.push_back(cond_End);
+    }
+
+    // if we find OrExprList = OrExpr(LHS, OrExprList), the current
+    // RHS is in position V->RChild()->LChild()
+    void doOr(OrExpr_AST* V, std::string cond_Res, std::string cond_End)
+    {
+	// make iffalse SSA entry
+	std::string cond_First = makeLabel();
+
+	label_Vec labels;
+	token Op = token(tok_iffalse);
+	std::string target = cond_Res;
+	std::string LHS = "goto";
+	std::string RHS = cond_First;
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	insertLine(line);
 
 	// jump over expr 2
 	Op = token(tok_goto);
-	target = cond_Second_;
+	target = cond_End;
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// now do expr 2
+	// handle expr2
 	if ( checkExprTarget(V->RChild()) ) // visitors printing labels
-	    active_Labels_.push_back(cond_First_);
-	else // those that don't: label next block
-	    labels.push_back(cond_First_); 
+	    active_Labels_.push_back(cond_First);
+	else // those that don't: label assignment at end 
+	    labels.push_back(cond_First); 
 	V->RChild()->accept(this);
-	cond_First_ = makeLabel();
+	active_Labels_.clear();
 
-	// assign addr(expr 2) to result of or
+	// ...and assign its result to the status variable (cond_Res)
 	Op = token(tok_eq);
+	target = cond_Res;
 	LHS = V->RChild()->Addr();
 	RHS = "";
-	line = new SSA_Entry(labels, Op, cond_Res_, LHS, RHS, frame_Str);
+	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
-	if ( !(dynamic_cast<OrExpr_AST*>(V->Parent())) ){ // see *** above:
-	    active_Labels_.push_back(cond_Second_); // print ONLY at end
-	    cond_Res_ = cond_Second_ = "";
-	}
+
+	if ( (dynamic_cast<OrExpr_AST*>(V->Parent())) )
+	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), cond_Res, cond_End);
+	else
+	    return;
     }
 
     void visit(AndExpr_AST* V)
@@ -471,6 +484,7 @@ private:
 	    return 1;
     }
 
+/*
     void makeLabelsCond(int startNewOrSeq)
     {
 	cond_First_ = makeLabel();
@@ -479,6 +493,7 @@ private:
 	    cond_Res_ = makeTmp();
 	}
     }
+*/
 
     void insertNOP(label_Vec const& Labels, std::string Env)
     {
@@ -508,10 +523,6 @@ static int count_Lab_;
 
 static std::string if_Next_;
 static std::string if_Done_;
-
-static std::string cond_First_;
-static std::string cond_Second_;
-static std::string cond_Res_;
 
 static label_Vec active_Labels_;
 };
