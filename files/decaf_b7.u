@@ -17,6 +17,11 @@ b	Type: int
 	Offset: 4
 	Width: 4
 
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
     1                        dec:         a,       int             (Env1)
     2                        dec:         b,       int             (Env1)
     3                          -:        t2,         a,         1  (Env1)
@@ -35,4 +40,13 @@ b	Type: int
    16                    iffalse:        t1,      goto,        L4  (Env1)
    17                       goto:        L1                        (Env1)
    18             L4:          =:        t1,         2             (Env1)
-   19             L1:          =:         a                        (Env1)
+   19             L1:          =:         a,        t1             (Env1)
+   20                          +:        t7,         a,         2  (Env1)
+   21                          -:        t8,         b             (Env1)
+   22                          !:        t9,        t8             (Env1)
+   23                          -:       t10,        t9             (Env1)
+   24                          -:       t11,       t10             (Env1)
+   25                          <:       t12,        t7,       t11  (Env1)
+   26                    iffalse:       t12,      goto,        L5  (Env1)
+   27                          =:         b,         a             (Env2)
+   28             L5:        nop:                                  (Env1)

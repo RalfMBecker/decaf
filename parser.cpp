@@ -706,11 +706,10 @@ parseStmt(void)
 	ret = parseIfType();
 	break;
 	// illegals reserved words that should not be found here
-	// ** TO DO: monitor and update
     case tok_else:
 	parseError(next_Token.Lex(), "illegal in context");
 	getNextToken();
-//	errorIn_Progress = 1;
+//	errorIn_Progress = 1; // to allow recovery from else followed by if 
 	ret = 0;
 	break;
     default: // assume empty expression
