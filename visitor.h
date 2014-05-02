@@ -168,27 +168,9 @@ private:
     }
 
 
-    // Even if different objects have the same code, must implement
-    // separately for each. There is certainly a way around this using
-    // another indirection; but we did not pursue it.
-    void visit(LogicalExpr_AST* V)
-    {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
-
-	std::string target = makeTmp();
-	V->setAddr(target);
-	token Op = V->Op();
-	std::string LHS = V->LChild()->Addr();
-	std::string RHS = V->RChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
-
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
-	insertLine(line);
-    }
+    // Even if different objects have the same code, it is easiest
+    // to implement them separately. 
+    void visit(LogicalExpr_AST* V) { return; }
 
     // Evaluate a sequence e1 || e2 [|| e3]* left to right.
     // As soon as any e_i evaluates to true, set addr = e_i, and jump to exit 
@@ -202,6 +184,8 @@ private:
     //               LC RC                => unroll first to get right labels
     void visit(OrExpr_AST* V)
     {
+	if (option_Debug) std::cout << "entering visitor or...\n";
+
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -229,12 +213,19 @@ private:
 
 	doOr(V, cond_Res, cond_End);
 	active_Labels_.push_back(cond_End);
+
+	if (option_Debug){
+	    std::cout << "\tvisiting or, exiting, and pushing\t\t";
+	    std::cout << cond_End << "\n";
+	}
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
     // RHS is in position V->RChild()->LChild()
     void doOr(OrExpr_AST* V, std::string cond_Res, std::string cond_End)
     {
+	if (option_Debug) std::cout << "entering visitor doOr...\n";
+
 	// make iffalse SSA entry
 	std::string cond_First = makeLabel();
 
@@ -255,8 +246,9 @@ private:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// handle expr2
+	// handle expr2 // ADDED
 	if ( checkExprTarget(V->RChild()) ) // visitors printing labels
+//	     dynamic_cast<AndExpr_AST*>(V->RChild()))
 	    active_Labels_.push_back(cond_First);
 	else // those that don't: label assignment at end 
 	    labels.push_back(cond_First); 
@@ -271,6 +263,8 @@ private:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
+	if (option_Debug) std::cout << "\tleaving visitor doOr...\n";
+
 	if ( (dynamic_cast<OrExpr_AST*>(V->Parent())) )
 	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), cond_Res, cond_End);
 	else{
@@ -283,6 +277,8 @@ private:
     // Compare OrExpr_AST visitor for logic
     void visit(AndExpr_AST* V)
     {
+	if (option_Debug) std::cout << "entering visitor and...\n";
+
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -310,12 +306,19 @@ private:
 
 	doAnd(V, cond_Res, cond_End);
 	active_Labels_.push_back(cond_End);
+
+	if (option_Debug){
+	    std::cout << "\tvisiting and, exiting, and pushing\t\t";
+	    std::cout << cond_End << "\n";
+	}
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
     // RHS is in position V->RChild()->LChild()
     void doAnd(AndExpr_AST* V, std::string cond_Res, std::string cond_End)
     {
+	if (option_Debug) std::cout << "entering visitor doAnd...\n";
+
 	// make iffalse SSA entry
 	std::string cond_First = makeLabel();
 
@@ -336,8 +339,9 @@ private:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// handle expr2
+	// handle expr2 // ADDED
 	if ( checkExprTarget(V->RChild()) ) // visitors printing labels
+//	     dynamic_cast<OrExpr_AST*>(V->RChild()))
 	    active_Labels_.push_back(cond_First);
 	else // those that don't: label assignment at end 
 	    labels.push_back(cond_First); 
@@ -351,6 +355,8 @@ private:
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
+
+	if (option_Debug) std::cout << "\tleaving visitor DoAnd...\n";
 
 	if ( (dynamic_cast<AndExpr_AST*>(V->Parent())) )
 	    doAnd(dynamic_cast<AndExpr_AST*>(V->Parent()), cond_Res, cond_End);
@@ -455,7 +461,7 @@ private:
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
 
 	// make iffalse SSA entry
-	label_Vec labels;
+	label_Vec labels = active_Labels_; // to catch exit points (eg, Or/And)
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
 	std::string LHS = "goto";
@@ -464,6 +470,7 @@ private:
 	std::string frame_Str = pFrame->getTableName();
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
+	active_Labels_.clear();
 
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
 	// make stmt (block) SSA entry (entries), if there is at least one
@@ -548,17 +555,6 @@ private:
 	else
 	    return 1;
     }
-
-/*
-    void makeLabelsCond(int startNewOrSeq)
-    {
-	cond_First_ = makeLabel();
-	if (startNewOrSeq){
-	    cond_Second_ = makeLabel();
-	    cond_Res_ = makeTmp();
-	}
-    }
-*/
 
     void insertNOP(label_Vec const& Labels, std::string Env)
     {

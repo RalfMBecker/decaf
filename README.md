@@ -10,7 +10,8 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 
 (5) type bool currently disallowed,  
  
-(6) evaluation of logical expressions similar to C (1 - true; 0 - false).
+(6) evaluation of logical expressions similar to C (this might mean similarly
+    undefined behavior; tbd)  
 
 Eventually, the compiler will have multiple parse rounds, probably refining first the AST, and then the generated SSA-style IR, using a Visitor Pattern to manage at least AST parsing but probably also the DAG implied by the IR.
 

@@ -50,6 +50,6 @@ Memory allocation - stack: 0
    26                          -:       t11,       t10             (Env1)
    27                          -:       t12,       t11             (Env1)
    28                          =:        t7,       t12             (Env1)
-   29                    iffalse:        t7,      goto,        L7  (Env1)
-   30             L5:          =:         b,         a             (Env2)
+   29             L5:    iffalse:        t7,      goto,        L7  (Env1)
+   30                          =:         b,         a             (Env2)
    31             L7:        nop:                                  (Env1)
