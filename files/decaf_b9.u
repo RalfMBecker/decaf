@@ -1,0 +1,42 @@
+-----------------------------------------------
+code generated for ./files/decaf_b9.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 8
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                          -:        t2,         a             (Env1)
+    4                          +:        t3,        t2,         2  (Env1)
+    5                          =:        t1,        t3             (Env1)
+    6                    iffalse:        t1,      goto,        L2  (Env1)
+    7                       goto:        L1                        (Env1)
+    8             L2:          =:        t4,         b             (Env1)
+    9                     iftrue:        t4,      goto,        L4  (Env1)
+   10                       goto:        L3                        (Env1)
+   11             L4:          +:        t5,         5,         2  (Env1)
+   12                          <:        t6,         a,        t5  (Env1)
+   13                          =:        t4,        t6             (Env1)
+   14                          =:        t1,        t4             (Env1)
+   15                    iffalse:        t1,      goto,        L5  (Env1)
+   16                       goto:        L1                        (Env1)
+   17                          -:        t8,         b,         a  (Env1)
+   18             L5:          =:        t7,        t8             (Env1)
+   19                     iftrue:        t7,      goto,        L7  (Env1)
+   20                       goto:        L6                        (Env1)
+   21             L7:          =:        t7,         4             (Env1)
+   22                          =:        t1,        t7             (Env1)
+   23             L1:          =:         a,        t1             (Env1)

@@ -11,3 +11,4 @@
 ./files/decaf_b6.dec
 ./files/decaf_b7.dec
 ./files/decaf_b8.dec
+./files/decaf_b9.dec
