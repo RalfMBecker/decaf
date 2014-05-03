@@ -507,11 +507,11 @@ private:
     {
 	// Dispatch expr - labels handled through global active_Labels_
 	needs_Label_ = 1;
-	    V->LChild()->accept(this);
+	V->LChild()->accept(this);
 
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
 
-	// make iffalse SSA entry
+	// make iffalse SSA entry// ** TO DO: next line seems no longer needed
 	label_Vec labels = active_Labels_; // to catch exit points (eg, Or/And)
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
@@ -592,6 +592,69 @@ private:
 	if_Next_ = makeLabel();
 	if (Has_Else && Is_LeadingIf)
 	    if_Done_ = makeLabel();
+    }
+
+    void visit(While_AST* V)
+    {
+	std::string label_Top = makeLabel();
+	std::string label_Out = makeLabel();
+
+	// Dispatch expr - labels handled through global active_Labels_
+	needs_Label_ = 1;
+	active_Labels_.push_back(label_Top);
+
+	std::cout << "\t[debug] ready to accept LChild\n";
+
+	V->LChild()->accept(this);
+
+	// make iffalse SSA entry // ** TO DO: next line seems no longer needed
+	label_Vec labels = active_Labels_; // to catch exit points (eg, Or/And)
+	token Op = token(tok_iffalse);
+	std::string target = V->LChild()->Addr();
+	std::string LHS = "goto";
+	std::string RHS = label_Out;
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	insertLine(line);
+	active_Labels_.clear(); 
+
+	std::cout << "\t[debug] ready to accept RChild\n";
+
+//	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
+	// make stmt (block) SSA entry (entries), if there is at least one
+	if ( (0 != V->RChild()) ){ 
+	    V->RChild()->accept(this);
+	    // Unhandled labels remaining; happens when, at end of inner scope,
+	    //               if [- else if]* [else if | end] 
+	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec - 
+	    // statement triggering this is else if (a > 0) ).
+//	    if ( !(active_Labels_.empty()) ){
+//		insertNOP(active_Labels_, frame_Str);
+//		active_Labels_.clear();
+//	    }
+	}
+	else
+	    ; // ** TO DO (also in if): think about this
+//	pLabels->Restore();
+
+	// make goto SSA entry
+	labels.clear();
+	Op = token(tok_goto);
+	target = label_Top;
+	LHS = RHS = "";
+	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	insertLine(line);
+
+	// If this is not followed by a statement, we would miss printing
+	// out remaining target labels. Take care of that.
+	active_Labels_.push_back(label_Out);
+	if ( (V->isEOB()) ){
+	    insertNOP(active_Labels_, frame_Str);
+	    active_Labels_.clear();
+	}
+
+//	delete pLabels;
     }
 
     // helper to make sure a target line for labels is always emitted

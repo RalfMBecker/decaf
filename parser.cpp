@@ -555,7 +555,7 @@ parseAssign(void)
     return ret;
 }
 
-Block_AST* dispatchStmtIf(void);
+Block_AST* dispatchStmt(void);
 
 // (if_stmt) stmt -> if (expr) [ stmt | block ] // stmt is block; for clarity
 // if_stmt [ epsilon | else [ stmt | block ] | if_stmt ]
@@ -575,7 +575,7 @@ parseIfStmt(int Type)
 	parseWarning("", "'=' in if-conditional - did you mean '=='?");
 
     // handle [ stmt | block ]
-    Block_AST* LHS = dispatchStmtIf();
+    Block_AST* LHS = dispatchStmt();
     if (errorIn_Progress) {
 	if (dynamic_cast<IfType_AST*>(LHS))
 	    return dynamic_cast<IfType_AST*>(LHS);
@@ -599,12 +599,10 @@ StmtList_AST* parseBlock(void);
 Stmt_AST* parseStmt(void);
 IfType_AST* parseIfType(void);
 
-// Even with no brackets, an if can 'make a stmtList': as long as an else
-// follows, same "stmt." This function handles that case.
 Block_AST*
-dispatchStmtIf(void)
+dispatchStmt(void)
 {
-    if (option_Debug) std::cout << "entering dispatchStmtIf()...\n";
+    if (option_Debug) std::cout << "entering dispatchStmt()...\n";
 
     Block_AST* LHS;
     if ( (0 == match(0, tok_paropen, 0)) ){
@@ -615,10 +613,7 @@ dispatchStmtIf(void)
 	top_Env = addEnv(top_Env);
 	frame_Depth++;
 
-	if ( (tok_if == next_Token.Tok()) )
-	    LHS = parseIfType();
-	else
-	    LHS = parseStmt();
+	LHS = parseStmt();
 
  	top_Env = top_Env->getPrior();
 	frame_Depth--;
@@ -664,7 +659,7 @@ parseIfCtd(IfType_AST* LHS)
 	}
     }
     else{ // terminating else
-	Block_AST* tmp = dispatchStmtIf();
+	Block_AST* tmp = dispatchStmt();
 	if (errorIn_Progress) RHS = 0;
 	if ( !(errorIn_Progress) ){
 	    int endBlock_Marker = 0;
@@ -676,6 +671,39 @@ parseIfCtd(IfType_AST* LHS)
 
     LHS = new IfType_AST(LHS, RHS);
     return LHS;
+}
+
+// stmt -> while (expr) [ stmt | block ]*
+// invariant: - upon entry, points at tok_while
+While_AST* 
+parseWhileStmt(void)
+{
+    if (option_Debug) std::cout << "parsing a while statement...\n";
+
+    if ( (-1 == match(0, tok_while, 1)) )
+	errExit(0, "parseWhileStmt should be called pointing at tok_while\n");
+
+    Expr_AST* expr = parseParensExpr();
+    if (errorIn_Progress) return 0;
+    if ( dynamic_cast<AssignExpr_AST*>(expr) )
+	parseWarning("", "'=' in while-conditional - did you mean '=='?");
+
+    // handle [ stmt | block ]
+    Block_AST* LHS = dispatchStmt();
+    if (errorIn_Progress) {
+//	if (dynamic_cast<While_AST*>(LHS))
+//	    return dynamic_cast<While_AST*>(LHS);
+//	else
+	    return 0;
+    }
+
+    // will only matter if dispatched 'stmt' was, in fact, a block
+    int endBlock_Marker = 0;
+    if ( (tok_parclosed == next_Token.Tok()) )
+	endBlock_Marker = 1;
+
+    While_AST* pWhile = new While_AST(expr, LHS, endBlock_Marker);
+    return pWhile;
 }
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
@@ -702,6 +730,9 @@ parseStmt(void)
     case tok_ID: 
 	ret = parseAssign();
 	break;
+    case tok_while:
+	ret = parseWhileStmt();
+	break;
     case tok_if:
 	ret = parseIfType();
 	break;
@@ -725,8 +756,8 @@ parseStmt(void)
     }
 
     // cases to improve error handling in case of errors in nested if's
-    if (errorIn_Progress){
-	if (dynamic_cast<IfType_AST*>(ret))
+    if (errorIn_Progress){ // ** TO DO: we added 2nd check. Confirm?
+	if ( dynamic_cast<IfType_AST*>(ret) || dynamic_cast<While_AST*>(ret) )
 	    errorResetStmt();
 	else
 	    return errorResetStmt();

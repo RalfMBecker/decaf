@@ -1,0 +1,17 @@
+{
+    int a;
+
+    while (a > 0)
+	if (a = 3)
+	    a = 2;
+	else 
+	    a = 1;
+
+    while (a = 2){
+
+	int b;
+
+	while (b)
+	    a = a;
+    }
+}

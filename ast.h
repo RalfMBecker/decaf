@@ -1,5 +1,4 @@
 /***********************************************************************
-
 * ast.h - AST for Decaf
 *
 * Dispatch of children: 
@@ -632,5 +631,23 @@ Else_AST(Block_AST* Block, int EOB = 0)
 private:
     int endOf_Block_;
 };
+
+class While_AST: public Stmt_AST{
+public:
+While_AST(Expr_AST* Expr, Block_AST* Block, int EOB = 0)
+    : Stmt_AST(Expr, Block), endOf_Block_(EOB)
+    {
+	if (option_Debug)
+	    std::cout << "\tcreated While_AST\n";
+    }
+
+    int isEOB(void) const { return endOf_Block_; }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    int endOf_Block_;
+};
+
 
 #endif
