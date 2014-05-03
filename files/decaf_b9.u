@@ -17,26 +17,48 @@ b	Type: int
 	Offset: 4
 	Width: 4
 
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
     1                        dec:         a,       int             (Env1)
     2                        dec:         b,       int             (Env1)
-    3                          -:        t2,         a             (Env1)
-    4                          +:        t3,        t2,         2  (Env1)
-    5                          =:        t1,        t3             (Env1)
-    6                    iffalse:        t1,      goto,        L2  (Env1)
-    7                       goto:        L1                        (Env1)
-    8             L2:          =:        t4,         b             (Env1)
-    9                     iftrue:        t4,      goto,        L4  (Env1)
-   10                       goto:        L3                        (Env1)
-   11             L4:          +:        t5,         5,         2  (Env1)
-   12                          <:        t6,         a,        t5  (Env1)
-   13                          =:        t4,        t6             (Env1)
-   14                          =:        t1,        t4             (Env1)
-   15                    iffalse:        t1,      goto,        L5  (Env1)
-   16                       goto:        L1                        (Env1)
-   17                          -:        t8,         b,         a  (Env1)
-   18             L5:          =:        t7,        t8             (Env1)
-   19                     iftrue:        t7,      goto,        L7  (Env1)
-   20                       goto:        L6                        (Env1)
-   21             L7:          =:        t7,         4             (Env1)
-   22                          =:        t1,        t7             (Env1)
-   23             L1:          =:         a,        t1             (Env1)
+    3                         ==:        t1,         b,         1  (Env1)
+    4                    iffalse:        t1,      goto,        L1  (Env1)
+    5                          =:         a,         0             (Env2)
+    6             L1:          -:        t3,         a             (Env1)
+    7                          +:        t4,        t3,         2  (Env1)
+    8                          =:        t2,        t4             (Env1)
+    9                    iffalse:        t2,      goto,        L3  (Env1)
+   10                       goto:        L2                        (Env1)
+   11             L3:          =:        t5,         b             (Env1)
+   12                     iftrue:        t5,      goto,        L5  (Env1)
+   13                       goto:        L4                        (Env1)
+   14             L5:          +:        t6,         5,         2  (Env1)
+   15                          <:        t7,         a,        t6  (Env1)
+   16                          =:        t5,        t7             (Env1)
+   17             L4:          =:        t2,        t5             (Env1)
+   18                    iffalse:        t2,      goto,        L6  (Env1)
+   19                       goto:        L2                        (Env1)
+   20             L6:          -:        t9,         b,         a  (Env1)
+   21                          =:        t8,        t9             (Env1)
+   22                     iftrue:        t8,      goto,        L8  (Env1)
+   23                       goto:        L7                        (Env1)
+   24             L8:          =:        t8,         4             (Env1)
+   25             L7:          =:        t2,        t8             (Env1)
+   26             L2:    iffalse:        t2,      goto,        L9  (Env1)
+   27                          =:         a,         1             (Env3)
+   28                       goto:       L10                        (Env1)
+   29             L9:          =:         a,         0             (Env4)
+   30            L10:        nop:                                  (Env1)

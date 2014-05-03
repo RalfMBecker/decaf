@@ -107,6 +107,7 @@ private:
     void visit(CoercedExpr_AST* V)
     {
 	label_Vec labels;
+	// ** TO DO: simplify this expression throughout
 	if ( !(active_Labels_.empty()) ){
 	    labels = active_Labels_;
 	    active_Labels_.clear();
@@ -185,7 +186,7 @@ private:
     void visit(OrExpr_AST* V)
     {
 	if (option_Debug) std::cout << "entering visitor or...\n";
-
+ 
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -195,11 +196,10 @@ private:
 
 	// handle expr1...
 	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){ 
-	    labels = active_Labels_;      
-	    active_Labels_.clear();
-	}
+	if ( !handleInitialAndOrLables(V->LChild()) ) // do we label
+	    labels = active_Labels_; // during expr, or when assigning expr?
 	V->LChild()->accept(this);
+	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
 	token Op = token(tok_eq);
@@ -215,7 +215,7 @@ private:
 	active_Labels_.push_back(cond_End);
 
 	if (option_Debug){
-	    std::cout << "\tvisiting or, exiting, and pushing\t\t";
+	    std::cout << "\tleaving visitor or, and pushing ";
 	    std::cout << cond_End << "\n";
 	}
     }
@@ -226,9 +226,9 @@ private:
     {
 	if (option_Debug) std::cout << "entering visitor doOr...\n";
 
-	// make iffalse SSA entry
 	std::string cond_First = makeLabel();
 
+	// make iffalse SSA entry
 	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = cond_Res;
@@ -246,13 +246,18 @@ private:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// handle expr2 // ADDED
-	if ( checkExprTarget(V->RChild()) ) // visitors printing labels
-//	     dynamic_cast<AndExpr_AST*>(V->RChild()))
+	// handle expr2
+	if ( checkExprTarget(V->RChild()) || // visitors printing labels
+	     dynamic_cast<AndExpr_AST*>(V->RChild()) )
 	    active_Labels_.push_back(cond_First);
 	else // those that don't: label assignment at end 
 	    labels.push_back(cond_First); 
 	V->RChild()->accept(this);
+
+	// If we go from 'and' to 'or', or vice versa, cond_End of child
+	// needs printing in the calling procedure.
+	if ( dynamic_cast<AndExpr_AST*>(V->RChild()) )
+	    labels = active_Labels_;
 	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -262,8 +267,6 @@ private:
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
-
-	if (option_Debug) std::cout << "\tleaving visitor doOr...\n";
 
 	if ( (dynamic_cast<OrExpr_AST*>(V->Parent())) )
 	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), cond_Res, cond_End);
@@ -288,11 +291,10 @@ private:
 
 	// handle expr1...
 	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){ 
-	    labels = active_Labels_;      
-	    active_Labels_.clear();
-	}
+	if ( !handleInitialAndOrLables(V->LChild()) ) // do we label
+	    labels = active_Labels_; // during expr, or when assigning expr?
 	V->LChild()->accept(this);
+	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
 	token Op = token(tok_eq);
@@ -308,7 +310,7 @@ private:
 	active_Labels_.push_back(cond_End);
 
 	if (option_Debug){
-	    std::cout << "\tvisiting and, exiting, and pushing\t\t";
+	    std::cout << "\tleaving visitor and, and pushing ";
 	    std::cout << cond_End << "\n";
 	}
     }
@@ -319,9 +321,9 @@ private:
     {
 	if (option_Debug) std::cout << "entering visitor doAnd...\n";
 
-	// make iffalse SSA entry
 	std::string cond_First = makeLabel();
 
+	// make iftrue SSA entry
 	label_Vec labels;
 	token Op = token(tok_iftrue);
 	std::string target = cond_Res;
@@ -339,13 +341,19 @@ private:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 
-	// handle expr2 // ADDED
-	if ( checkExprTarget(V->RChild()) ) // visitors printing labels
-//	     dynamic_cast<OrExpr_AST*>(V->RChild()))
+	// handle expr2
+	if ( checkExprTarget(V->RChild()) || // visitors printing labels
+	     dynamic_cast<OrExpr_AST*>(V->RChild())) 
 	    active_Labels_.push_back(cond_First);
-	else // those that don't: label assignment at end 
+	else // those that don't: label assignment at end
 	    labels.push_back(cond_First); 
 	V->RChild()->accept(this);
+
+	// If we go from 'and' to 'or', or vice versa, cond_End of child
+	// needs printing in the calling procedure.
+	// Note: by precedence, this case should never happen. For safety.
+	if ( dynamic_cast<OrExpr_AST*>(V->RChild()) )
+	    labels = active_Labels_;
 	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -355,8 +363,6 @@ private:
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
-
-	if (option_Debug) std::cout << "\tleaving visitor DoAnd...\n";
 
 	if ( (dynamic_cast<AndExpr_AST*>(V->Parent())) )
 	    doAnd(dynamic_cast<AndExpr_AST*>(V->Parent()), cond_Res, cond_End);
@@ -544,13 +550,37 @@ private:
 	    if_Done_ = makeLabel();
     }
 
-    // helper to make sure a target line for labels is emitted always
+    // helper to make sure a target line for labels is always emitted
     int checkExprTarget(Node_AST* E)
     {
 	// **TO DO: evaluate later if also: (dynamic_cast<IdArrayExpr_AST*>(E))
 	// expressions whose visitors produce no IR line
-	if ( (dynamic_cast<Tmp_AST*>(E)) || (dynamic_cast<IdExpr_AST*>(E)) ||  
-	     (dynamic_cast<IntExpr_AST*>(E))||(dynamic_cast<FltExpr_AST*>(E)))
+	if ( dynamic_cast<Tmp_AST*>(E) || dynamic_cast<IdExpr_AST*>(E) ||  
+	     dynamic_cast<IntExpr_AST*>(E) || dynamic_cast<FltExpr_AST*>(E) )
+	    return 0;
+	else
+	    return 1;
+    }
+
+    // If LChild of an 'and' or 'or' expression is one of the opposite type,
+    // whether it prints a label or not depends on the child's LChild. 
+    // Tree type:                Or
+    //                        And
+    //                      Expr (not Or, not And)
+    // As the function is only applied at the deepest level or a list of Or
+    // expressions (see visit(OrExpr_AST*)), we can check for a child of 
+    // the same type, as this will never be the case (easier coding).
+    // In a case like           Or (1)
+    //                       And
+    //                     Or (2)
+    // only the deepeest level (2) will matter - no recursive descending needed.
+    // RV: 1 - next expression will print labels; 0 - not
+    // **TO DO: This should work; might want to test more.
+    int handleInitialAndOrLables(Node_AST* E)
+    {
+	if ( !checkExprTarget(E) || // visitors !printing labels
+	     ( dynamic_cast<LogicalExpr_AST*>(E) &&
+	       !checkExprTarget(E->LChild()) ) )
 	    return 0;
 	else
 	    return 1;
@@ -575,6 +605,18 @@ private:
 	std::ostringstream tmp_Stream;
 	tmp_Stream << "L" << ++count_Lab_;
 	return tmp_Stream.str();
+    }
+
+    // debugging function
+    void printLabels(label_Vec labels)
+    {
+	std::string tmp_String;
+	label_Vec::const_iterator iter;
+	for (iter = labels.begin(); iter != labels.end(); iter++){
+	    tmp_String += *iter;
+	    tmp_String += ": ";
+	}
+	std::cout << tmp_String << "\n";
     }
 
 private:
