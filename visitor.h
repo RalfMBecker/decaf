@@ -4,6 +4,11 @@
 * Note: abstract base class defined in ast.h to break dependency
 *       cycle
 *
+* Philosophy: At the expense of emitting an occasional NOP, this was
+*             re-factored to greatly simplify the emission of labels
+*             in || and && objects; and to a lesser extent in if -
+*             else if - else tropes.
+*
 ********************************************************************/
 
 #ifndef VISITOR_H_
@@ -59,39 +64,75 @@ private:
     void visit(Expr_AST* V){ return; }
 
     // objects with address set by default ctor
-    void visit(Tmp_AST* V) { return; }
-    void visit(IdExpr_AST* V) { return; }
-    void visit(IdArrayExpr_AST* V) { return; }
-    void visit(IntExpr_AST* V) { return; }
-    void visit(FltExpr_AST* V) { return; }
+    void visit(Tmp_AST* V) 
+    {
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+	needs_Label_ = 0;
+    }
+
+    void visit(IntExpr_AST* V) 
+    {
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+	needs_Label_ = 0;
+    }
+    void visit(FltExpr_AST* V) 
+    {
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+	needs_Label_ = 0;
+    }
+
+    void visit(IdExpr_AST* V) 
+    {
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+	needs_Label_ = 0;
+    }
+
+    // ** TO DO
+    void visit(IdArrayExpr_AST*) { return; }
 
     void visit(NOP_AST* V)
     {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+ 
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string frame_Str;
 	if ( (0 == V) ) // only when dispatched from visitor if
-	    frame_Str = " n/a";
-	else{
-	    Env* pFrame = V->getEnv();
-	    std::string frame_Str = pFrame->getTableName();
-	}
+	    frame_Str = "";
+	else
+	    frame_Str = V->Addr();
 
-	insertNOP(labels, "n/a");
+	insertNOP(labels, frame_Str);
     }
 
     // objects needing addr update
     void visit(ArithmExpr_AST* V)
-    {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+    {  
+	needs_Label_ = 0;
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting ArithmExpr_AST");
+	if ( (0 != V->RChild()) )
+	    V->RChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting ArithmExpr_AST");
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -106,12 +147,18 @@ private:
 
     void visit(CoercedExpr_AST* V)
     {
-	label_Vec labels;
-	// ** TO DO: simplify this expression throughout
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting CoercedExpr_AST");
+	if ( (0 != V->RChild()) )
+	    V->RChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting CoercedExpr_AST");
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -131,11 +178,15 @@ private:
 
     void visit(UnaryArithmExpr_AST* V)
     {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+	std::string e = "parsing error detected when visiting UnaryArExpr_AST";
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, e.c_str());
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -149,15 +200,22 @@ private:
     // no address update needed, but kept among expression visitor types
     void visit(AssignExpr_AST* V)
     {
-	// empty assignment?
-	if ( (0 == V->RChild()) )
-	    return;
+	// empty assignment? // ** TO DO: think about this - should be an error
+//	if ( (0 == V->RChild()) ) // if it happens; so it should have been
+//	    return; // caught earlier on (check unnecessary?)
 
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting AssignExpr_AST");
+	if ( (0 != V->RChild()) )
+	    V->RChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting AssignExpr_AST");
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_eq);
@@ -168,9 +226,6 @@ private:
 	insertLine(line);
     }
 
-
-    // Even if different objects have the same code, it is easiest
-    // to implement them separately. 
     void visit(LogicalExpr_AST* V) { return; }
 
     // Evaluate a sequence e1 || e2 [|| e3]* left to right.
@@ -195,13 +250,11 @@ private:
 	    V = dynamic_cast<OrExpr_AST*>(V->LChild());
 
 	// handle expr1...
-	label_Vec labels;
-	if ( !handleInitialAndOrLables(V->LChild()) ) // do we label
-	    labels = active_Labels_; // during expr, or when assigning expr?
+	needs_Label_ = 1;
 	V->LChild()->accept(this);
-	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
+	label_Vec labels;
 	token Op = token(tok_eq);
 	std::string target = cond_Res;
 	std::string LHS = V->LChild()->Addr();
@@ -247,11 +300,8 @@ private:
 	insertLine(line);
 
 	// handle expr2
-	if ( checkExprTarget(V->RChild()) || // visitors printing labels
-	     dynamic_cast<AndExpr_AST*>(V->RChild()) )
-	    active_Labels_.push_back(cond_First);
-	else // those that don't: label assignment at end 
-	    labels.push_back(cond_First); 
+	needs_Label_ = 1;
+	active_Labels_.push_back(cond_First);
 	V->RChild()->accept(this);
 
 	// If we go from 'and' to 'or', or vice versa, cond_End of child
@@ -290,13 +340,11 @@ private:
 	    V = dynamic_cast<AndExpr_AST*>(V->LChild());
 
 	// handle expr1...
-	label_Vec labels;
-	if ( !handleInitialAndOrLables(V->LChild()) ) // do we label
-	    labels = active_Labels_; // during expr, or when assigning expr?
+	needs_Label_ = 1;
 	V->LChild()->accept(this);
-	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
+	label_Vec labels;
 	token Op = token(tok_eq);
 	std::string target = cond_Res;
 	std::string LHS = V->LChild()->Addr();
@@ -342,11 +390,8 @@ private:
 	insertLine(line);
 
 	// handle expr2
-	if ( checkExprTarget(V->RChild()) || // visitors printing labels
-	     dynamic_cast<OrExpr_AST*>(V->RChild())) 
-	    active_Labels_.push_back(cond_First);
-	else // those that don't: label assignment at end
-	    labels.push_back(cond_First); 
+	needs_Label_ = 1;
+	active_Labels_.push_back(cond_First);
 	V->RChild()->accept(this);
 
 	// If we go from 'and' to 'or', or vice versa, cond_End of child
@@ -375,11 +420,18 @@ private:
 
     void visit(RelExpr_AST* V)
     {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting RelExpr_AST");
+	if ( (0 != V->RChild()) )
+	    V->RChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting RelExpr_AST");
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -394,11 +446,13 @@ private:
 
     void visit(NotExpr_AST* V)
     {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	needs_Label_ = 0;
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	else
+	    errExit(0, "parsing error detected when visiting NotExpr_AST");
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
 	std::string target = makeTmp();
 	V->setAddr(target);
@@ -416,11 +470,9 @@ private:
 
     void visit(VarDecl_AST* V)
     {
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_dec);
 	std::string LHS = V->Type().Lex();
@@ -433,15 +485,13 @@ private:
 
     void visit(Assign_AST* V)
     {
-	// empty assignment?
+	// empty assignment? // ** TO DO: think about Labelling!
 	if ( (0 == V->RChild()) )
 	    return;
 
-	label_Vec labels;
-	if ( !(active_Labels_.empty()) ){
-	    labels = active_Labels_;
-	    active_Labels_.clear();
-	}
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_eq);
 	std::string LHS = V->RChild()->Addr();
@@ -455,14 +505,9 @@ private:
 
     void visit(If_AST* V)
     {
-	// Dispatch expr - labels handled through global active_Labels_.
-	// If the expression is "empty", put label in front of a nop SSA.
-	if ( (1 == checkExprTarget(V->LChild())) )
+	// Dispatch expr - labels handled through global active_Labels_
+	needs_Label_ = 1;
 	    V->LChild()->accept(this);
-	else{
-	    NOP_AST* dummy = 0;
-	    visit(dummy);
-	}
 
 	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
 
@@ -487,8 +532,7 @@ private:
 	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec - 
 	    // statement triggering this is else if (a > 0) ).
 	    if ( !(active_Labels_.empty()) ){
-		labels = active_Labels_;
-		insertNOP(labels, frame_Str);
+		insertNOP(active_Labels_, frame_Str);
 		active_Labels_.clear();
 	    }
 	}
@@ -562,30 +606,6 @@ private:
 	    return 1;
     }
 
-    // If LChild of an 'and' or 'or' expression is one of the opposite type,
-    // whether it prints a label or not depends on the child's LChild. 
-    // Tree type:                Or
-    //                        And
-    //                      Expr (not Or, not And)
-    // As the function is only applied at the deepest level or a list of Or
-    // expressions (see visit(OrExpr_AST*)), we can check for a child of 
-    // the same type, as this will never be the case (easier coding).
-    // In a case like           Or (1)
-    //                       And
-    //                     Or (2)
-    // only the deepeest level (2) will matter - no recursive descending needed.
-    // RV: 1 - next expression will print labels; 0 - not
-    // **TO DO: This should work; might want to test more.
-    int handleInitialAndOrLables(Node_AST* E)
-    {
-	if ( !checkExprTarget(E) || // visitors !printing labels
-	     ( dynamic_cast<LogicalExpr_AST*>(E) &&
-	       !checkExprTarget(E->LChild()) ) )
-	    return 0;
-	else
-	    return 1;
-    }
-
     void insertNOP(label_Vec const& Labels, std::string Env)
     {
 	token Op = token(tok_nop);
@@ -627,6 +647,7 @@ static int count_Lab_;
 static std::string if_Next_;
 static std::string if_Done_;
 
+static int needs_Label_;
 static label_Vec active_Labels_;
 };
 

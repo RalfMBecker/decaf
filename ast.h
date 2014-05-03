@@ -1,8 +1,14 @@
-/********************************************************************
+/***********************************************************************
 
 * ast.h - AST for Decaf
 *
-********************************************************************/
+* Dispatch of children: 
+*        - for objects not needing to emit labels, the usual semantic 
+*          applies (e.g., see NODE_AST)
+*        - for those who might receive lables, the parent visitor
+*          dispatches for its children
+*
+***********************************************************************/
 
 #ifndef AST_H_
 #define AST_H_
@@ -358,8 +364,6 @@ NOP_AST(void)
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
-
-
 // ******TO DO: STRING (etc.)********************
 
 /***************************************
@@ -378,14 +382,8 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 // replaces old position of LHS in AST, with new LC being the TMP
@@ -404,14 +402,7 @@ CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
     tokenType From() const { return from_; }
     tokenType To() const {return to_; }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     tokenType from_; // for easier access by visitor
@@ -429,12 +420,8 @@ UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 // ***To DO: treat array in expr as sub class of this?***
@@ -448,14 +435,8 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
 	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 /***************************************
@@ -474,10 +455,7 @@ LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 
     ~LogicalExpr_AST() {}
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // implement ||
@@ -492,10 +470,7 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // implement && (as, in ultimate code generation, we short-circuit, it 
@@ -511,10 +486,7 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // implement <, <=, >, >=, ==, !=
@@ -529,14 +501,8 @@ RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 // implement (logical) ! (chaining not allowed)
@@ -551,12 +517,8 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 };
 
 /***************************************
@@ -645,10 +607,7 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
     int hasElse(void) const { return has_Else_; }
     int isEOB(void) const { return endOf_Block_; }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int isElse_If_;
@@ -668,10 +627,8 @@ Else_AST(Block_AST* Block, int EOB = 0)
 
     int isEOB(void) const { return endOf_Block_; }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	Visitor->visit(this);
-    }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
     int endOf_Block_;
 };

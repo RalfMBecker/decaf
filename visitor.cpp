@@ -11,5 +11,6 @@ int MakeIR_Visitor::count_Lab_ = 0;
 std::string MakeIR_Visitor::if_Next_ = "";
 std::string MakeIR_Visitor::if_Done_ = "";
 
+int MakeIR_Visitor::needs_Label_ = 0;
 std::vector<std::string> MakeIR_Visitor::active_Labels_ = 
     std::vector<std::string>();

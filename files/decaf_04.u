@@ -36,12 +36,12 @@ Memory allocation - stack: 0
                      heap: 0
 
     1                        dec:         a,       int             (Env1)
-    2                        nop:                                   (n/a)
+    2                        nop:                                  (Env1)
     3                    iffalse:         1,      goto,        L1  (Env1)
     4                       goto:        L2                        (Env1)
     5             L1:          =:         a,         2             (Env1)
     6                    iffalse:         a,      goto,        L3  (Env1)
     7                          =:         a,         0             (Env3)
     8                       goto:        L2                        (Env1)
-    9             L3:        nop:                                   (n/a)
+    9             L3:        nop:                                      ()
    10             L2:        nop:                                  (Env1)
