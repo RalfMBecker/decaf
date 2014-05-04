@@ -436,6 +436,48 @@ parsePrimaryExpr(void)
     return 0;
 }
 
+
+// Splitting the function into two parts allows to process after 
+// discovering a ','. 
+ExprList_AST*
+parseExprListCtd(ExprList_AST* LHS, tokenType Sep)
+{
+    if (option_Debug) std::cout << "parsing an ExprListCtd...\n";
+
+    Expr_AST* RHS = 0;
+    while ( (Sep == next_Token.Tok()) ){
+	getNextToken();
+	if (errorIn_Progress) return 0;
+	RHS = dispatchExpr();
+	if ( (0 == RHS) && !(errorIn_Progress) )
+	    RHS = new NOP_AST();
+	if (errorIn_Progress) return 0;
+	LHS = new ExprList_AST(LHS, RHS);
+    }
+
+    return LHS;
+}
+
+// Sep: (1) ';', (2) ',' - (2) still to be integrated. 
+ExprList_AST*
+parseExprList(tokenType Sep)
+{
+    if (option_Debug) std::cout << "parsing an ExprList...\n";
+
+    ExprList_AST* ret;
+    Expr_AST* LHS = dispatchExpr();
+    if ( (0 == LHS) && !(errorIn_Progress) )
+	LHS = new NOP_AST();
+
+    if (errorIn_Progress) return 0;
+    if ( (Sep != next_Token.Tok()) )
+	return new ExprList_AST(LHS, 0);
+    ret = parseExprListCtd(LHS, Sep);
+    if (errorIn_Progress) return 0;
+
+    return ret;
+}
+
 /*********************************
 *  Statement parsers
 *********************************/
@@ -751,7 +793,9 @@ parseStmt(void)
 	    punctError(';', 0);
 	    break;
 	}
-	ret = new NOP_AST();
+	ret = reinterpret_cast<Stmt_AST*>(new NOP_AST()); // ugly, unclean
+	// cast: nop inherits naturally from expr; and expr is both
+	// an expr-list, and a stmt - was made to inherit from expr-list
 	break;
     }
 

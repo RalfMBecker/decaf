@@ -205,12 +205,30 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 /***************************************
 * Expression parent class
 ***************************************/
+class ExprList_AST: public Node_AST{
+public:
+ExprList_AST(Node_AST* LHS, Node_AST* RHS)
+    : Node_AST(LHS, RHS)
+    {
+	if (option_Debug) std::cout << "\tcreated an ExprList...\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+};
+
 // arithmetic, logical, basic, and access (array) types
-class Expr_AST: public Stmt_AST{
+class Expr_AST: public ExprList_AST{
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
-    : Stmt_AST(lc, rc), type_(Type), op_(OpTor)
+    : ExprList_AST(lc, rc), type_(Type), op_(OpTor)
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
