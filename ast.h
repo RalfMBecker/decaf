@@ -53,6 +53,7 @@ class Assign_AST;
 class IfType_AST;
 class If_AST;
 class Else_AST;
+class While_AST;
 
 class AST_Visitor{
 public: 
@@ -83,6 +84,7 @@ public:
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
+    virtual void visit(While_AST*) = 0;
 
     ~AST_Visitor();
 };

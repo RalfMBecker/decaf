@@ -523,6 +523,7 @@ private:
 	insertLine(line);
 	active_Labels_.clear();
 
+	// ** TO DO: make labels private/hand on instead?
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
 	// make stmt (block) SSA entry (entries), if there is at least one
 	if ( (0 != V->RChild()) ){ 
@@ -548,19 +549,13 @@ private:
 	    insertLine(line);
 	}
 
-	// If this is not followed by a statement, we would miss printing
-	// out remaining target labels. Take care of that.
-	if ( (V->isEOB()) ){
+	if ( !(V->hasElse()) ){
 	    insertNOP(pLabels->getLabels(), frame_Str);
 	    if_Next_ = if_Done_ = "";
 	}
-	else if ( (V->hasElse()) ){
+	else{
 	    active_Labels_.push_back(if_Next_);
 	    if_Next_ = "";
-	}
-	else{
-	    active_Labels_ = pLabels->getLabels();
-	    if_Next_ = if_Done_ = "";
 	}
 
 	delete pLabels;
@@ -576,13 +571,8 @@ private:
 	V->LChild()->accept(this); // this does not mirror treatment in if
 	pLabels->Restore();        // visitor (go through logic)
 
-	// Ensure remaining labels are printed in next line (always after 
-	// else type).
-	if ( (V->isEOB()) )
-	    insertNOP(pLabels->getLabels(), frame_Str);
-	else
-	    active_Labels_ = pLabels->getLabels();
-
+	// case distinction of 'if' obiously doesn't apply
+	insertNOP(pLabels->getLabels(), frame_Str);
 	delete pLabels;
 	if_Next_ = if_Done_ = "";
     }
@@ -603,8 +593,6 @@ private:
 	needs_Label_ = 1;
 	active_Labels_.push_back(label_Top);
 
-	std::cout << "\t[debug] ready to accept LChild\n";
-
 	V->LChild()->accept(this);
 
 	// make iffalse SSA entry // ** TO DO: next line seems no longer needed
@@ -619,24 +607,11 @@ private:
 	insertLine(line);
 	active_Labels_.clear(); 
 
-	std::cout << "\t[debug] ready to accept RChild\n";
-
-//	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	// make stmt (block) SSA entry (entries), if there is at least one
-	if ( (0 != V->RChild()) ){ 
+	// ** TO DO: monitor - if treated differently (by choice)
+	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
-	    // Unhandled labels remaining; happens when, at end of inner scope,
-	    //               if [- else if]* [else if | end] 
-	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec - 
-	    // statement triggering this is else if (a > 0) ).
-//	    if ( !(active_Labels_.empty()) ){
-//		insertNOP(active_Labels_, frame_Str);
-//		active_Labels_.clear();
-//	    }
-	}
 	else
 	    ; // ** TO DO (also in if): think about this
-//	pLabels->Restore();
 
 	// make goto SSA entry
 	labels.clear();
@@ -653,8 +628,6 @@ private:
 	    insertNOP(active_Labels_, frame_Str);
 	    active_Labels_.clear();
 	}
-
-//	delete pLabels;
     }
 
     // helper to make sure a target line for labels is always emitted

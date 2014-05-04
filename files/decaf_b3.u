@@ -62,4 +62,5 @@ Memory allocation - stack: 0
    16                       goto:        L5                        (Env4)
    17             L6:          =:         a,         1             (Env7)
    18             L5:        nop:                                  (Env4)
-   19             L2:          =:         a,         0             (Env1)
+   19             L2:        nop:                                  (Env1)
+   20                          =:         a,         0             (Env1)
