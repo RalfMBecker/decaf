@@ -478,6 +478,27 @@ parseExprList(tokenType Sep)
     return ret;
 }
 
+// (expr-list) -> expr-list
+ExprList_AST*
+parseParensExprList(tokenType Sep)
+{
+    if (option_Debug) std::cout << "parsing a ParensExprList...\n";
+
+    if ( (-1 == match(0, tok_rdopen, 1)) )
+	errExit(0, "invalid call of function parseParensExprList()");
+
+    ExprList_AST* E = parseExprList(Sep);
+    if (errorIn_Progress) return 0;
+
+    if ( (-1 == match(0, tok_rdclosed, 1)) ){
+	punctError(')', 0);
+	errorIn_Progress = 1;
+    }
+    if (errorIn_Progress) return 0;
+
+    return E;
+}
+
 /*********************************
 *  Statement parsers
 *********************************/
@@ -715,7 +736,40 @@ parseIfCtd(IfType_AST* LHS)
     return LHS;
 }
 
-// stmt -> while (expr) [ stmt | block ]*
+
+// stmt -> for (expr-list) [ stmt | block ]?
+// invariant: - upon entry, points at tok_while
+For_AST* 
+parseForStmt(void)
+{
+    if (option_Debug) std::cout << "parsing a for statement...\n";
+
+    if ( (-1 == match(0, tok_for, 1)) )
+	errExit(0, "parseForStmt should be called pointing at tok_for\n");
+
+    ExprList_AST* expr = parseParensExprList(tok_semi);
+    if (errorIn_Progress) return 0;
+
+    // handle [ stmt | block ]
+    Block_AST* LHS = dispatchStmt();
+    if (errorIn_Progress) {
+//	if (dynamic_cast<While_AST*>(LHS))
+//	    return dynamic_cast<While_AST*>(LHS);
+//	else
+	    return 0;
+    }
+
+    // will only matter if dispatched 'stmt' was, in fact, a block
+    int endBlock_Marker = 0;
+    if ( (tok_parclosed == next_Token.Tok()) )
+	endBlock_Marker = 1;
+
+    For_AST* pWhile = new For_AST(expr, LHS, endBlock_Marker);
+    return pWhile;
+}
+
+
+// stmt -> while (expr) [ stmt | block ]?
 // invariant: - upon entry, points at tok_while
 While_AST* 
 parseWhileStmt(void)
@@ -774,6 +828,9 @@ parseStmt(void)
 	break;
     case tok_while:
 	ret = parseWhileStmt();
+	break;
+    case tok_for:
+	ret = parseForStmt();
 	break;
     case tok_if:
 	ret = parseIfType();

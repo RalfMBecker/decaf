@@ -53,7 +53,7 @@ class Assign_AST;
 class IfType_AST;
 class If_AST;
 class Else_AST;
-class While_AST;
+class For_AST;
 
 class AST_Visitor{
 public: 
@@ -84,7 +84,7 @@ public:
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
-    virtual void visit(While_AST*) = 0;
+    virtual void visit(For_AST*) = 0;
 
     ~AST_Visitor();
 };
@@ -652,14 +652,16 @@ private:
     int endOf_Block_;
 };
 
-class While_AST: public Stmt_AST{
+class For_AST: public Stmt_AST{
 public:
-While_AST(Expr_AST* Expr, Block_AST* Block, int EOB = 0)
+For_AST(ExprList_AST* Expr, Block_AST* Block, int EOB = 0)
     : Stmt_AST(Expr, Block), endOf_Block_(EOB)
     {
 	if (option_Debug)
-	    std::cout << "\tcreated While_AST\n";
+	    std::cout << "\tcreated Iteration_AST\n";
     }
+
+    ~For_AST() {}
 
     int isEOB(void) const { return endOf_Block_; }
 
@@ -669,5 +671,16 @@ private:
     int endOf_Block_;
 };
 
+class While_AST: public For_AST{
+public:
+While_AST(Expr_AST* Expr, Block_AST* Block, int EOB = 0)
+    : For_AST(new ExprList_AST(0, Expr), Block, EOB)
+    {
+	if (option_Debug)
+	    std::cout << "\tcreated While_AST\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+};
 
 #endif

@@ -584,34 +584,57 @@ private:
 	    if_Done_ = makeLabel();
     }
 
-    void visit(While_AST* V)
+    // Expr-List:        e-list
+    //               e-list   cond
+    //            init   iter
+    // (for while: e-list(0, cond)
+    void visit(For_AST* V)
     {
+	// handle initialization expression
+	if ( (0 != V->LChild()) )
+	    if ( (0!= V->LChild()->LChild()) )
+		if ( (0 != V->LChild()->LChild()->LChild()) )
+		    V->LChild()->LChild()->LChild()->accept(this);
+
 	std::string label_Top = makeLabel();
 	std::string label_Out = makeLabel();
 
-	// Dispatch expr - labels handled through global active_Labels_
-	needs_Label_ = 1;
-	active_Labels_.push_back(label_Top);
-
-	V->LChild()->accept(this);
-
-	// make iffalse SSA entry // ** TO DO: next line seems no longer needed
-	label_Vec labels = active_Labels_; // to catch exit points (eg, Or/And)
-	token Op = token(tok_iffalse);
-	std::string target = V->LChild()->Addr();
-	std::string LHS = "goto";
-	std::string RHS = label_Out;
+	// Dispatch condition expr - labels handled through active_Labels_
+	// Cond could be 0 (infinite loop), but we always need a label
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
+	active_Labels_.push_back(label_Top);
+	needs_Label_ = 1;
+	if ( (0 != V->LChild()) ){
+	    if ( (0!= V->LChild()->RChild()) )
+		    V->LChild()->RChild()->accept(this);
+	    else
+		insertNOP(active_Labels_, frame_Str);
+	}
+	else
+	    insertNOP(active_Labels_, frame_Str);
+
+	// make iffalse SSA entry
+	label_Vec labels;
+	token Op = token(tok_iffalse);
+	std::string target = V->LChild()->RChild()->Addr();
+	std::string LHS = "goto";
+	std::string RHS = label_Out;
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
 	active_Labels_.clear(); 
 
-	// ** TO DO: monitor - if treated differently (by choice)
+	// handle statement
 	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
 	else
 	    ; // ** TO DO (also in if): think about this
+
+	// handle iteration expression
+	if ( (0 != V->LChild()) )
+	    if ( (0!= V->LChild()->LChild()) )
+		if ( (0 != V->LChild()->LChild()->RChild()) )
+		    V->LChild()->LChild()->RChild()->accept(this);
 
 	// make goto SSA entry
 	labels.clear();
