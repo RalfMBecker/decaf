@@ -9,6 +9,9 @@
 *             in || and && objects; and to a lesser extent in if -
 *             else if - else tropes.
 *
+* Errors: When visitor operates, handed on code should be error-free
+*         (any errors handled in parsing).
+*
 ********************************************************************/
 
 #ifndef VISITOR_H_
@@ -200,10 +203,6 @@ private:
     // no address update needed, but kept among expression visitor types
     void visit(AssignExpr_AST* V)
     {
-	// empty assignment? // ** TO DO: think about this - should be an error
-//	if ( (0 == V->RChild()) ) // if it happens; so it should have been
-//	    return; // caught earlier on (check unnecessary?)
-
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -396,7 +395,6 @@ private:
 
 	// If we go from 'and' to 'or', or vice versa, cond_End of child
 	// needs printing in the calling procedure.
-	// Note: by precedence, this case should never happen. For safety.
 	if ( dynamic_cast<OrExpr_AST*>(V->RChild()) )
 	    labels = active_Labels_;
 	active_Labels_.clear();
@@ -526,17 +524,8 @@ private:
 	// ** TO DO: make labels private/hand on instead?
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
 	// make stmt (block) SSA entry (entries), if there is at least one
-	if ( (0 != V->RChild()) ){ 
+	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
-	    // Unhandled labels remaining; happens when, at end of inner scope,
-	    //               if [- else if]* [else if | end] 
-	    // and no {} around this IfType_AST (c., e.g., decaf_b5.dec - 
-	    // statement triggering this is else if (a > 0) ).
-	    if ( !(active_Labels_.empty()) ){
-		insertNOP(active_Labels_, frame_Str);
-		active_Labels_.clear();
-	    }
-	}
 	pLabels->Restore();
 
 	// make goto SSA entry
@@ -568,8 +557,9 @@ private:
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
-	V->LChild()->accept(this); // this does not mirror treatment in if
-	pLabels->Restore();        // visitor (go through logic)
+	if ( (0 != V->LChild()) )
+	    V->LChild()->accept(this);
+	pLabels->Restore(); 
 
 	// case distinction of 'if' obiously doesn't apply
 	insertNOP(pLabels->getLabels(), frame_Str);
@@ -595,9 +585,8 @@ private:
 	std::string frame_Str = pFrame->getTableName();
 
 	// handle initialization expression
-	if ( (0 != V->LChild()) )
-	    if ( (0!= V->LChild()->LChild()) )
-		if ( (0 != V->LChild()->LChild()->LChild()) ){
+	if ( (0 != V->LChild()) && (0!= V->LChild()->LChild()) &&
+	     (0 != V->LChild()->LChild()->LChild()) ){
 		    needs_Label_ = 1;
 		    V->LChild()->LChild()->LChild()->accept(this);
 		}
@@ -611,29 +600,17 @@ private:
 	needs_Label_ = 1;
 
 	std::string target;
-	// check is way overboard; for safety in case of mis-use
-	if ( (0 != V->LChild()) ){
-	    if ( (0!= V->LChild()->LChild()) ){
-		if ( (0 != V->LChild()->LChild()->RChild()) ){
+	if ( (0 != V->LChild()) && (0!= V->LChild()->LChild()) && 
+	     (0 != V->LChild()->LChild()->RChild()) ){
 		    V->LChild()->LChild()->RChild()->accept(this);
 		    if ( ("" == V->LChild()->LChild()->RChild()->Addr()) )
 			target = "1";
 		    else
 			target = V->LChild()->LChild()->RChild()->Addr();
 		}
-		else{
-		    insertNOP(active_Labels_, frame_Str);
-		    target = "1"; // dummy for forever loop - in case
-		}
-	    }
-	    else{
-		insertNOP(active_Labels_, frame_Str);
-		target = "1"; // see above
-	    }
-	}
 	else{
 	    insertNOP(active_Labels_, frame_Str);
-	    target = "1"; // see above
+	    target = "1"; // dummy for forever loop - in case
 	}
 	active_Labels_.clear(); 
 
@@ -651,8 +628,7 @@ private:
 
 	// Handle iteration expression - inner functions (if, for, while)
 	// emit their own NOP target if needed, so not here
-	if ( (0 != V->LChild()) )
-	    if ( (0!= V->LChild()->RChild()) ){
+	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) ){
 		needs_Label_ = 1;
 		V->LChild()->RChild()->accept(this);
 	    }
@@ -669,18 +645,6 @@ private:
 	// out remaining target labels. Take care of that.
 	labels.push_back(label_Out);
 	insertNOP(labels, frame_Str);
-    }
-
-    // helper to make sure a target line for labels is always emitted
-    int checkExprTarget(Node_AST* E)
-    {
-	// **TO DO: evaluate later if also: (dynamic_cast<IdArrayExpr_AST*>(E))
-	// expressions whose visitors produce no IR line
-	if ( dynamic_cast<Tmp_AST*>(E) || dynamic_cast<IdExpr_AST*>(E) ||  
-	     dynamic_cast<IntExpr_AST*>(E) || dynamic_cast<FltExpr_AST*>(E) )
-	    return 0;
-	else
-	    return 1;
     }
 
     void insertNOP(label_Vec const& Labels, std::string Env)

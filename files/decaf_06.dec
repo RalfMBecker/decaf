@@ -1,0 +1,18 @@
+{
+    int a;
+    if (a > 0)
+	;
+    else if (a)
+	for (;;;)
+	    ;
+    else{
+	if (1)
+	    a = 3;
+	else if (2)
+	    while (1)
+		a
+	else
+	    a = 1;
+    }
+    a = 0;
+}

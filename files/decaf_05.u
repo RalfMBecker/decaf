@@ -1,7 +1,7 @@
 -----------------------------------------------
 code generated for ./files/decaf_05.dec
 -----------------------------------------------
-Error near 5:8: Syntax error (else) - illegal in context
+Error near 5:8: Syntax error (else) - else without leading if
 Warning near 13:3: '=' in if-conditional - did you mean '=='?
 Error near 17:16: Syntax error ()) - Expected primary expression
 
@@ -54,7 +54,6 @@ Memory allocation - stack: 0
    10                          =:         a,         5             (Env4)
    11                          =:         b,         6             (Env4)
    12                       goto:        L4                        (Env3)
-   13             L3:        nop:                                  (Env1)
-   14                       goto:        L2                        (Env1)
-   15             L1:          =:         b,         2             (Env5)
-   16             L2:        nop:                                  (Env1)
+   13                       goto:        L2                        (Env1)
+   14         L3: L1:          =:         b,         2             (Env5)
+   15             L2:        nop:                                  (Env1)

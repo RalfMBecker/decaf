@@ -223,7 +223,10 @@ ExprList_AST(Node_AST* LHS, Node_AST* RHS)
     }
 };
 
-// arithmetic, logical, basic, and access (array) types
+// Arithmetic, logical, basic, and access (array) types
+// Natural child of both Stmt_AST and ExprList_AST. However, multiple
+// inheritance would not be logical; so we choose one, and deal with
+// ugly casts if we need parenthood to the other (only once).
 class Expr_AST: public ExprList_AST{
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 

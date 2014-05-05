@@ -2,6 +2,7 @@
 code generated for ./files/decaf_b11.dec
 -----------------------------------------------
 Warning near 10:4: '=' in if-conditional - did you mean '=='?
+Warning near 14:20: '=' in for-conditional - did you mean '=='?
 
 Info for table Env1
 ---------------------------------------------------

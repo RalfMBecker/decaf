@@ -5,16 +5,16 @@
 *                (also known as Dijksta shunting algorithm) to flatten
 *                the deep cfg
 *
-* Invariant: upon return, parse functions ensure to point ahead
+* Invariant: upon return, parse functions guarantee to point ahead
 *
 * Error handling: local error report, after which the error is 
 *                 handed on to statement level, and processed there
 *                 (using Panic Mode recovery) 
+* Note (errors): Warning in '='/'==' case for IF is off by a line
 *
 * Mem Leaks: will add a function to delete AST*s and Env* later
 *
 ********************************************************************/
-// **TO DO: consider keeping debugging output with a -v (verbose) switch
 
 #include <vector>
 #include "lexer.h"
@@ -67,8 +67,6 @@ errorResetStmt(void)
 int
 match(int update_Prior, tokenType t, int update_Post)
 {
-    if (option_Debug) std::cout << "matching...\n";
-
     if (update_Prior) getNextToken();
     if (errorIn_Progress) return -2;
     if ( (t == next_Token.Tok()) ){
@@ -213,7 +211,8 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
 	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
-	if ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ){
+	if ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) && 
+	     (0 != RHS) && (dynamic_cast<Expr_AST*>(RHS)) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -253,7 +252,9 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
 	default:
-	    errExit(0, "illegal use of function parseInfixRHS (abort}");
+	    parseError(binOp1.Lex(), "illegal in context");
+	    errorIn_Progress = 1;
+	    return 0;
 	}
     }
 }
@@ -285,9 +286,9 @@ parseExpr(void)
     if (option_Debug) std::cout << "parsing an expr...\n";
 
     Expr_AST* LHS = parsePrimaryExpr();
+    if (errorIn_Progress) return 0;
     if ( !LHS )
 	return new NOP_AST(); // handled by caller
-    if (errorIn_Progress) return 0; // ** TO DO CHECK
 
     return LHS;
 }
@@ -437,20 +438,29 @@ parsePrimaryExpr(void)
 
 
 // Splitting the function into two parts allows to process after 
-// discovering a ','. 
+// discovering a ';' in place of an expression (empty expression). 
 ExprList_AST*
 parseExprListCtd(ExprList_AST* LHS, tokenType Sep, int Number)
 {
     if (option_Debug) std::cout << "parsing an ExprListCtd...\n";
 
     Expr_AST* RHS = 0;
-    while ( (Sep == next_Token.Tok()) && (0 <= --Number) ){
+    std::string err_Msg = "unexpected token while processing expression list";
+    while ( (0 <= --Number) && (Sep == next_Token.Tok()) ){
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	if ( (tok_rdclosed == next_Token.Tok()) ){ // empty expression last
-	    LHS = new ExprList_AST(LHS, 0);
-	    break;
-	}
+	    if ( (0 == Number) ){
+		    LHS = new ExprList_AST(LHS, 0);
+		    return LHS;
+		    break;
+	    }
+	    else{
+		parseError(next_Token.Lex(), err_Msg);
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	}	
 
 	RHS = dispatchExpr();
 	if ( (0 == RHS) && !(errorIn_Progress) ) // comes back as NOP; we
@@ -476,7 +486,7 @@ parseExprList(tokenType Sep, int Number)
 
     if (errorIn_Progress) return 0;
     tokenType t = next_Token.Tok();
-    if ( (Sep != t) || (0 >= --Number) || (tok_rdclosed == t) )
+    if ( (0 >= --Number) || (Sep != t) || (tok_rdclosed == t) )
 	return new ExprList_AST(LHS, 0);
     ret = parseExprListCtd(LHS, Sep, Number);
     if (errorIn_Progress) return 0;
@@ -521,7 +531,7 @@ parseVarDecl(token Type)
 
     // access error (allow for shadowing)
     if ( (tok_ID != next_Token.Tok()) )
-	errExit(0, "parseVarDecl should be called pointing at tok_id\n");
+	errExit(0, "parseVarDecl should be called pointing at tok_id");
     Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
     if ( (prior_Env == top_Env) ){
 	varAccessError(next_Token.Lex(), 1);
@@ -636,7 +646,7 @@ parseIfStmt(int Type)
     if (option_Debug) std::cout << "parsing an if statement...\n";
 
     if ( (-1 == match(0, tok_if, 1)) )
-	errExit(0, "parseIfStmt should be called pointing at tok_if\n");
+	errExit(0, "parseIfStmt should be called pointing at tok_if");
 
     Expr_AST* expr = parseParensExpr();
     if (errorIn_Progress) return 0;
@@ -710,7 +720,7 @@ parseIfCtd(IfType_AST* LHS)
     if (option_Debug) std::cout << "entering parseIfCtd...\n";
 
     if ( (-1 == match(0, tok_else, 1)) )
-	errExit(0, "parseIfCtd should be called pointing at tok_else\n");
+	errExit(0, "parseIfCtd should be called pointing at tok_else");
     if (errorIn_Progress) return 0;
 
     IfType_AST* RHS;
@@ -746,10 +756,15 @@ parseForStmt(void)
     if (option_Debug) std::cout << "parsing a for statement...\n";
 
     if ( (-1 == match(0, tok_for, 1)) )
-	errExit(0, "parseForStmt should be called pointing at tok_for\n");
+	errExit(0, "parseForStmt should be called pointing at tok_for");
 
+    // handle expr-list
     ExprList_AST* expr = parseParensExprList(tok_semi, 3);
     if (errorIn_Progress) return 0;
+    if ( ( 0 != expr) && ( 0 != expr->LChild()) && 
+	 (0 != expr->LChild()->RChild()) )
+	if ( dynamic_cast<AssignExpr_AST*>(expr->LChild()->RChild()) )
+	    parseWarning("", "'=' in for-conditional - did you mean '=='?");
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmt();
@@ -774,8 +789,9 @@ parseWhileStmt(void)
     if (option_Debug) std::cout << "parsing a while statement...\n";
 
     if ( (-1 == match(0, tok_while, 1)) )
-	errExit(0, "parseWhileStmt should be called pointing at tok_while\n");
+	errExit(0, "parseWhileStmt should be called pointing at tok_while");
 
+    // handle expr
     Expr_AST* expr = parseParensExpr();
     if (errorIn_Progress) return 0;
     if ( dynamic_cast<AssignExpr_AST*>(expr) )
@@ -830,7 +846,7 @@ parseStmt(void)
 	break;
 	// illegals reserved words that should not be found here
     case tok_else:
-	parseError(next_Token.Lex(), "illegal in context");
+	parseError(next_Token.Lex(), "else without leading if");
 	getNextToken();
 //	errorIn_Progress = 1; // to allow recovery from else followed by if 
 	ret = 0;
@@ -850,8 +866,9 @@ parseStmt(void)
     }
 
     // cases to improve error handling in case of errors in nested if's
-    if (errorIn_Progress){ // ** TO DO: we added 2nd check. Confirm?
-	if ( dynamic_cast<IfType_AST*>(ret) || dynamic_cast<While_AST*>(ret) )
+    if (errorIn_Progress){ // **TO DO: check error recovery for while/for
+	if ( dynamic_cast<IfType_AST*>(ret) || dynamic_cast<For_AST*>(ret) 
+	     || dynamic_cast<While_AST*>(ret) )
 	    errorResetStmt();
 	else
 	    return errorResetStmt();
@@ -871,7 +888,7 @@ parseBlock(void)
 
     StmtList_AST* pSL;
     if ( (-1 == match(0, tok_paropen, 1)) )
-	errExit(0, "invalid use of parseBlock() - should point at '{'\n");
+	errExit(0, "invalid use of parseBlock() - should point at '{'");
     if ( (0 == match(0, tok_parclosed, 0)) ){
 	getNextToken();
 	return new StmtList_AST(0, 0);

@@ -77,7 +77,7 @@ errorBase(int is_Error)
     std::cerr << "near " << line_No << ":" << col_No << ": ";
 }
 
-// error class for compiler-usage errors (never prompted by user of
+// Error class for compiler-usage errors (never prompted by user of
 // compiler). Hence, terminate() compiling (influenced by Kerrisk)
 #ifdef __GNUC__
 __attribute__ ((__noreturn__)) // in case of being called from
