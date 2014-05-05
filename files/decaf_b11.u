@@ -1,20 +1,21 @@
 -----------------------------------------------
 code generated for ./files/decaf_b11.dec
 -----------------------------------------------
-		[debug] next_Token = ;
-		[debug] next_Token = ;
-Warning near 6:6: '=' in if-conditional - did you mean '=='?
-		[debug] next_Token = ;
-		[debug] next_Token = ;
+Warning near 10:4: '=' in if-conditional - did you mean '=='?
 
 Info for table Env1
 ---------------------------------------------------
-Memory allocation - stack: 4
+Memory allocation - stack: 8
                      heap: 0
 
 a	Type: int
 	MemType: stack
 	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
 	Width: 4
 
 Info for table Env2
@@ -34,40 +35,67 @@ Memory allocation - stack: 0
 
 Info for table Env5
 ---------------------------------------------------
-Memory allocation - stack: 4
+Memory allocation - stack: 0
                      heap: 0
-
-b	Type: int
-	MemType: stack
-	Offset: 0
-	Width: 4
 
 Info for table Env6
 ---------------------------------------------------
 Memory allocation - stack: 0
                      heap: 0
 
+Info for table Env7
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env8
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env9
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
     1                        dec:         a,       int             (Env1)
-    2                          =:         a,        10             (Env1)
-    3             L1:          >:        t1,         a,         0  (Env1)
-    4                    iffalse:        t1,      goto,        L2  (Env1)
-    5                          =:         a,         3             (Env2)
-    6                    iffalse:         a,      goto,        L3  (Env2)
-    7                          =:         a,         2             (Env3)
-    8                       goto:        L4                        (Env2)
-    9             L3:          =:         a,         1             (Env4)
-   10             L4:        nop:                                  (Env2)
-   11                          -:        t2,         a,         1  (Env1)
-   12                          =:         a,        t2             (Env1)
-   13                       goto:        L1                        (Env1)
-   14             L2:        nop:                                      ()
-   15             L5:          =:         a,         2             (Env1)
-   16                    iffalse:         a,      goto,        L6  (Env1)
-   17                        dec:         b,       int             (Env5)
-   18             L7:        nop:                                  (Env5)
-   19                    iffalse:         b,      goto,        L8  (Env5)
-   20                          =:         a,         a             (Env6)
-   21                       goto:        L7                        (Env5)
-   22             L8:        nop:                                  (Env5)
-   23                       goto:        L5                        (Env1)
-   24             L6:        nop:                                  (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                          =:         a,        10             (Env1)
+    4             L1:          >:        t1,         a,         0  (Env1)
+    5                    iffalse:        t1,      goto,        L2  (Env1)
+    6                          =:         b,         0             (Env2)
+    7             L3:         <=:        t2,         b,         5  (Env2)
+    8                    iffalse:        t2,      goto,        L4  (Env2)
+    9             L5:         !=:        t3,         b,         1  (Env3)
+   10                    iffalse:        t3,      goto,        L6  (Env3)
+   11                        nop:                                      ()
+   12             L7:        nop:                                      ()
+   13                    iffalse:         1,      goto,        L8  (Env4)
+   14                          =:         a,         3             (Env5)
+   15                    iffalse:         a,      goto,        L9  (Env5)
+   16                          =:         a,         2             (Env6)
+   17                       goto:       L10                        (Env5)
+   18             L9:          =:         a,         1             (Env7)
+   19            L10:        nop:                                  (Env5)
+   20                       goto:        L7                        (Env4)
+   21             L8:        nop:                                  (Env4)
+   22                       goto:        L5                        (Env3)
+   23             L6:        nop:                                  (Env3)
+   24                          +:        t4,         b,         1  (Env2)
+   25                          =:         b,        t4             (Env2)
+   26                       goto:        L3                        (Env2)
+   27             L4:        nop:                                  (Env2)
+   28                          -:        t5,         a,         1  (Env1)
+   29                          =:         a,        t5             (Env1)
+   30                       goto:        L1                        (Env1)
+   31             L2:        nop:                                  (Env1)
+   32                        nop:                                      ()
+   33            L11:          =:         a,         2             (Env1)
+   34                    iffalse:         a,      goto,       L12  (Env1)
+   35            L13:        nop:                                  (Env1)
+   36                    iffalse:         b,      goto,       L14  (Env8)
+   37                          =:         a,         a             (Env9)
+   38                       goto:       L13                        (Env8)
+   39            L14:        nop:                                  (Env8)
+   40                       goto:       L11                        (Env1)
+   41            L12:        nop:                                  (Env1)

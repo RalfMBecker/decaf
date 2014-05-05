@@ -28,7 +28,7 @@ extern int option_Debug;
 
 class MakeIR_Visitor: public AST_Visitor{
 public:
-// label mgmt per frame helper class: when entering new scope in any context
+// For if visitor: when entering new scope in any context
 // that might modify labels, save state, then retrieve upon return
 class Label_State{
 public:
@@ -590,19 +590,23 @@ private:
     // (for while: e-list(0, cond)
     void visit(For_AST* V)
     {
+	// establish frame for for scope
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+
 	// handle initialization expression
 	if ( (0 != V->LChild()) )
 	    if ( (0!= V->LChild()->LChild()) )
-		if ( (0 != V->LChild()->LChild()->LChild()) )
+		if ( (0 != V->LChild()->LChild()->LChild()) ){
+		    needs_Label_ = 1;
 		    V->LChild()->LChild()->LChild()->accept(this);
+		}
 
 	std::string label_Top = makeLabel();
 	std::string label_Out = makeLabel();
 
 	// Dispatch condition expr - labels handled through active_Labels_
 	// Cond could be 0 (infinite loop), but we always need a label
-	Env* pFrame = V->getEnv();
-	std::string frame_Str = pFrame->getTableName();
 	active_Labels_.push_back(label_Top);
 	needs_Label_ = 1;
 
@@ -612,7 +616,10 @@ private:
 	    if ( (0!= V->LChild()->LChild()) ){
 		if ( (0 != V->LChild()->LChild()->RChild()) ){
 		    V->LChild()->LChild()->RChild()->accept(this);
-		    target = V->LChild()->LChild()->RChild()->Addr();
+		    if ( ("" == V->LChild()->LChild()->RChild()->Addr()) )
+			target = "1";
+		    else
+			target = V->LChild()->LChild()->RChild()->Addr();
 		}
 		else{
 		    insertNOP(active_Labels_, frame_Str);
@@ -621,13 +628,14 @@ private:
 	    }
 	    else{
 		insertNOP(active_Labels_, frame_Str);
-		target = "1"; // dummy for forever loop - in case
+		target = "1"; // see above
 	    }
 	}
 	else{
 	    insertNOP(active_Labels_, frame_Str);
-	    target = "1"; // dummy for forever loop - in case
+	    target = "1"; // see above
 	}
+	active_Labels_.clear(); 
 
 	// make iffalse SSA entry
 	label_Vec labels;
@@ -636,18 +644,18 @@ private:
 	std::string RHS = label_Out;
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line);
-	active_Labels_.clear(); 
 
 	// handle statement
 	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
-	else
-	    ; // ** TO DO (also in if): think about this
 
-	// handle iteration expression
+	// Handle iteration expression - inner functions (if, for, while)
+	// emit their own NOP target if needed, so not here
 	if ( (0 != V->LChild()) )
-	    if ( (0!= V->LChild()->RChild()) )
+	    if ( (0!= V->LChild()->RChild()) ){
+		needs_Label_ = 1;
 		V->LChild()->RChild()->accept(this);
+	    }
 
 	// make goto SSA entry
 	labels.clear();
@@ -659,11 +667,8 @@ private:
 
 	// If this is not followed by a statement, we would miss printing
 	// out remaining target labels. Take care of that.
-	active_Labels_.push_back(label_Out);
-	if ( (V->isEOB()) ){
-	    insertNOP(active_Labels_, frame_Str);
-	    active_Labels_.clear();
-	}
+	labels.push_back(label_Out);
+	insertNOP(labels, frame_Str);
     }
 
     // helper to make sure a target line for labels is always emitted
@@ -719,8 +724,9 @@ static int count_Lab_;
 static std::string if_Next_;
 static std::string if_Done_;
 
-static int needs_Label_;
-static label_Vec active_Labels_;
+static int needs_Label_; // In case a line needs a label, this triggers
+                         // emission of a NOP in lines that otherwise don't
+static label_Vec active_Labels_; // has the relevant labels for needs_Label_
 };
 
 #endif

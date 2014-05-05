@@ -330,7 +330,7 @@ validInPrefix(token t)
 {
     switch(t.Tok()){
     case tok_rdopen: case tok_minus: case tok_log_not:
-    case tok_ID: case tok_int: case tok_double:
+    case tok_ID: case tok_intV: case tok_doubleV:
 	return 0;
     default:
 	return -1;
@@ -352,15 +352,15 @@ dispatchPrefixExpr(token t)
     // collect legal prefixes
     std::vector<token> tok_Vec;
     while ( (tok_minus == t.Tok()) || (tok_log_not == t.Tok()) ) {
+	tok_Vec.push_back(token(t));
+	t = getNextToken();
+	if (errorIn_Progress) break;
 	if ( (-1 == validInPrefix(t)) ){
 	    parseError(next_Token.Lex(), err_Msg);
 	    errorIn_Progress = 1;
 	}
-	tok_Vec.push_back(token(t));
-	t = getNextToken();
-	if (errorIn_Progress) break;
     }
-    if (errorIn_Progress) return 0; // ***********
+    if (errorIn_Progress) return 0;
 
     // process legal expression types prefix(es) operate on
     switch(next_Token.Tok()){
@@ -371,7 +371,7 @@ dispatchPrefixExpr(token t)
     default:
 	parseError(next_Token.Lex(), "expected primary expression");
 	errorIn_Progress = 1;
-	return 0; // **************
+	return 0;
 	break;
     }
 
@@ -380,8 +380,7 @@ dispatchPrefixExpr(token t)
     for (iter = tok_Vec.rbegin(); iter != tok_Vec.rend(); iter++)
 	ret = new UnaryArithmExpr_AST(*iter, ret);
 
-    if (errorIn_Progress) return 0; // ****TO DO
-    if ( !ret )
+    if ( !ret ) // if we come here, result is already error-checked
 	return new NOP_AST(); // handled by caller
     return ret;
 }
@@ -446,18 +445,13 @@ parseExprListCtd(ExprList_AST* LHS, tokenType Sep, int Number)
 
     Expr_AST* RHS = 0;
     while ( (Sep == next_Token.Tok()) && (0 <= --Number) ){
-
-	std::cout << "\t\t[debug] next_Token = " << next_Token.Lex() << "\n";
-
-
 	getNextToken();
-
+	if (errorIn_Progress) return 0;
 	if ( (tok_rdclosed == next_Token.Tok()) ){ // empty expression last
 	    LHS = new ExprList_AST(LHS, 0);
 	    break;
 	}
 
-	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
 	if ( (0 == RHS) && !(errorIn_Progress) ) // comes back as NOP; we
 	    RHS = 0; // really want 0 though for 'for'
@@ -651,12 +645,7 @@ parseIfStmt(int Type)
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmt();
-    if (errorIn_Progress) {
-	if (dynamic_cast<IfType_AST*>(LHS))
-	    return dynamic_cast<IfType_AST*>(LHS);
-	else
-	    return 0;
-    }
+    if (errorIn_Progress) return 0;
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int hasElse = 0;
@@ -882,7 +871,7 @@ parseBlock(void)
 
     StmtList_AST* pSL;
     if ( (-1 == match(0, tok_paropen, 1)) )
-	return 0; // **TO DO: add error handling on this level
+	errExit(0, "invalid use of parseBlock() - should point at '{'\n");
     if ( (0 == match(0, tok_parclosed, 0)) ){
 	getNextToken();
 	return new StmtList_AST(0, 0);
@@ -890,13 +879,13 @@ parseBlock(void)
 
     top_Env = addEnv(top_Env);
     frame_Depth++;
+    if ( (0 == match(0, tok_paropen, 0)) )
+	pSL = parseStmtListCtd(0); // handles the case of opening '{'
+    else
+	pSL = parseStmtList();
 
-    pSL = parseStmtList();
-
-    // TO DO: more thinking about this once integrated higher
     if ( (0 < frame_Depth) ){ // could have been reduced in error handling
-	int test;
-	if ( (0 != (test = match(0, tok_parclosed, 0))) ){
+	if ( (-1 == match(0, tok_parclosed, 0)) ){
 	    punctError('}', 0);
 	    errorIn_Progress = 1;
 	    pSL = 0;
