@@ -585,8 +585,8 @@ private:
     }
 
     // Expr-List:        e-list
-    //               e-list   cond
-    //            init   iter
+    //               e-list   iter
+    //            init   cond
     // (for while: e-list(0, cond)
     void visit(For_AST* V)
     {
@@ -605,19 +605,33 @@ private:
 	std::string frame_Str = pFrame->getTableName();
 	active_Labels_.push_back(label_Top);
 	needs_Label_ = 1;
+
+	std::string target;
+	// check is way overboard; for safety in case of mis-use
 	if ( (0 != V->LChild()) ){
-	    if ( (0!= V->LChild()->RChild()) )
-		    V->LChild()->RChild()->accept(this);
-	    else
+	    if ( (0!= V->LChild()->LChild()) ){
+		if ( (0 != V->LChild()->LChild()->RChild()) ){
+		    V->LChild()->LChild()->RChild()->accept(this);
+		    target = V->LChild()->LChild()->RChild()->Addr();
+		}
+		else{
+		    insertNOP(active_Labels_, frame_Str);
+		    target = "1"; // dummy for forever loop - in case
+		}
+	    }
+	    else{
 		insertNOP(active_Labels_, frame_Str);
+		target = "1"; // dummy for forever loop - in case
+	    }
 	}
-	else
+	else{
 	    insertNOP(active_Labels_, frame_Str);
+	    target = "1"; // dummy for forever loop - in case
+	}
 
 	// make iffalse SSA entry
 	label_Vec labels;
 	token Op = token(tok_iffalse);
-	std::string target = V->LChild()->RChild()->Addr();
 	std::string LHS = "goto";
 	std::string RHS = label_Out;
 	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
@@ -632,9 +646,8 @@ private:
 
 	// handle iteration expression
 	if ( (0 != V->LChild()) )
-	    if ( (0!= V->LChild()->LChild()) )
-		if ( (0 != V->LChild()->LChild()->RChild()) )
-		    V->LChild()->LChild()->RChild()->accept(this);
+	    if ( (0!= V->LChild()->RChild()) )
+		V->LChild()->RChild()->accept(this);
 
 	// make goto SSA entry
 	labels.clear();

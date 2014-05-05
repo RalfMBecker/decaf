@@ -440,17 +440,27 @@ parsePrimaryExpr(void)
 // Splitting the function into two parts allows to process after 
 // discovering a ','. 
 ExprList_AST*
-parseExprListCtd(ExprList_AST* LHS, tokenType Sep)
+parseExprListCtd(ExprList_AST* LHS, tokenType Sep, int Number)
 {
     if (option_Debug) std::cout << "parsing an ExprListCtd...\n";
 
     Expr_AST* RHS = 0;
-    while ( (Sep == next_Token.Tok()) ){
+    while ( (Sep == next_Token.Tok()) && (0 <= --Number) ){
+
+	std::cout << "\t\t[debug] next_Token = " << next_Token.Lex() << "\n";
+
+
 	getNextToken();
+
+	if ( (tok_rdclosed == next_Token.Tok()) ){ // empty expression last
+	    LHS = new ExprList_AST(LHS, 0);
+	    break;
+	}
+
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
-	if ( (0 == RHS) && !(errorIn_Progress) )
-	    RHS = new NOP_AST();
+	if ( (0 == RHS) && !(errorIn_Progress) ) // comes back as NOP; we
+	    RHS = 0; // really want 0 though for 'for'
 	if (errorIn_Progress) return 0;
 	LHS = new ExprList_AST(LHS, RHS);
     }
@@ -459,20 +469,22 @@ parseExprListCtd(ExprList_AST* LHS, tokenType Sep)
 }
 
 // Sep: (1) ';', (2) ',' - (2) still to be integrated. 
+// Number: how many to read in? If not limited, choose 'high enough'
 ExprList_AST*
-parseExprList(tokenType Sep)
+parseExprList(tokenType Sep, int Number)
 {
     if (option_Debug) std::cout << "parsing an ExprList...\n";
 
     ExprList_AST* ret;
     Expr_AST* LHS = dispatchExpr();
     if ( (0 == LHS) && !(errorIn_Progress) )
-	LHS = new NOP_AST();
+	LHS = 0; // see parseExprListCtd()
 
     if (errorIn_Progress) return 0;
-    if ( (Sep != next_Token.Tok()) )
+    tokenType t = next_Token.Tok();
+    if ( (Sep != t) || (0 >= --Number) || (tok_rdclosed == t) )
 	return new ExprList_AST(LHS, 0);
-    ret = parseExprListCtd(LHS, Sep);
+    ret = parseExprListCtd(LHS, Sep, Number);
     if (errorIn_Progress) return 0;
 
     return ret;
@@ -480,14 +492,14 @@ parseExprList(tokenType Sep)
 
 // (expr-list) -> expr-list
 ExprList_AST*
-parseParensExprList(tokenType Sep)
+parseParensExprList(tokenType Sep, int Number)
 {
     if (option_Debug) std::cout << "parsing a ParensExprList...\n";
 
     if ( (-1 == match(0, tok_rdopen, 1)) )
 	errExit(0, "invalid call of function parseParensExprList()");
 
-    ExprList_AST* E = parseExprList(Sep);
+    ExprList_AST* E = parseExprList(Sep, Number);
     if (errorIn_Progress) return 0;
 
     if ( (-1 == match(0, tok_rdclosed, 1)) ){
@@ -747,17 +759,13 @@ parseForStmt(void)
     if ( (-1 == match(0, tok_for, 1)) )
 	errExit(0, "parseForStmt should be called pointing at tok_for\n");
 
-    ExprList_AST* expr = parseParensExprList(tok_semi);
+    ExprList_AST* expr = parseParensExprList(tok_semi, 3);
     if (errorIn_Progress) return 0;
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmt();
-    if (errorIn_Progress) {
-//	if (dynamic_cast<While_AST*>(LHS))
-//	    return dynamic_cast<While_AST*>(LHS);
-//	else
-	    return 0;
-    }
+    if (errorIn_Progress)
+	return 0;
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int endBlock_Marker = 0;
@@ -786,12 +794,8 @@ parseWhileStmt(void)
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmt();
-    if (errorIn_Progress) {
-//	if (dynamic_cast<While_AST*>(LHS))
-//	    return dynamic_cast<While_AST*>(LHS);
-//	else
-	    return 0;
-    }
+    if (errorIn_Progress)
+	return 0;
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int endBlock_Marker = 0;

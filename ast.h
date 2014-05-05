@@ -674,7 +674,7 @@ private:
 class While_AST: public For_AST{
 public:
 While_AST(Expr_AST* Expr, Block_AST* Block, int EOB = 0)
-    : For_AST(new ExprList_AST(0, Expr), Block, EOB)
+    : For_AST(new ExprList_AST(new ExprList_AST(0, Expr), 0), Block, EOB)
     {
 	if (option_Debug)
 	    std::cout << "\tcreated While_AST\n";
