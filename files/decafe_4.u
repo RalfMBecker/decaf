@@ -1,0 +1,47 @@
+-----------------------------------------------
+code generated for ./files/decafe_4.dec
+-----------------------------------------------
+Error near 3:13: Syntax error ()) - Expected primary expression
+Error near 5:8: Syntax error (else) - else without leading if
+Error near 6:7: Syntax error (;) - expected infix operator or primary expression
+Error near 6:7: Syntax error (;) - invalid assignment
+Warning near 8:2: '=' in if-conditional - did you mean '=='?
+Warning near 10:2: unused expression
+
+found 4 syntactic/semantic errors
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                        nop:                                  (Env1)
+    3                    iffalse:         1,      goto,        L1  (Env1)
+    4                       goto:        L2                        (Env1)
+    5             L1:          =:         a,         2             (Env1)
+    6                    iffalse:         a,      goto,        L3  (Env1)
+    7                          =:         a,         0             (Env3)
+    8                       goto:        L2                        (Env1)
+    9             L3:        nop:                                      ()
+   10             L2:        nop:                                  (Env1)

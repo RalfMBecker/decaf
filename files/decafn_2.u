@@ -1,0 +1,56 @@
+-----------------------------------------------
+code generated for ./files/decafn_2.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 8
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+c	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                          <:        t1,         a,         0  (Env1)
+    3                    iffalse:        t1,      goto,        L1  (Env1)
+    4                          =:         a,         2             (Env2)
+    5             L1:        nop:                                  (Env1)
+    6                        dec:         b,       int             (Env1)
+    7                         ==:        t2,         b,         0  (Env1)
+    8                    iffalse:        t2,      goto,        L2  (Env1)
+    9                        dec:         c,       int             (Env3)
+   10                          +:        t3,         a,         b  (Env3)
+   11                          =:         c,        t3             (Env3)
+   12                         ==:        t4,         a,         0  (Env3)
+   13                    iffalse:        t4,      goto,        L3  (Env3)
+   14                          =:         a,         1             (Env4)
+   15             L3:        nop:                                  (Env3)
+   16                          =:         a,         4             (Env3)
+   17             L2:        nop:                                  (Env1)

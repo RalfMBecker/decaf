@@ -1,0 +1,59 @@
+-----------------------------------------------
+code generated for ./files/decafe_5.dec
+-----------------------------------------------
+Error near 5:8: Syntax error (else) - else without leading if
+Warning near 13:3: '=' in if-conditional - did you mean '=='?
+Error near 17:16: Syntax error ()) - Expected primary expression
+
+found 2 syntactic/semantic errors
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 8
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                          =:         a,         b             (Env2)
+    4                          =:         a,         1             (Env1)
+    5                          =:         b,         2             (Env1)
+    6                          =:         b,         1             (Env1)
+    7                    iffalse:         b,      goto,        L1  (Env1)
+    8                         ==:        t1,         a,         b  (Env3)
+    9                    iffalse:        t1,      goto,        L3  (Env3)
+   10                          =:         a,         5             (Env4)
+   11                          =:         b,         6             (Env4)
+   12                       goto:        L4                        (Env3)
+   13                       goto:        L2                        (Env1)
+   14         L3: L1:          =:         b,         2             (Env5)
+   15             L2:        nop:                                  (Env1)

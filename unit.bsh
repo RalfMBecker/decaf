@@ -59,7 +59,7 @@ do
       else
          echo "Adding "$OPTARG" to file list.txt ..."
          echo $OPTARG >> $FROM
-         sort $FROM | uniq > __OUT
+         sort -u -t '_' -k1,1 -k2n,2 $FROM > __OUT
          cp __OUT $FROM
          rm __OUT
          exit 0 ;
@@ -102,6 +102,7 @@ done
 echo "Performing unit tests..."
 exec > $TO 2>&1
 i=0
+s=0
 read CURRENT
 while [[ "$CURRENT" != '' ]]
 do
@@ -119,7 +120,13 @@ do
           echo "unit testing "`basename $UNIT_NAME`
           echo "------------------------------"
           echo "`diff $UNIT_NAME $TMP_NAME`"
-          echo "------------------------------"
+	  diff $UNIT_NAME $TMP_NAME > /dev/null 2>&1
+          rv=$?
+	  if [[ $rv == 0 ]]
+	  then
+              s=$[ $s + 1 ]	      
+	  fi
+	  echo "------------------------------"
           i=$[ $i + 1 ]
       fi
    else
@@ -131,5 +138,6 @@ do
 done
    
 `rm ./files/*.tmp`
-echo "Done. Successfully tested "$i" units."
+echo "Done." 
+echo "Tested "$i" units - success for "$s"."
 exit 0

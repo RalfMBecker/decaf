@@ -1,0 +1,67 @@
+-----------------------------------------------
+code generated for ./files/decafn_9.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 8
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: int
+	MemType: stack
+	Offset: 4
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                         ==:        t1,         b,         1  (Env1)
+    4                    iffalse:        t1,      goto,        L1  (Env1)
+    5                          =:         a,         0             (Env2)
+    6             L1:        nop:                                  (Env1)
+    7                          -:        t3,         a             (Env1)
+    8                          +:        t4,        t3,         2  (Env1)
+    9                          =:        t2,        t4             (Env1)
+   10                    iffalse:        t2,      goto,        L3  (Env1)
+   11                       goto:        L2                        (Env1)
+   12             L3:        nop:                                  (Env1)
+   13                          =:        t5,         b             (Env1)
+   14                     iftrue:        t5,      goto,        L5  (Env1)
+   15                       goto:        L4                        (Env1)
+   16             L5:          +:        t6,         5,         2  (Env1)
+   17                          <:        t7,         a,        t6  (Env1)
+   18                          =:        t5,        t7             (Env1)
+   19             L4:          =:        t2,        t5             (Env1)
+   20                    iffalse:        t2,      goto,        L6  (Env1)
+   21                       goto:        L2                        (Env1)
+   22             L6:          -:        t9,         b,         a  (Env1)
+   23                          =:        t8,        t9             (Env1)
+   24                     iftrue:        t8,      goto,        L8  (Env1)
+   25                       goto:        L7                        (Env1)
+   26             L8:        nop:                                  (Env1)
+   27                          =:        t8,         4             (Env1)
+   28             L7:          =:        t2,        t8             (Env1)
+   29             L2:    iffalse:        t2,      goto,        L9  (Env1)
+   30                          =:         a,         1             (Env3)
+   31                       goto:       L10                        (Env1)
+   32             L9:          =:         a,         0             (Env4)
+   33            L10:        nop:                                  (Env1)

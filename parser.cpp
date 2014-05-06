@@ -10,7 +10,7 @@
 * Error handling: local error report, after which the error is 
 *                 handed on to statement level, and processed there
 *                 (using Panic Mode recovery) 
-* Note (errors): Warning in '='/'==' case for IF is off by a line
+* Note (errors): Warning in '='/'==' case for 'if' is off by a line
 *
 * Mem Leaks: will add a function to delete AST*s and Env* later
 *
@@ -211,8 +211,8 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
 	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
-	if ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) && 
-	     (0 != RHS) && (dynamic_cast<Expr_AST*>(RHS)) ){
+	if ( ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ) || 
+	     (0 == RHS) || !(dynamic_cast<Expr_AST*>(RHS)) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;

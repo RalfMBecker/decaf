@@ -1,0 +1,67 @@
+-----------------------------------------------
+code generated for ./files/decafn_10.dec
+-----------------------------------------------
+Warning near 6:6: '=' in if-conditional - did you mean '=='?
+Warning near 10:18: '=' in while-conditional - did you mean '=='?
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+b	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env6
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2             L1:          >:        t1,         a,         0  (Env1)
+    3                    iffalse:        t1,      goto,        L2  (Env1)
+    4                          =:         a,         3             (Env2)
+    5                    iffalse:         a,      goto,        L3  (Env2)
+    6                          =:         a,         2             (Env3)
+    7                       goto:        L4                        (Env2)
+    8             L3:          =:         a,         1             (Env4)
+    9             L4:        nop:                                  (Env2)
+   10                       goto:        L1                        (Env1)
+   11             L2:        nop:                                  (Env1)
+   12             L5:          =:         a,         2             (Env1)
+   13                    iffalse:         a,      goto,        L6  (Env1)
+   14                        dec:         b,       int             (Env5)
+   15             L7:        nop:                                  (Env5)
+   16                    iffalse:         b,      goto,        L8  (Env5)
+   17                          =:         a,         a             (Env6)
+   18                       goto:        L7                        (Env5)
+   19             L8:        nop:                                  (Env5)
+   20                       goto:        L5                        (Env1)
+   21             L6:        nop:                                  (Env1)

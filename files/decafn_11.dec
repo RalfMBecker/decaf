@@ -1,0 +1,19 @@
+{
+    int a;
+    int b;
+
+    for ( a = 10; a > 0; a = a -1 )
+	for ( b = 0; b <= 5; b = b + 1)
+	    while ( b != 1)
+		for (;;)
+		    if (a = 3)
+			a = 2;
+		    else
+			a = 1;
+
+    for ( ;a = 2; ){
+
+	while (b)
+	    a = a;
+    }
+}

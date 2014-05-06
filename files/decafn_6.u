@@ -1,0 +1,65 @@
+-----------------------------------------------
+code generated for ./files/decafn_6.dec
+-----------------------------------------------
+Warning near 4:2: unused expression
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+b	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env6
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                         ==:        t1,         a,         1  (Env1)
+    3                    iffalse:        t1,      goto,        L1  (Env1)
+    4                        nop:                                      ()
+    5                       goto:        L2                        (Env1)
+    6             L1:         ==:        t2,         a,         2  (Env1)
+    7                    iffalse:        t2,      goto,        L3  (Env1)
+    8                          =:         a,         3             (Env3)
+    9                       goto:        L2                        (Env1)
+   10             L3:        dec:         b,       int             (Env4)
+   11                          <:        t3,         a,         b  (Env4)
+   12                    iffalse:        t3,      goto,        L4  (Env4)
+   13                          =:         b,         a             (Env5)
+   14                       goto:        L5                        (Env4)
+   15             L4:          >:        t4,         a,         b  (Env4)
+   16                    iffalse:        t4,      goto,        L6  (Env4)
+   17                          =:         b,         1             (Env6)
+   18         L6: L5:        nop:                                  (Env4)
+   19             L2:        nop:                                  (Env1)
+   20                          =:         a,         0             (Env1)

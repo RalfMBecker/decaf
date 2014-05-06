@@ -1,0 +1,16 @@
+{
+    int a;
+    if (a > 0)
+	a = 1;
+    else if (a)
+	a;
+    else{
+	if (1)
+	    a = 3;
+	else if (2)
+	    ;
+	else
+	    a = 1;
+    }
+    a = 0;
+}

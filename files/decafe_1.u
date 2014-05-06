@@ -1,0 +1,37 @@
+-----------------------------------------------
+code generated for ./files/decafe_1.dec
+-----------------------------------------------
+Error near 3:37: token (1111111111111111111111111111111) longer than MAX_LIT (32)
+Error near 6:4: Syntax error - missing token (;)
+Error near 10:37: token (111111111111.111111111111111111) longer than MAX_LIT (32)
+Error near 13:33: token (99.99e+999999999999999999) float - strtod: Numerical result out of range
+Error near 16:31: token (99999999999999999999999) integer - strtol: Numerical result out of range
+Error near 21:9: attempt to access undefined variable (not_D)
+
+found 4 lexical errors
+found 2 syntactic/semantic errors
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 12
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: double
+	MemType: stack
+	Offset: 4
+	Width: 8
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,    double             (Env1)
+    3                       cast:        t1,         2,    double  (Env1)
+    4                          =:         b,        t1             (Env1)
+    5                          =:         a,         1             (Env1)
+    6                          =:         b,       4.1             (Env1)
+    7                          -:        t2,         1             (Env1)
+    8                          =:         a,        t2             (Env1)
+    9                          =:         a,         0             (Env1)
