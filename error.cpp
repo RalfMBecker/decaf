@@ -60,7 +60,7 @@ void
 usageErr(std::string Name)
 {
     std::cerr << "Usage: " << Name << ": ";
-    std::cerr << "[-d] <file_Name.dec>\n";
+    std::cerr << "[-d] [-O 0] <file_Name.dec>\n";
     exit(EXIT_FAILURE);
 }
 

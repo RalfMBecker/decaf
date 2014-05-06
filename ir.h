@@ -23,19 +23,18 @@
 
 // forward declaration
 class Env;
+class SSA_Entry;
 
-// **TO DO: monitor if we still need an abstract base
-class IR_Line{
-public:
-    virtual void print(void) const = 0;
-};
-
+typedef std::map<int, SSA_Entry*> ir_Rep;
 // from ir.cpp
-extern std::map<int, IR_Line*> iR_List;
-void printIR_List(void);
-void insertLine(IR_Line*);
+extern ir_Rep iR_List;
+extern ir_Rep iR_List_2;
 
-class SSA_Entry: public IR_Line{
+void insertLine(SSA_Entry*, ir_Rep&, int Reset = 0);
+void printIR_List(ir_Rep const&);
+ir_Rep removeNOPs(ir_Rep const&);
+
+class SSA_Entry{
 public: 
 SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target, 
 	  std::string LHS, std::string RHS, std::string Frame)
@@ -92,6 +91,7 @@ SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target,
     }
 
     void addLabel(std::string Label) { labels_.push_back(Label); }
+    void replaceLabels(std::vector<std::string> Labels) { labels_ = Labels; }
 
     std::vector<std::string> Labels() const { return labels_; }
     token Op(void) const { return op_; }

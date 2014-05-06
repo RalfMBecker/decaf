@@ -144,8 +144,8 @@ private:
 	std::string RHS = V->RChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
     }
 
     void visit(CoercedExpr_AST* V)
@@ -176,7 +176,8 @@ private:
 	}
 	std::string Frame = V->getEnv()->getTableName();
 
-	insertLine(new SSA_Entry(labels, Op, target, LHS, to_Str, Frame));
+	SSA_Entry* line = new SSA_Entry(labels, Op, target,LHS, to_Str, Frame);;
+	insertLine(line, iR_List);
     }
 
     void visit(UnaryArithmExpr_AST* V)
@@ -197,7 +198,8 @@ private:
 	std::string LHS = V->LChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	insertLine(new SSA_Entry(labels, Op, target, LHS, "", Frame));
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	insertLine(line, iR_List);
     }
 
     // no address update needed, but kept among expression visitor types
@@ -221,8 +223,8 @@ private:
 	std::string LHS = V->RChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	insertLine(line, iR_List);
     }
 
     void visit(LogicalExpr_AST* V) { return; }
@@ -260,8 +262,8 @@ private:
 	std::string RHS = "";
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
 
 	doOr(V, cond_Res, cond_End);
 	active_Labels_.push_back(cond_End);
@@ -288,15 +290,15 @@ private:
 	std::string RHS = cond_First;
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
 
 	// jump over expr 2
 	Op = token(tok_goto);
 	target = cond_End;
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	insertLine(line, iR_List);
 
 	// handle expr2
 	needs_Label_ = 1;
@@ -315,7 +317,7 @@ private:
 	LHS = V->RChild()->Addr();
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	insertLine(line, iR_List);
 
 	if ( (dynamic_cast<OrExpr_AST*>(V->Parent())) )
 	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), cond_Res, cond_End);
@@ -350,8 +352,8 @@ private:
 	std::string RHS = "";
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS,frame_Str);
+	insertLine(line, iR_List);
 
 	doAnd(V, cond_Res, cond_End);
 	active_Labels_.push_back(cond_End);
@@ -378,15 +380,15 @@ private:
 	std::string RHS = cond_First;
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
 
 	// jump over expr 2
 	Op = token(tok_goto);
 	target = cond_End;
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	insertLine(line, iR_List);
 
 	// handle expr2
 	needs_Label_ = 1;
@@ -405,7 +407,7 @@ private:
 	LHS = V->RChild()->Addr();
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	insertLine(line, iR_List);
 
 	if ( (dynamic_cast<AndExpr_AST*>(V->Parent())) )
 	    doAnd(dynamic_cast<AndExpr_AST*>(V->Parent()), cond_Res, cond_End);
@@ -438,8 +440,8 @@ private:
 	std::string RHS = V->RChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
     }
 
     void visit(NotExpr_AST* V)
@@ -458,7 +460,8 @@ private:
 	std::string LHS = V->LChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	insertLine(new SSA_Entry(labels, Op, target, LHS, "", Frame));
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	insertLine(line, iR_List);
     }
 
     // Statements begin
@@ -477,8 +480,8 @@ private:
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, "", frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame_Str);
+	insertLine(line, iR_List);
     }
 
     void visit(Assign_AST* V)
@@ -495,8 +498,8 @@ private:
 	std::string LHS = V->RChild()->Addr();
 	std::string Frame = V->getEnv()->getTableName();
 
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	insertLine(line, iR_List);
     }
 
     void visit(IfType_AST* V) { return; }
@@ -517,8 +520,8 @@ private:
 	std::string RHS = if_Next_;
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
 	active_Labels_.clear();
 
 	// ** TO DO: make labels private/hand on instead?
@@ -535,7 +538,7 @@ private:
 	    target = if_Done_;
 	    LHS = RHS = "";
 	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	    insertLine(line);
+	    insertLine(line, iR_List);
 	}
 
 	if ( !(V->hasElse()) ){
@@ -619,8 +622,8 @@ private:
 	token Op = token(tok_iffalse);
 	std::string LHS = "goto";
 	std::string RHS = label_Out;
-	IR_Line* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
 
 	// handle statement
 	if ( (0 != V->RChild()) )
@@ -639,7 +642,7 @@ private:
 	target = label_Top;
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
-	insertLine(line);
+	insertLine(line, iR_List);
 
 	// If this is not followed by a statement, we would miss printing
 	// out remaining target labels. Take care of that.
@@ -650,8 +653,8 @@ private:
     void insertNOP(label_Vec const& Labels, std::string Env)
     {
 	token Op = token(tok_nop);
-	IR_Line* line = new SSA_Entry(Labels, Op, "", "", "", Env);
-	insertLine(line);
+	SSA_Entry* line = new SSA_Entry(Labels, Op, "", "", "", Env);
+	insertLine(line, iR_List);
     }
 
     std::string makeTmp(void)

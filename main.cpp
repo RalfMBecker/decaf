@@ -31,13 +31,15 @@ void usageErr(std::string);
 
 extern std::istream* input;
 extern int option_Debug;
+extern int option_optLevel;
 
 int
 main(int argc, char* argv[])
 {
     int opt;
+    char* pArg;
     std::string err = "unexpected error while processing command line options";
-    std::string opt_Str = ":d"; 
+    std::string opt_Str = ":dO:"; 
 
     while ( (-1 != (opt = getopt(argc, argv, opt_Str.c_str()))) ){
 	if ( ('?' == opt) || (':' == opt) ){
@@ -49,6 +51,13 @@ main(int argc, char* argv[])
 
 	switch(opt){
 	case 'd': option_Debug = 1; break;
+	case 'O': 
+	    pArg = optarg;
+	    if ( (0 == strcmp(pArg, "0")) )
+		option_optLevel = 1;
+	    else
+		errExit(0, "invalid optimization level %s", pArg);
+	    break;
 	default: 
 	    errExit(0, err.c_str());
 	    break;

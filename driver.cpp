@@ -20,6 +20,7 @@ extern int no_par_Errors;
 
 std::istream* input;
 int option_Debug = 0;
+int option_optLevel = 0; // 0 - remove NOPs
 
 void
 initFrontEnd(std::string Str)
@@ -64,8 +65,14 @@ startParse(void)
     if ( (0 != pFirst_Node) ){
 	printSTInfo();
 	pFirst_Node->accept(new MakeIR_Visitor);
-	printIR_List();
-    }
+
+	if ( !(option_optLevel) )	
+	    printIR_List(iR_List);
+	if ( (1 == option_optLevel) ){
+	    iR_List_2 = removeNOPs(iR_List);
+	    printIR_List(iR_List_2);
+	}
+   }
     else
 	std::cerr << "---no valid statements found---\n";
 }
