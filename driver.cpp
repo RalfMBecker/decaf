@@ -68,6 +68,7 @@ startParse(void)
 
 	if ( !(option_optLevel) )	
 	    printIR_List(iR_List);
+
 	if ( (1 == option_optLevel) ){
 	    iR_List_2 = removeNOPs(iR_List);
 	    printIR_List(iR_List_2);

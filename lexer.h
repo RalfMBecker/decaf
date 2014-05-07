@@ -20,7 +20,7 @@ enum tokenType{
     tok_doubleV = -24, tok_stringV = -25,
     // looping
     tok_for = -30, tok_while = -31, tok_if = -32, tok_else = -33, 
-    tok_break = -34,
+    tok_break = -34, tok_cont = -35,
     // i/o
     tok_Print = -40, tok_ReadInteger = -41, tok_ReadLine = -42,
     // classes
@@ -73,6 +73,7 @@ public:
 	case tok_if: lexeme_ = "if"; break;
 	case tok_else: lexeme_ = "else"; break;
 	case tok_break: lexeme_ = "break"; break;
+	case tok_cont: lexeme_ = "continue"; break;
 
 	case tok_class: lexeme_ = "class"; break;
 	case tok_interface: lexeme_ = "interface"; break;

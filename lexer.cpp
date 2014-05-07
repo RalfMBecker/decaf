@@ -98,6 +98,8 @@ checkReserved(std::string Str)
 	return token(tok_else);
     if ( ("break" == Str) )
 	return token(tok_break);
+    if ( ("continue" == Str) )
+	return token(tok_cont);
     // i/o
     if ( ("Print" == Str) )
 	return token(tok_Print);

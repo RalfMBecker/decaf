@@ -28,6 +28,7 @@ extern int errorIn_Progress;
 
 extern int option_Debug;
 int frame_Depth = 0; // track depth of scope nesting (used in error handling)
+int break_Enabled = 0;
 
 /***************************************
 *  Helper functions
@@ -758,6 +759,9 @@ parseForStmt(void)
     if ( (-1 == match(0, tok_for, 1)) )
 	errExit(0, "parseForStmt should be called pointing at tok_for");
 
+    // enable break and continue
+    break_Enabled++;
+
     // handle expr-list
     ExprList_AST* expr = parseParensExprList(tok_semi, 3);
     if (errorIn_Progress) return 0;
@@ -776,6 +780,9 @@ parseForStmt(void)
     if ( (tok_parclosed == next_Token.Tok()) )
 	endBlock_Marker = 1;
 
+    // restore break state
+    break_Enabled--;
+
     For_AST* pWhile = new For_AST(expr, LHS, endBlock_Marker);
     return pWhile;
 }
@@ -790,6 +797,9 @@ parseWhileStmt(void)
 
     if ( (-1 == match(0, tok_while, 1)) )
 	errExit(0, "parseWhileStmt should be called pointing at tok_while");
+
+    // enable break and continue
+    break_Enabled++;
 
     // handle expr
     Expr_AST* expr = parseParensExpr();
@@ -807,8 +817,47 @@ parseWhileStmt(void)
     if ( (tok_parclosed == next_Token.Tok()) )
 	endBlock_Marker = 1;
 
+    // restore break state
+    break_Enabled--;
+
     While_AST* pWhile = new While_AST(expr, LHS, endBlock_Marker);
     return pWhile;
+}
+
+Break_AST*
+parseBreakStmt(void)
+{
+    Break_AST* ret;
+    if ( (-1 == match(1, tok_semi, 0)) ){
+	punctError(';', 0);
+	errorIn_Progress = 1;
+	return ret = 0;
+    }
+    else
+	ret = new Break_AST();
+
+    getNextToken();
+    if (errorIn_Progress) ret = 0;
+
+    return ret;
+}
+
+Cont_AST*
+parseContStmt(void)
+{
+    Cont_AST* ret;
+    if ( (-1 == match(1, tok_semi, 0)) ){
+	punctError(';', 0);
+	errorIn_Progress = 1;
+	return ret = 0;
+    }
+    else
+	ret = new Cont_AST();
+
+    getNextToken();
+    if (errorIn_Progress) ret = 0;
+
+    return ret;
 }
 
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
@@ -840,6 +889,20 @@ parseStmt(void)
 	break;
     case tok_for:
 	ret = parseForStmt();
+	break;
+    case tok_break:
+	if ( !(break_Enabled) ){
+	    parseError(next_Token.Lex(), "illegal without enclosing for/while");
+	    break;
+	}
+	ret = parseBreakStmt();
+	break;
+    case tok_cont:
+	if ( !(break_Enabled) ){
+	    parseError(next_Token.Lex(), "illegal without enclosing for/while");
+	    break;
+	}
+	ret = parseContStmt();
 	break;
     case tok_if:
 	ret = parseIfType();

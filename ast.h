@@ -54,6 +54,8 @@ class IfType_AST;
 class If_AST;
 class Else_AST;
 class For_AST;
+class Break_AST;
+class Cont_AST;
 
 class AST_Visitor{
 public: 
@@ -85,6 +87,8 @@ public:
     virtual void visit(If_AST*) = 0;
     virtual void visit(Else_AST*) = 0;
     virtual void visit(For_AST*) = 0;
+    virtual void visit(Break_AST*) = 0;
+    virtual void visit(Cont_AST*) = 0;
 
     ~AST_Visitor();
 };
@@ -546,6 +550,28 @@ NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
 /***************************************
 * Non-logical or procedural statements
 ***************************************/
+class Break_AST: public Stmt_AST{
+public:
+Break_AST(void)
+    : Stmt_AST(0, 0)
+    {
+	if (option_Debug) std::cout<< "\tcreated a Break_AST\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+};
+
+class Cont_AST: public Stmt_AST{
+public:
+Cont_AST(void)
+    : Stmt_AST(0, 0)
+    {
+	if (option_Debug) std::cout<< "\tcreated a Cont_AST\n";
+    }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+};
+
 // ***To DO:  give array declarations their own class (?)***
 class VarDecl_AST: public Stmt_AST{
 public:

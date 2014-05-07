@@ -596,6 +596,9 @@ private:
 
 	std::string label_Top = makeLabel();
 	std::string label_Out = makeLabel();
+	std::string label_Iter;
+	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) )
+	    label_Iter = makeLabel(); 
 
 	// Dispatch condition expr - labels handled through active_Labels_
 	// Cond could be 0 (infinite loop), but we always need a label
@@ -626,13 +629,22 @@ private:
 	insertLine(line, iR_List);
 
 	// handle statement
+	std::string labelBreak_Old = label_Break_;
+	std::string labelCont_Old = label_Cont_;
+	label_Break_ = label_Out;
+	label_Cont_ = ( ("" == label_Iter) )?label_Top:label_Iter;
+
 	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
+
+	label_Break_ = labelBreak_Old;
+	label_Cont_ = labelCont_Old;
 
 	// Handle iteration expression - inner functions (if, for, while)
 	// emit their own NOP target if needed, so not here
 	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) ){
 		needs_Label_ = 1;
+		active_Labels_.push_back(label_Iter);
 		V->LChild()->RChild()->accept(this);
 	    }
 
@@ -648,6 +660,32 @@ private:
 	// out remaining target labels. Take care of that.
 	labels.push_back(label_Out);
 	insertNOP(labels, frame_Str);
+    }
+
+    // stmt -> break;
+    void visit(Break_AST* V)
+    {
+	// make goto SSA entry
+	label_Vec labels;
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+	token Op = token(tok_goto);
+	std::string target = label_Break_;
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, "", "", frame_Str);
+	insertLine(line, iR_List);
+    }
+
+    // stmt -> continue;
+    void visit(Cont_AST* V)
+    {
+	// make goto SSA entry
+	label_Vec labels;
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+	token Op = token(tok_goto);
+	std::string target = label_Cont_;
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, "", "", frame_Str);
+	insertLine(line, iR_List);
     }
 
     void insertNOP(label_Vec const& Labels, std::string Env)
@@ -690,6 +728,9 @@ static int count_Lab_;
 
 static std::string if_Next_;
 static std::string if_Done_;
+
+static std::string label_Break_;
+static std::string label_Cont_;
 
 static int needs_Label_; // In case a line needs a label, this triggers
                          // emission of a NOP in lines that otherwise don't

@@ -1,18 +1,28 @@
-Compiler for the Brown Decaf language. Note that the language appears to be modified frequently. This project is based on the specifications of a Stanford 2012 class. Some changes were made: 
+Compiler for the Brown Decaf language. Note that the language appears to be modified frequently. This project is based on the specifications of a Stanford 2012 class. Some changes were made (eventually, a full CFG grammar will be added):
 
-(1) visibility of declarations and definitions is C/C++-like - from the point of declaration,  
+(1) visibility of declarations and definitions is C/C++-like - from the point 
+    of declaration; use before declaration is error-checked,
 
-(2) basic types type coercion/conversion was added,  
+(2) type coercion/conversion: for basic types, as in C/C++,  
 
-(3) we short-circuit in the usual way,   
+(3) strings: debating copy semantics; syntax by and large as in C,   
 
-(4) debating copy semantics of strings,   
+(4) types: bool currently disallowed; octal integers legal; double must be
+           decimal,
 
-(5) type bool currently disallowed,  
+(5) arrays: C/C++ semantics; consciously not range-checked; can to be
+            placed on stack and heap,
+
+(6) assignment expressions: can be chained,
  
-(6) evaluation of logical expressions similar to C (this might mean similarly
-    undefined behavior; tbd)  
+(7) logical expressions: evaluation similar to C (this might mean similarly
+    undefined behavior; tbd),
 
-Eventually, the compiler will have multiple parse rounds, probably refining first the AST, and then the generated SSA-style IR, using a Visitor Pattern to manage at least AST parsing but probably also the DAG implied by the IR.
+(8) short-circuiting of ||/&&: in the usual C/C++/Java way,   
 
-When an IR can be produced for the entire CFG, and prior to AST/IR optimization rounds, we will add an x86 32b assembly interpreter as a backend (maybe only for a subset of the language).
+(9) for: all 3 expressions in expression list are optional (middle one too)
+
+Eventually, the compiler will have multiple parse rounds, on either the AST, or the generated SSA-style IR. Currently, the implemented optimization rounds are:
+-O 0: remove NOPs from IR.
+
+After a sufficiently large part of the language can be translated to an IR, we will add an x86 32b assembly interpreter as a backend (maybe only for a subset of the language).

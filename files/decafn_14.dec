@@ -1,0 +1,22 @@
+{
+    int a;
+
+    for (a = 1; a != 10; a = a + 1 ){
+	int b = 10;
+
+	while ( b>= 0){
+	    if (b == 5)
+		break;
+	    else if (b == 3)
+		continue;
+	    b = b -1;
+	}
+
+	if (a == 3)
+	    break;
+	else if (a == 5)
+	    continue;
+	else
+	    break;
+    }
+}
