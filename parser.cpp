@@ -660,13 +660,10 @@ parseIfStmt(int Type)
 
     // will only matter if dispatched 'stmt' was, in fact, a block
     int hasElse = 0;
-    int endBlock_Marker = 0;
     if ( (tok_else == next_Token.Tok()) )
 	hasElse = 1;
-    else if ( (tok_parclosed == next_Token.Tok()) )
-	endBlock_Marker = 1;
 
-    IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse, endBlock_Marker);
+    IfType_AST* pIf = new If_AST(expr, LHS, Type, hasElse);
     return pIf;
 }
 
@@ -699,6 +696,7 @@ dispatchStmt(void)
 
 IfType_AST* parseIfCtd(IfType_AST*); 
 
+// ** TO DO: meaningful error recovery for new If
 IfType_AST*
 parseIfType(void)
 {
@@ -720,6 +718,7 @@ parseIfCtd(IfType_AST* LHS)
 {
     if (option_Debug) std::cout << "entering parseIfCtd...\n";
 
+    IfType_AST* ret;
     if ( (-1 == match(0, tok_else, 1)) )
 	errExit(0, "parseIfCtd should be called pointing at tok_else");
     if (errorIn_Progress) return 0;
@@ -737,17 +736,16 @@ parseIfCtd(IfType_AST* LHS)
 	Block_AST* tmp = dispatchStmt();
 	if (errorIn_Progress) RHS = 0;
 	if ( !(errorIn_Progress) ){
-	    int endBlock_Marker = 0;
-	    if ( (tok_parclosed == next_Token.Tok()) )
-		endBlock_Marker = 1;
-	    RHS = new Else_AST(tmp, endBlock_Marker);
+	    RHS = new Else_AST(tmp);
+	    LHS->setNext(RHS);
 	}
     }
 
-    LHS = new IfType_AST(LHS, RHS);
-    return LHS;
+    ret = new IfType_AST(LHS, RHS);
+    if ( !(0 == RHS) && !dynamic_cast<Else_AST*>(RHS) )
+	LHS->setNext(dynamic_cast<IfType_AST*>(RHS->LChild()));
+    return ret;
 }
-
 
 // stmt -> for (expr-list) [ stmt | block ]?
 // invariant: - upon entry, points at tok_while

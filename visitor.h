@@ -266,7 +266,8 @@ private:
 	insertLine(line, iR_List);
 
 	doOr(V, cond_Res, cond_End);
-	active_Labels_.push_back(cond_End);
+	labels.push_back(cond_End);
+	insertNOP(labels, frame_Str);
 
 	if (option_Debug){
 	    std::cout << "\tleaving visitor or, and pushing ";
@@ -304,11 +305,6 @@ private:
 	needs_Label_ = 1;
 	active_Labels_.push_back(cond_First);
 	V->RChild()->accept(this);
-
-	// If we go from 'and' to 'or', or vice versa, cond_End of child
-	// needs printing in the calling procedure.
-	if ( dynamic_cast<AndExpr_AST*>(V->RChild()) )
-	    labels = active_Labels_;
 	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -356,7 +352,8 @@ private:
 	insertLine(line, iR_List);
 
 	doAnd(V, cond_Res, cond_End);
-	active_Labels_.push_back(cond_End);
+	labels.push_back(cond_End);
+	insertNOP(labels, frame_Str);
 
 	if (option_Debug){
 	    std::cout << "\tleaving visitor and, and pushing ";
@@ -394,11 +391,6 @@ private:
 	needs_Label_ = 1;
 	active_Labels_.push_back(cond_First);
 	V->RChild()->accept(this);
-
-	// If we go from 'and' to 'or', or vice versa, cond_End of child
-	// needs printing in the calling procedure.
-	if ( dynamic_cast<OrExpr_AST*>(V->RChild()) )
-	    labels = active_Labels_;
 	active_Labels_.clear();
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -504,77 +496,132 @@ private:
 
     void visit(IfType_AST* V) { return; }
 
+    // -- Handling similar to the case of || and && --
+    // Note that the sub-tree of an if [else if]* [else]? sequence looks
+    // as follows:
+    //                  IT
+    //              If      IT 
+    //                  ElIf   IT
+    //                      Elif End
+    // (Notation:
+    // IT == IfType_AST,
+    // End -> [else | epsilon], ElIf -> else if, If -> if)
+    // Visit will naturally start at leading if; guide it from there.
     void visit(If_AST* V)
     {
-	// Dispatch expr - labels handled through global active_Labels_
+	// ** TO DO: can we avoid active_Label handling?
+	// dispatch expr - labels handled through global active_Labels_
 	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
-	makeLabelsIf( !(V->isElseIf()) , V->hasElse());
-
-	// make iffalse SSA entry// ** TO DO: next line seems no longer needed
-	label_Vec labels = active_Labels_; // to catch exit points (eg, Or/And)
+	// make labels
+	std::string if_Next;
+	std::string if_Done;
+	if_Next = makeLabel();
+	if (V->hasElse())
+	    if_Done = makeLabel();
+	else
+	    if_Done = if_Next;
+ 
+	// make iffalse SSA entry
+	label_Vec labels;
 	token Op = token(tok_iffalse);
 	std::string target = V->LChild()->Addr();
 	std::string LHS = "goto";
-	std::string RHS = if_Next_;
+	std::string RHS = if_Next;
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
 	insertLine(line, iR_List);
-	active_Labels_.clear();
 
-	// ** TO DO: make labels private/hand on instead?
-	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
 	// make stmt (block) SSA entry (entries), if there is at least one
 	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
-	pLabels->Restore();
 
 	// make goto SSA entry
 	if (V->hasElse()){
-	    labels.clear();
 	    Op = token(tok_goto);
-	    target = if_Done_;
+	    target = if_Done;
 	    LHS = RHS = "";
 	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	    insertLine(line, iR_List);
 	}
 
-	if ( !(V->hasElse()) ){
-	    insertNOP(pLabels->getLabels(), frame_Str);
-	    if_Next_ = if_Done_ = "";
-	}
-	else{
-	    active_Labels_.push_back(if_Next_);
-	    if_Next_ = "";
-	}
+	// make target for iffalse (which is = if_Done, if nothing follows)
+	labels.push_back(if_Next);
+	insertNOP(labels, frame_Str);
 
-	delete pLabels;
+	if ( (V->hasElse()) ){
+	    if ( dynamic_cast<If_AST*>(V->Next()) )
+		doElseIf(dynamic_cast<If_AST*>(V->Next()), if_Done);
+	    else
+		doElse(dynamic_cast<Else_AST*>(V->Next()), if_Done);
+	}
+  
     }
 
-    // c. If_AST* visitor for logic
-    void visit(Else_AST* V)
+    void doElseIf(If_AST* V, std::string if_Done)
+    {
+//	// dispatch expr - labels handled through global active_Labels_
+//	needs_Label_ = 1;
+	// dispatch expr (no labels outside if-else is-else scope possible)
+	V->LChild()->accept(this);
+
+	// make labels
+	std::string if_Next;
+	if ( !(V->hasElse()) ) // terminating else if
+	    if_Next = if_Done;
+	else
+	    if_Next = makeLabel();
+ 
+	// make iffalse SSA entry
+	label_Vec labels;
+	token Op = token(tok_iffalse);
+	std::string target = V->LChild()->Addr();
+	std::string LHS = "goto";
+	std::string RHS = if_Next;
+	Env* pFrame = V->getEnv();
+	std::string frame_Str = pFrame->getTableName();
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	insertLine(line, iR_List);
+
+	// make stmt (block) SSA entry (entries), if there is at least one
+	if ( (0 != V->RChild()) )
+	    V->RChild()->accept(this);
+
+	// make goto SSA entry
+	if (V->hasElse()){
+	    Op = token(tok_goto);
+	    target = if_Done;
+	    LHS = RHS = "";
+	    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
+	    insertLine(line, iR_List);
+	}
+
+	// make target for iffalse (which is = if_Done, if nothing follows)
+	labels.push_back(if_Next);
+	insertNOP(labels, frame_Str);
+
+	if ( (V->hasElse()) ){
+	    if ( dynamic_cast<If_AST*>(V->Next()) )
+		doElseIf(dynamic_cast<If_AST*>(V->Next()), if_Done);
+	    else
+		doElse(dynamic_cast<Else_AST*>(V->Next()), if_Done);
+	}
+    }
+ 
+    void doElse(Else_AST* V, std::string if_Done)
     {
 	// make stmt (block) SSA entry (entries)
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
-	Label_State* pLabels = new Label_State(frame_Str, if_Next_, if_Done_);
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
-	pLabels->Restore(); 
 
-	// case distinction of 'if' obiously doesn't apply
-	insertNOP(pLabels->getLabels(), frame_Str);
-	delete pLabels;
-	if_Next_ = if_Done_ = "";
-    }
-
-    void makeLabelsIf(int Is_LeadingIf, int Has_Else)
-    {
-	if_Next_ = makeLabel();
-	if (Has_Else && Is_LeadingIf)
-	    if_Done_ = makeLabel();
+	// label final exit of (if - else if - else)
+	label_Vec labels; 
+	labels.push_back(if_Done);
+	insertNOP(labels, frame_Str);
     }
 
     // Expr-List:        e-list

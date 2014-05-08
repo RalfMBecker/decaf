@@ -52,7 +52,7 @@ class VarDecl_AST;
 class Assign_AST;
 class IfType_AST;
 class If_AST;
-class Else_AST;
+//class Else_AST;
 class For_AST;
 class Break_AST;
 class Cont_AST;
@@ -85,7 +85,7 @@ public:
     virtual void visit(Assign_AST*) = 0;
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
-    virtual void visit(Else_AST*) = 0;
+//    virtual void visit(Else_AST*) = 0;
     virtual void visit(For_AST*) = 0;
     virtual void visit(Break_AST*) = 0;
     virtual void visit(Cont_AST*) = 0;
@@ -632,17 +632,27 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 // an IfType_AST (which is a statement by inheritance) child.
 class IfType_AST: public Stmt_AST{
 public:
-    IfType_AST(Node_AST* LHS, Node_AST* RHS=0)
-	: Stmt_AST(LHS, RHS) {}
+IfType_AST(Node_AST* LHS, Node_AST* RHS=0, IfType_AST* PNext = 0)
+	: Stmt_AST(LHS, RHS) 
+    {
+	pNext_ = PNext; 
+	if (option_Debug) std::cout << "created an IfType...\n";
+    }
 
     ~IfType_AST() {}
+
+    virtual IfType_AST* Next(void) { return pNext_; }
+    virtual void setNext(IfType_AST* Next) { pNext_ = Next; }
+
+//    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+private:
+    IfType_AST* pNext_;
 };
 
 class If_AST: public IfType_AST{
 public:
-If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
-    : IfType_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse), 
-	endOf_Block_(EOB)
+If_AST(Expr_AST* Expr,Block_AST* Block,int ElseIf,int HasElse, IfType_AST* P=0)
+    : IfType_AST(Expr, Block, P), isElse_If_(ElseIf), has_Else_(HasElse)
     {
 	if (option_Debug){
 	    std::cout << "\tcreated If_AST, type ";
@@ -653,32 +663,25 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse, int EOB = 0)
 
     int isElseIf(void) const { return isElse_If_; }
     int hasElse(void) const { return has_Else_; }
-    int isEOB(void) const { return endOf_Block_; }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int isElse_If_;
     int has_Else_;
-    int endOf_Block_;
 };
 
 // We need an Else stmt object as a wrapper around the block (or stmt) 
 // the object actually embodies, for unified treatment in visitor
 class Else_AST: public IfType_AST{
 public:
-Else_AST(Block_AST* Block, int EOB = 0)
-    : IfType_AST(Block, 0), endOf_Block_(EOB)
+Else_AST(Block_AST* Block)
+    : IfType_AST(Block, 0)
     {
 	if (option_Debug) std::cout << "\tcreated Else_AST \n";
     }
 
-    int isEOB(void) const { return endOf_Block_; }
-
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
-private:
-    int endOf_Block_;
 };
 
 class For_AST: public Stmt_AST{
