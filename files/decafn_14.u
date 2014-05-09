@@ -1,0 +1,91 @@
+-----------------------------------------------
+code generated for ./files/decafn_14.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+b	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+Info for table Env3
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env4
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env6
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env7
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env8
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                          =:         a,         1             (Env1)
+    3             L1:         !=:        t1,         a,        10  (Env1)
+    4                    iffalse:        t1,      goto,        L2  (Env1)
+    5                        dec:         b,       int             (Env2)
+    6                          =:         b,        10             (Env2)
+    7             L4:         >=:        t2,         b,         0  (Env2)
+    8                    iffalse:        t2,      goto,        L5  (Env2)
+    9                         ==:        t3,         b,         5  (Env3)
+   10                    iffalse:        t3,      goto,        L6  (Env3)
+   11                       goto:        L5                        (Env4)
+   12                       goto:        L7                        (Env3)
+   13             L6:        nop:                                  (Env3)
+   14                         ==:        t4,         b,         3  (Env3)
+   15                    iffalse:        t4,      goto,        L7  (Env3)
+   16                       goto:        L4                        (Env5)
+   17             L7:        nop:                                  (Env3)
+   18                          -:        t5,         b,         1  (Env3)
+   19                          =:         b,        t5             (Env3)
+   20                       goto:        L4                        (Env2)
+   21             L5:        nop:                                  (Env2)
+   22                         ==:        t6,         a,         3  (Env2)
+   23                    iffalse:        t6,      goto,        L8  (Env2)
+   24                       goto:        L2                        (Env6)
+   25                       goto:        L9                        (Env2)
+   26             L8:        nop:                                  (Env2)
+   27                         ==:        t7,         a,         5  (Env2)
+   28                    iffalse:        t7,      goto,       L10  (Env2)
+   29                       goto:        L3                        (Env7)
+   30                       goto:        L9                        (Env2)
+   31            L10:        nop:                                  (Env2)
+   32                       goto:        L2                        (Env8)
+   33             L9:        nop:                                  (Env2)
+   34             L3:          +:        t8,         a,         1  (Env1)
+   35                          =:         a,        t8             (Env1)
+   36                       goto:        L1                        (Env1)
+   37             L2:        nop:                                  (Env1)

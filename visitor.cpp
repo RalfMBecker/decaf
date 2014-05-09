@@ -8,9 +8,6 @@
 int MakeIR_Visitor::count_Tmp_ = 0;
 int MakeIR_Visitor::count_Lab_ = 0;
 
-std::string MakeIR_Visitor::if_Next_ = "";
-std::string MakeIR_Visitor::if_Done_ = "";
-
 std::string MakeIR_Visitor::label_Break_ = "";
 std::string MakeIR_Visitor::label_Cont_ = "";
 

@@ -447,7 +447,7 @@ public:
 
     void visit(Assign_AST* V)
     {
-	// empty assignment? // ** TO DO: think about Labelling!
+	// empty assignment?
 	if ( (0 == V->RChild()) )
 	    return;
 
@@ -482,13 +482,9 @@ public:
     // IT == IfType_AST,
     // End -> [else | epsilon], ElIf -> else if, If -> if)
     // Visit will naturally start at leading if; guide it from there.
+    // Note: we walk to the bottom left through visitor IfType_AST.
     void visit(If_AST* V)
     {
-	// get to bottom left (only one step, actually)
-//	while ( (dynamic_cast<IfType_AST*>(V->LChild())) )
-//	    V = dynamic_cast<AndExpr_AST*>(V->LChild());
-
-	// ** TO DO: can we avoid active_Label handling?
 	// dispatch expr - labels handled through global active_Labels_
 	needs_Label_ = 1;
 	V->LChild()->accept(this);
@@ -530,7 +526,8 @@ public:
 	labels.push_back(if_Next);
 	insertNOP(labels, frame_Str);
 
-	if ( (V->hasElse()) ){
+	// O check for next object necessary in case of error recovery
+	if ( (V->hasElse()) && (0 != V->Parent()->RChild()) ){
 	    if ( dynamic_cast<If_AST*>(V->Parent()->RChild()) )
 		doElseIf(dynamic_cast<If_AST*>(V->Parent()->RChild()), if_Done);
 	    else
@@ -541,9 +538,7 @@ public:
 
     void doElseIf(If_AST* V, std::string if_Done)
     {
-//	// dispatch expr - labels handled through global active_Labels_
-//	needs_Label_ = 1;
-	// dispatch expr (no labels outside if-else is-else scope possible)
+	// dispatch expr (no labels outside {if- else if - else} scope possible)
 	V->LChild()->accept(this);
 
 	// make labels
@@ -582,13 +577,13 @@ public:
 	insertNOP(labels, frame_Str);
 
 	// walk across the tree as indicated in comment on top of If Visitor
+	// O check for next object necessary in case of error recovery
 	if ( (V->hasElse()) ){ // extra checks to process error cases
 	    if ( !(0 == V->Parent()->Parent()) && 
+		 (0 != V->Parent()->Parent()->RChild()) &&
 		 dynamic_cast<IfType_AST*>(V->Parent()->Parent()) ){
 		IfType_AST* pNextPar;
 		pNextPar = dynamic_cast<IfType_AST*>(V->Parent()->Parent());
-		if ( (0 == pNextPar->RChild()) )
-		    return; // a recovered error in parsing
 
 		IfType_AST* pNext;
 		pNext = dynamic_cast<IfType_AST*>(pNextPar->RChild());
@@ -633,7 +628,7 @@ public:
 
 	std::string label_Top = makeLabel();
 	std::string label_Out = makeLabel();
-	std::string label_Iter;
+	std::string label_Iter; // as target for possible continue stmt
 	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) )
 	    label_Iter = makeLabel(); 
 
@@ -641,7 +636,6 @@ public:
 	// Cond could be 0 (infinite loop), but we always need a label
 	active_Labels_.push_back(label_Top);
 	needs_Label_ = 1;
-
 	std::string target;
 	if ( (0 != V->LChild()) && (0!= V->LChild()->LChild()) && 
 	     (0 != V->LChild()->LChild()->RChild()) ){
@@ -684,17 +678,16 @@ public:
 		active_Labels_.push_back(label_Iter);
 		V->LChild()->RChild()->accept(this);
 	    }
+//	labels.clear();
 
-	// make goto SSA entry
-	labels.clear();
+	// make goto SSA entry (continuing loop)
 	Op = token(tok_goto);
 	target = label_Top;
 	LHS = RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line, iR_List);
 
-	// If this is not followed by a statement, we would miss printing
-	// out remaining target labels. Take care of that.
+	// handle target of jump out from within for logic
 	labels.push_back(label_Out);
 	insertNOP(labels, frame_Str);
     }
@@ -762,9 +755,6 @@ private:
 // **TO DO: for now and simplicity, make all private vars static
 static int count_Tmp_;
 static int count_Lab_;
-
-static std::string if_Next_;
-static std::string if_Done_;
 
 static std::string label_Break_;
 static std::string label_Cont_;

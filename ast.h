@@ -52,7 +52,6 @@ class VarDecl_AST;
 class Assign_AST;
 class IfType_AST;
 class If_AST;
-//class Else_AST;
 class For_AST;
 class Break_AST;
 class Cont_AST;
@@ -85,7 +84,6 @@ public:
     virtual void visit(Assign_AST*) = 0;
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
-//    virtual void visit(Else_AST*) = 0;
     virtual void visit(For_AST*) = 0;
     virtual void visit(Break_AST*) = 0;
     virtual void visit(Cont_AST*) = 0;
@@ -597,7 +595,6 @@ private:
     token type_;
 };
 
-// ***To DO:  give array declarations their own class (?)***
 class Assign_AST: public Stmt_AST{
 public:
 Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
@@ -630,38 +627,24 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
 //              if (expr) stmt
 // Using the below object, we can create a statement list, then wrap it into 
 // an IfType_AST (which is a statement by inheritance) child.
+// To see how it will be wrapped, compare the visitor of If_AST
 class IfType_AST: public Stmt_AST{
 public:
-IfType_AST(Node_AST* LHS, Node_AST* RHS=0, IfType_AST* PNext = 0)
+IfType_AST(Node_AST* LHS, Node_AST* RHS=0)
 	: Stmt_AST(LHS, RHS) 
     {
-	pNext_ = PNext; 
 	if (option_Debug) std::cout << "created an IfType...\n";
     }
 
     ~IfType_AST() {}
 
-/*
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) ) // walk to start of processing (see visitor)
-	    this->lChild_->accept(Visitor);
-    }
-*/
-  
-    virtual IfType_AST* Next(void) { return pNext_; }
-    virtual void setNext(IfType_AST* Next) { pNext_ = Next; }
-
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
-private:
-    IfType_AST* pNext_;
 };
 
 class If_AST: public IfType_AST{
 public:
-If_AST(Expr_AST* Expr,Block_AST* Block,int ElseIf,int HasElse, IfType_AST* P=0)
-    : IfType_AST(Expr, Block, P), isElse_If_(ElseIf), has_Else_(HasElse)
+If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse)
+    : IfType_AST(Expr, Block), isElse_If_(ElseIf), has_Else_(HasElse)
     {
 	if (option_Debug){
 	    std::cout << "\tcreated If_AST, type ";
@@ -695,27 +678,22 @@ Else_AST(Block_AST* Block)
 
 class For_AST: public Stmt_AST{
 public:
-For_AST(ExprList_AST* Expr, Block_AST* Block, int EOB = 0)
-    : Stmt_AST(Expr, Block), endOf_Block_(EOB)
+For_AST(ExprList_AST* Expr, Block_AST* Block)
+    : Stmt_AST(Expr, Block)
     {
 	if (option_Debug)
-	    std::cout << "\tcreated Iteration_AST\n";
+	    std::cout << "\tcreated a For_AST\n";
     }
 
     ~For_AST() {}
 
-    int isEOB(void) const { return endOf_Block_; }
-
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
-private:
-    int endOf_Block_;
 };
 
 class While_AST: public For_AST{
 public:
-While_AST(Expr_AST* Expr, Block_AST* Block, int EOB = 0)
-    : For_AST(new ExprList_AST(new ExprList_AST(0, Expr), 0), Block, EOB)
+While_AST(Expr_AST* Expr, Block_AST* Block)
+    : For_AST(new ExprList_AST(new ExprList_AST(0, Expr), 0), Block)
     {
 	if (option_Debug)
 	    std::cout << "\tcreated While_AST\n";

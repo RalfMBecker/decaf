@@ -696,7 +696,6 @@ dispatchStmt(void)
 
 IfType_AST* parseIfCtd(IfType_AST*); 
 
-// ** TO DO: meaningful error recovery for new If
 IfType_AST*
 parseIfType(void)
 {
@@ -770,15 +769,10 @@ parseForStmt(void)
     if (errorIn_Progress)
 	return 0;
 
-    // will only matter if dispatched 'stmt' was, in fact, a block
-    int endBlock_Marker = 0;
-    if ( (tok_parclosed == next_Token.Tok()) )
-	endBlock_Marker = 1;
-
     // restore break state
     break_Enabled--;
 
-    For_AST* pWhile = new For_AST(expr, LHS, endBlock_Marker);
+    For_AST* pWhile = new For_AST(expr, LHS);
     return pWhile;
 }
 
@@ -807,15 +801,10 @@ parseWhileStmt(void)
     if (errorIn_Progress)
 	return 0;
 
-    // will only matter if dispatched 'stmt' was, in fact, a block
-    int endBlock_Marker = 0;
-    if ( (tok_parclosed == next_Token.Tok()) )
-	endBlock_Marker = 1;
-
     // restore break state
     break_Enabled--;
 
-    While_AST* pWhile = new While_AST(expr, LHS, endBlock_Marker);
+    While_AST* pWhile = new While_AST(expr, LHS);
     return pWhile;
 }
 
@@ -924,7 +913,7 @@ parseStmt(void)
     }
 
     // cases to improve error handling in case of errors in nested if's
-    if (errorIn_Progress){ // **TO DO: check error recovery for while/for
+    if (errorIn_Progress){
 	if ( dynamic_cast<IfType_AST*>(ret) || dynamic_cast<For_AST*>(ret) 
 	     || dynamic_cast<While_AST*>(ret) )
 	    errorResetStmt();
