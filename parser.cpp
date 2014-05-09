@@ -718,7 +718,6 @@ parseIfCtd(IfType_AST* LHS)
 {
     if (option_Debug) std::cout << "entering parseIfCtd...\n";
 
-    IfType_AST* ret;
     if ( (-1 == match(0, tok_else, 1)) )
 	errExit(0, "parseIfCtd should be called pointing at tok_else");
     if (errorIn_Progress) return 0;
@@ -727,8 +726,9 @@ parseIfCtd(IfType_AST* LHS)
     if ( (tok_if == next_Token.Tok()) ){ // else if case
 	RHS = parseIfStmt(1);
 	if (errorIn_Progress) RHS = 0 ;
+	LHS = new IfType_AST(LHS, RHS);
 	if ( !(errorIn_Progress) && (tok_else == next_Token.Tok()) ){
-	    RHS = parseIfCtd(RHS);
+	    RHS = parseIfCtd(LHS);
 	    if (errorIn_Progress) RHS = 0;
 	}
     }
@@ -737,14 +737,11 @@ parseIfCtd(IfType_AST* LHS)
 	if (errorIn_Progress) RHS = 0;
 	if ( !(errorIn_Progress) ){
 	    RHS = new Else_AST(tmp);
-	    LHS->setNext(RHS);
+	    LHS = new IfType_AST(LHS, RHS);
 	}
     }
 
-    ret = new IfType_AST(LHS, RHS);
-    if ( !(0 == RHS) && !dynamic_cast<Else_AST*>(RHS) )
-	LHS->setNext(dynamic_cast<IfType_AST*>(RHS->LChild()));
-    return ret;
+    return LHS;
 }
 
 // stmt -> for (expr-list) [ stmt | block ]?

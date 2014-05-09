@@ -31,37 +31,6 @@ extern int option_Debug;
 
 class MakeIR_Visitor: public AST_Visitor{
 public:
-// For if visitor: when entering new scope in any context
-// that might modify labels, save state, then retrieve upon return
-class Label_State{
-public:
-Label_State(std::string Frame, std::string If_Next="", std::string If_Done="")
-    : frame_(Frame), ifNext_(If_Next), ifDone_(If_Done)
-    {
-	all_Labels_ = label_Vec();
-	if ( ("" != If_Next) ) all_Labels_.push_back(If_Next);
-	if ( ("" != If_Done) ) all_Labels_.push_back(If_Done);
-
-	MakeIR_Visitor::if_Next_ = "";
-	MakeIR_Visitor::if_Done_ = "";
-    }
-
-    label_Vec getLabels(void) const { return all_Labels_; }
-
-    void Restore(void) const
-    {
-	MakeIR_Visitor::if_Next_ = ifNext_;
-	MakeIR_Visitor::if_Done_ = ifDone_;
-    }
-
-private:
-    std::string frame_;
-    std::string ifNext_;
-    std::string ifDone_;
-
-    label_Vec all_Labels_;
-};
-
     // address-less objects
     void visit(Node_AST* V) { return; }
     void visit(Expr_AST* V){ return; }
@@ -494,21 +463,31 @@ private:
 	insertLine(line, iR_List);
     }
 
-    void visit(IfType_AST* V) { return; }
+    // walk down the tree (see visitor If_AST)
+    void visit(IfType_AST* V) 
+    {
+	while ( (dynamic_cast<IfType_AST*>(V->LChild())) )
+	    V = dynamic_cast<IfType_AST*>(V->LChild());
+	V->accept(this);
+    }
 
     // -- Handling similar to the case of || and && --
     // Note that the sub-tree of an if [else if]* [else]? sequence looks
     // as follows:
-    //                  IT
-    //              If      IT 
-    //                  ElIf   IT
-    //                      Elif End
+    //                      IT
+    //                   IT   End 
+    //                IT   ElIf
+    //              If  Elif
     // (Notation:
     // IT == IfType_AST,
     // End -> [else | epsilon], ElIf -> else if, If -> if)
     // Visit will naturally start at leading if; guide it from there.
     void visit(If_AST* V)
     {
+	// get to bottom left (only one step, actually)
+//	while ( (dynamic_cast<IfType_AST*>(V->LChild())) )
+//	    V = dynamic_cast<AndExpr_AST*>(V->LChild());
+
 	// ** TO DO: can we avoid active_Label handling?
 	// dispatch expr - labels handled through global active_Labels_
 	needs_Label_ = 1;
@@ -552,10 +531,10 @@ private:
 	insertNOP(labels, frame_Str);
 
 	if ( (V->hasElse()) ){
-	    if ( dynamic_cast<If_AST*>(V->Next()) )
-		doElseIf(dynamic_cast<If_AST*>(V->Next()), if_Done);
+	    if ( dynamic_cast<If_AST*>(V->Parent()->RChild()) )
+		doElseIf(dynamic_cast<If_AST*>(V->Parent()->RChild()), if_Done);
 	    else
-		doElse(dynamic_cast<Else_AST*>(V->Next()), if_Done);
+		doElse(dynamic_cast<Else_AST*>(V->Parent()->RChild()), if_Done);
 	}
   
     }
@@ -602,11 +581,22 @@ private:
 	labels.push_back(if_Next);
 	insertNOP(labels, frame_Str);
 
-	if ( (V->hasElse()) ){
-	    if ( dynamic_cast<If_AST*>(V->Next()) )
-		doElseIf(dynamic_cast<If_AST*>(V->Next()), if_Done);
-	    else
-		doElse(dynamic_cast<Else_AST*>(V->Next()), if_Done);
+	// walk across the tree as indicated in comment on top of If Visitor
+	if ( (V->hasElse()) ){ // extra checks to process error cases
+	    if ( !(0 == V->Parent()->Parent()) && 
+		 dynamic_cast<IfType_AST*>(V->Parent()->Parent()) ){
+		IfType_AST* pNextPar;
+		pNextPar = dynamic_cast<IfType_AST*>(V->Parent()->Parent());
+		if ( (0 == pNextPar->RChild()) )
+		    return; // a recovered error in parsing
+
+		IfType_AST* pNext;
+		pNext = dynamic_cast<IfType_AST*>(pNextPar->RChild());
+		if ( dynamic_cast<If_AST*>(pNext) )
+		    doElseIf(dynamic_cast<If_AST*>(pNext), if_Done);
+		else
+		    doElse(dynamic_cast<Else_AST*>(pNext), if_Done);
+	    }
 	}
     }
  

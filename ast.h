@@ -641,10 +641,19 @@ IfType_AST(Node_AST* LHS, Node_AST* RHS=0, IfType_AST* PNext = 0)
 
     ~IfType_AST() {}
 
+/*
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) ) // walk to start of processing (see visitor)
+	    this->lChild_->accept(Visitor);
+    }
+*/
+  
     virtual IfType_AST* Next(void) { return pNext_; }
     virtual void setNext(IfType_AST* Next) { pNext_ = Next; }
 
-//    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
     IfType_AST* pNext_;
 };
