@@ -728,13 +728,13 @@ parseIfCtd(IfType_AST* LHS)
 	if (errorIn_Progress) RHS = 0 ;
 	LHS = new IfType_AST(LHS, RHS);
 	if ( !(errorIn_Progress) && (tok_else == next_Token.Tok()) ){
-	    RHS = parseIfCtd(LHS);
+	    LHS = parseIfCtd(LHS);
 	    if (errorIn_Progress) RHS = 0;
 	}
     }
     else{ // terminating else
 	Block_AST* tmp = dispatchStmt();
-	if (errorIn_Progress) RHS = 0;
+	if (errorIn_Progress) LHS = 0;
 	if ( !(errorIn_Progress) ){
 	    RHS = new Else_AST(tmp);
 	    LHS = new IfType_AST(LHS, RHS);
