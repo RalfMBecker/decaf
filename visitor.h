@@ -678,7 +678,6 @@ public:
 		active_Labels_.push_back(label_Iter);
 		V->LChild()->RChild()->accept(this);
 	    }
-//	labels.clear();
 
 	// make goto SSA entry (continuing loop)
 	Op = token(tok_goto);
