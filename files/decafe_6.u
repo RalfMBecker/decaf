@@ -1,13 +1,15 @@
 -----------------------------------------------
 code generated for ./files/decafe_6.dec
 -----------------------------------------------
-Warning near 4:2: unused expression
+Error near 4:6: Syntax error (break) - illegal without enclosing for/while
+Warning near 4:7: unused expression
+Error near 5:8: Syntax error (else) - else without leading if
 Error near 6:9: Syntax error - missing token ())
 Warning near 7:6: unused expression
 Error near 8:8: Syntax error (else) - else without leading if
 Error near 14:5: Syntax error (else) - '=' or ';' expected
 
-found 3 syntactic/semantic errors
+found 5 syntactic/semantic errors
 
 Info for table Env1
 ---------------------------------------------------
@@ -52,9 +54,9 @@ Memory allocation - stack: 0
     1                        dec:         a,       int             (Env1)
     2                          >:        t1,         a,         0  (Env1)
     3                    iffalse:        t1,      goto,        L1  (Env1)
-    4                        nop:                                      ()
-    5                       goto:        L2                        (Env1)
-    6             L1:        nop:                                  (Env1)
+    4             L1:        nop:                                  (Env1)
+    5                        nop:                                      ()
+    6                        nop:                                  (Env1)
     7                    iffalse:         a,      goto,        L2  (Env1)
     8             L2:        nop:                                  (Env1)
     9                        nop:                                      ()

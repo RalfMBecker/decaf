@@ -98,7 +98,7 @@ public:
 // to parent in any child
 class Node_AST{
 public:
-Node_AST(Node_AST* lC=0, Node_AST* rC=0)
+Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
     : parent_(0), lChild_(lC), rChild_(rC), line_(line_No), col_(col_No),
 	addr_(""), env_(top_Env)
     {
@@ -204,36 +204,15 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
     }
 };
 
-/***************************************
-* Expression parent class
-***************************************/
-class ExprList_AST: public Node_AST{
-public:
-ExprList_AST(Node_AST* LHS, Node_AST* RHS)
-    : Node_AST(LHS, RHS)
-    {
-	if (option_Debug) std::cout << "\tcreated an ExprList...\n";
-    }
-
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
-};
-
+/************************************************
+* Expression parent class & lists of expressions
+************************************************/
 // Arithmetic, logical, basic, and access (array) types
-// Natural child of both Stmt_AST and ExprList_AST. However, multiple
-// inheritance would not be logical; so we choose one, and deal with
-// ugly casts if we need parenthood to the other (only once).
-class Expr_AST: public ExprList_AST{
+class Expr_AST: public Stmt_AST{
 public:
 Expr_AST(token Type=token(), token OpTor=token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
-    : ExprList_AST(lc, rc), type_(Type), op_(OpTor)
+    : Stmt_AST(lc, rc), type_(Type), op_(OpTor)
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -287,6 +266,31 @@ protected:
     token op_;   // (tok_plus, "+")
     int typeW_;
     int typeP_;
+};
+
+class IterExprList_AST: public Node_AST{
+public:
+IterExprList_AST(Expr_AST* E1 = 0, Expr_AST* E2 = 0, Expr_AST* E3 = 0) 
+    : Node_AST(), init_(E1), cond_(E2), iter_(E3)
+    {
+	if (option_Debug) std::cout << "\tcreated an iterExprList...\n";
+    }
+
+    ~IterExprList_AST()
+    {
+	if ( (0 != init_) ) delete init_;
+	if ( (0 != cond_) ) delete cond_;
+	if ( (0 != iter_) ) delete iter_;
+    }
+
+    Expr_AST* Init(void) const { return init_; }
+    Expr_AST* Cond(void) const { return cond_; }
+    Expr_AST* Iter(void) const { return iter_; }
+
+private:
+    Expr_AST* init_;
+    Expr_AST* cond_;
+    Expr_AST* iter_;
 };
 
 /***************************************
@@ -678,7 +682,7 @@ Else_AST(Block_AST* Block)
 
 class For_AST: public Stmt_AST{
 public:
-For_AST(ExprList_AST* Expr, Block_AST* Block)
+For_AST(IterExprList_AST* Expr, Block_AST* Block)
     : Stmt_AST(Expr, Block)
     {
 	if (option_Debug)
@@ -692,8 +696,8 @@ For_AST(ExprList_AST* Expr, Block_AST* Block)
 
 class While_AST: public For_AST{
 public:
-While_AST(Expr_AST* Expr, Block_AST* Block)
-    : For_AST(new ExprList_AST(new ExprList_AST(0, Expr), 0), Block)
+While_AST(IterExprList_AST* Expr, Block_AST* Block)
+    : For_AST(Expr, Block)
     {
 	if (option_Debug)
 	    std::cout << "\tcreated While_AST\n";

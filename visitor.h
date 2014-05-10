@@ -9,8 +9,11 @@
 *             in || and && objects; and to a lesser extent in if -
 *             else if - else tropes.
 *
-* Errors: When visitor operates, handed on code should be error-free
-*         (any errors handled in parsing).
+* Errors: 
+* Compile-time: when visitor operates, handed on code should be 
+*               compile-time error-free (handled in parsing).
+* Run-time: handled here. Currently:
+*                         - array bounds
 *
 ********************************************************************/
 
@@ -609,27 +612,26 @@ public:
 	insertNOP(labels, frame_Str);
     }
 
-    // Expr-List:        e-list
-    //               e-list   iter
-    //            init   cond
-    // (for while: e-list(0, cond)
+    // Expr-List: (Init, Cond, Iter)
+    // (while: (0, cond, 0) )
     void visit(For_AST* V)
     {
-	// establish frame for for scope
+	// establish frame for for scope, and get expr-list ready
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
+	// expr below could be zero in error case
+	IterExprList_AST* expr = dynamic_cast<IterExprList_AST*>(V->LChild()); 
 
 	// handle initialization expression
-	if ( (0 != V->LChild()) && (0!= V->LChild()->LChild()) &&
-	     (0 != V->LChild()->LChild()->LChild()) ){
-		    needs_Label_ = 1;
-		    V->LChild()->LChild()->LChild()->accept(this);
-		}
+	if ( (0 != expr) && (0 != expr->Init()) ){
+	    needs_Label_ = 1;
+	    expr->Init()->accept(this);
+	}
 
 	std::string label_Top = makeLabel();
 	std::string label_Out = makeLabel();
 	std::string label_Iter; // as target for possible continue stmt
-	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) )
+	if ( (0 != expr) && (0!= expr->Iter()) )
 	    label_Iter = makeLabel(); 
 
 	// Dispatch condition expr - labels handled through active_Labels_
@@ -637,19 +639,18 @@ public:
 	active_Labels_.push_back(label_Top);
 	needs_Label_ = 1;
 	std::string target;
-	if ( (0 != V->LChild()) && (0!= V->LChild()->LChild()) && 
-	     (0 != V->LChild()->LChild()->RChild()) ){
-		    V->LChild()->LChild()->RChild()->accept(this);
-		    if ( ("" == V->LChild()->LChild()->RChild()->Addr()) )
-			target = "1";
-		    else
-			target = V->LChild()->LChild()->RChild()->Addr();
-		}
+	if ( (0 != expr) && (0 != expr->Cond()) ){
+	    expr->Cond()->accept(this);
+	    if ( ("" == expr->Cond()->Addr()) )
+		target = "1";
+	    else
+		target = expr->Cond()->Addr();
+	}
 	else{
 	    insertNOP(active_Labels_, frame_Str);
-	    target = "1"; // dummy for forever loop - in case
+	    target = "1"; // dummy for forever loop if no cond
 	}
-	active_Labels_.clear(); 
+	active_Labels_.clear();
 
 	// make iffalse SSA entry
 	label_Vec labels;
@@ -673,11 +674,12 @@ public:
 
 	// Handle iteration expression - inner functions (if, for, while)
 	// emit their own NOP target if needed, so not here
-	if ( (0 != V->LChild()) && (0!= V->LChild()->RChild()) ){
-		needs_Label_ = 1;
-		active_Labels_.push_back(label_Iter);
-		V->LChild()->RChild()->accept(this);
-	    }
+	if ( (0 != expr) && (0 != expr->Iter()) ){
+	    needs_Label_ = 1;
+	    active_Labels_.push_back(label_Iter);
+	    expr->Iter()->accept(this);
+	    active_Labels_.clear();
+	}
 
 	// make goto SSA entry (continuing loop)
 	Op = token(tok_goto);
@@ -751,7 +753,6 @@ public:
     }
 
 private:
-// **TO DO: for now and simplicity, make all private vars static
 static int count_Tmp_;
 static int count_Lab_;
 

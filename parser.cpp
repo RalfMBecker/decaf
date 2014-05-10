@@ -437,83 +437,46 @@ parsePrimaryExpr(void)
     return 0;
 }
 
-
-// Splitting the function into two parts allows to process after 
-// discovering a ';' in place of an expression (empty expression). 
-ExprList_AST*
-parseExprListCtd(ExprList_AST* LHS, tokenType Sep, int Number)
+// List of the (init; cond; res) tuple of args to a For_AST
+IterExprList_AST*
+parseIterExprList(void)
 {
-    if (option_Debug) std::cout << "parsing an ExprListCtd...\n";
-
-    Expr_AST* RHS = 0;
-    std::string err_Msg = "unexpected token while processing expression list";
-    while ( (0 <= --Number) && (Sep == next_Token.Tok()) ){
-	getNextToken();
-	if (errorIn_Progress) return 0;
-	if ( (tok_rdclosed == next_Token.Tok()) ){ // empty expression last
-	    if ( (0 == Number) ){
-		    LHS = new ExprList_AST(LHS, 0);
-		    return LHS;
-		    break;
-	    }
-	    else{
-		parseError(next_Token.Lex(), err_Msg);
-		errorIn_Progress = 1;
-		return 0;
-	    }
-	}	
-
-	RHS = dispatchExpr();
-	if ( (0 == RHS) && !(errorIn_Progress) ) // comes back as NOP; we
-	    RHS = 0; // really want 0 though for 'for'
-	if (errorIn_Progress) return 0;
-	LHS = new ExprList_AST(LHS, RHS);
-    }
-
-    return LHS;
-}
-
-// Sep: (1) ';', (2) ',' - (2) still to be integrated. 
-// Number: how many to read in? If not limited, choose 'high enough'
-ExprList_AST*
-parseExprList(tokenType Sep, int Number)
-{
-    if (option_Debug) std::cout << "parsing an ExprList...\n";
-
-    ExprList_AST* ret;
-    Expr_AST* LHS = dispatchExpr();
-    if ( (0 == LHS) && !(errorIn_Progress) )
-	LHS = 0; // see parseExprListCtd()
-
-    if (errorIn_Progress) return 0;
-    tokenType t = next_Token.Tok();
-    if ( (0 >= --Number) || (Sep != t) || (tok_rdclosed == t) )
-	return new ExprList_AST(LHS, 0);
-    ret = parseExprListCtd(LHS, Sep, Number);
-    if (errorIn_Progress) return 0;
-
-    return ret;
-}
-
-// (expr-list) -> expr-list
-ExprList_AST*
-parseParensExprList(tokenType Sep, int Number)
-{
-    if (option_Debug) std::cout << "parsing a ParensExprList...\n";
+    if (option_Debug) std::cout << "parsing an IterExprList...\n";
 
     if ( (-1 == match(0, tok_rdopen, 1)) )
-	errExit(0, "invalid call of function parseParensExprList()");
+	errExit(0, "invalid call of function parseIterExprList()");
+    std::string err_Msg = "unexpected token while processing expression list";
 
-    ExprList_AST* E = parseExprList(Sep, Number);
+    Expr_AST* e1 = dispatchExpr();
+    if (errorIn_Progress) return 0;
+    if ( (-1 == match(0, tok_semi, 1)) ){
+	parseError(next_Token.Lex(), err_Msg);
+	errorIn_Progress = 1;
+	return 0;
+    }
+
+    Expr_AST* e2 = dispatchExpr();
+    if (errorIn_Progress) return 0;
+    if ( (-1 == match(0, tok_semi, 1)) ){
+	parseError(next_Token.Lex(), err_Msg);
+	errorIn_Progress = 1;
+	return 0;
+    }
+
+    Expr_AST* e3;
+    if ( (tok_rdclosed == next_Token.Tok()) )
+	e3 = 0;
+    else
+	e3 = dispatchExpr();
     if (errorIn_Progress) return 0;
 
     if ( (-1 == match(0, tok_rdclosed, 1)) ){
 	punctError(')', 0);
 	errorIn_Progress = 1;
+	return 0;
     }
-    if (errorIn_Progress) return 0;
 
-    return E;
+    return new IterExprList_AST(e1, e2, e3);
 }
 
 /*********************************
@@ -568,7 +531,8 @@ parseVarDecl(token Type)
 	next_Token = op_Token;
 	break;
     default: 
-	parseError(next_Token.Lex(), "exptected \'=\' or \';\' instead");
+	std::string e_M2 = "expected \'=\', \';\', or \'[\' instead";	
+	parseError(next_Token.Lex(), e_M2);
 	errorIn_Progress = 1;
 	return 0;
     }
@@ -757,11 +721,10 @@ parseForStmt(void)
     break_Enabled++;
 
     // handle expr-list
-    ExprList_AST* expr = parseParensExprList(tok_semi, 3);
+    IterExprList_AST* expr = parseIterExprList();
     if (errorIn_Progress) return 0;
-    if ( ( 0 != expr) && ( 0 != expr->LChild()) && 
-	 (0 != expr->LChild()->RChild()) )
-	if ( dynamic_cast<AssignExpr_AST*>(expr->LChild()->RChild()) )
+    if ( ( 0 != expr) && ( 0 != expr->Cond() ) ) 
+	if ( dynamic_cast<AssignExpr_AST*>(expr->Cond()) )
 	    parseWarning("", "'=' in for-conditional - did you mean '=='?");
 
     // handle [ stmt | block ]
@@ -795,6 +758,7 @@ parseWhileStmt(void)
     if (errorIn_Progress) return 0;
     if ( dynamic_cast<AssignExpr_AST*>(expr) )
 	parseWarning("", "'=' in while-conditional - did you mean '=='?");
+    IterExprList_AST* expr_List = new IterExprList_AST(0, expr, 0);
 
     // handle [ stmt | block ]
     Block_AST* LHS = dispatchStmt();
@@ -804,7 +768,7 @@ parseWhileStmt(void)
     // restore break state
     break_Enabled--;
 
-    While_AST* pWhile = new While_AST(expr, LHS);
+    While_AST* pWhile = new While_AST(expr_List, LHS);
     return pWhile;
 }
 
@@ -877,6 +841,9 @@ parseStmt(void)
     case tok_break:
 	if ( !(break_Enabled) ){
 	    parseError(next_Token.Lex(), "illegal without enclosing for/while");
+	    getNextToken();
+//	    errorIn_Progress = 1; // to allow recovery from else followed by if
+	    ret = 0;
 	    break;
 	}
 	ret = parseBreakStmt();
@@ -884,6 +851,9 @@ parseStmt(void)
     case tok_cont:
 	if ( !(break_Enabled) ){
 	    parseError(next_Token.Lex(), "illegal without enclosing for/while");
+	    getNextToken();
+//	    errorIn_Progress = 1; // see comment above
+	    ret = 0;
 	    break;
 	}
 	ret = parseContStmt();
@@ -895,7 +865,7 @@ parseStmt(void)
     case tok_else:
 	parseError(next_Token.Lex(), "else without leading if");
 	getNextToken();
-//	errorIn_Progress = 1; // to allow recovery from else followed by if 
+//	errorIn_Progress = 1; // see comment above 
 	ret = 0;
 	break;
     default: // assume empty expression
@@ -906,16 +876,13 @@ parseStmt(void)
 	    punctError(';', 0);
 	    break;
 	}
-	ret = reinterpret_cast<Stmt_AST*>(new NOP_AST()); // ugly, unclean
-	// cast: nop inherits naturally from expr; and expr is both
-	// an expr-list, and a stmt - was made to inherit from expr-list
+	ret = new NOP_AST();
 	break;
     }
 
     // cases to improve error handling in case of errors in nested if's
     if (errorIn_Progress){
-	if ( dynamic_cast<IfType_AST*>(ret) || dynamic_cast<For_AST*>(ret) 
-	     || dynamic_cast<While_AST*>(ret) )
+	if ( dynamic_cast<IfType_AST*>(ret) )
 	    errorResetStmt();
 	else
 	    return errorResetStmt();
