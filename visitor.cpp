@@ -8,6 +8,9 @@
 int MakeIR_Visitor::count_Tmp_ = 0;
 int MakeIR_Visitor::count_Lab_ = 0;
 
+std::vector<std::string> MakeIR_Visitor::runtime_StackAdj_ =
+    std::vector<std::string>();
+
 std::string MakeIR_Visitor::label_Break_ = "";
 std::string MakeIR_Visitor::label_Cont_ = "";
 

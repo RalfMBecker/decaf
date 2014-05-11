@@ -115,13 +115,15 @@ parseIdExpr(std::string Name)
 {
     if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
 
-    // TO DO: once we also catch arrays/fcts, might need change
+    // TO DO: once we also catch fcts, might need change
     Expr_AST* pId;
-    if ( (0 == (pId = findNameInHierarchy(top_Env, Name))) ){
+    VarDecl_AST* pVD;
+    if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
 	varAccessError(next_Token.Lex(), 0);
 	errorIn_Progress = 1;
 	return 0;
     }
+    pId = pVD->Expr();
 
     if ( (0 == match(1, tok_rdopen, 0)) ){
 	if (errorIn_Progress) return 0;
@@ -554,7 +556,7 @@ parseVarDecl(token Type)
     // access error (allow for shadowing)
     if ( (tok_ID != next_Token.Tok()) )
 	errExit(0, "parseVarDecl should be called pointing at tok_id");
-    Env* prior_Env = findFrameInHierarchy(top_Env, next_Token.Lex());
+    Env* prior_Env = findVarFrame(top_Env, next_Token.Lex());
     if ( (prior_Env == top_Env) ){
 	varAccessError(next_Token.Lex(), 1);
 	errorIn_Progress = 1;
@@ -564,11 +566,11 @@ parseVarDecl(token Type)
     IdExpr_AST* new_Id;
     new_Id = new IdExpr_AST(Type, next_Token);
     token t_Id = next_Token; // to reset after '='
-    token t_Table = getNextToken(); 
+    getNextToken(); 
     if (errorIn_Progress) return 0;
 
     VarDecl_AST* ret;
-    switch(t_Table.Tok()){
+    switch(next_Token.Tok()){
     case tok_semi: // we are done - declaration only
 	ret = new VarDecl_AST(new_Id);
 	getNextToken();
@@ -591,19 +593,11 @@ parseVarDecl(token Type)
 	return 0;
     }
 
-    // insert what can definitely be inserted at run-time (c. (*))
-    int is_Basic = (tok_semi == t_Table.Tok()) || (tok_eq == t_Table.Tok());  
-    int isCt_Array = (tok_sqopen == t_Table.Tok()) && 
-	( (dynamic_cast<ArrayVarDecl_AST*>(ret)->allInts()) ); 
-    if ( is_Basic || isCt_Array ){
-	int err_Code;
-	const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
-	if ( (0!= (err_Code = addVarDeclToEnv(top_Env, ret, "stack"))) )
-	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
-    }
-    else{
-	; // ** TO DO: insert rt-style array into Env
-    }
+    // record in compile-time ST (rt-allocated arrays with 0 width)
+    int err_Code;
+    const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
+    if ( (0!= (err_Code = addVarDeclToEnv(top_Env, ret, "stack"))) )
+	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 
     return ret;
 }

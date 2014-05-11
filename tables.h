@@ -40,22 +40,24 @@ extern Env* top_Env;
 
 Env* makeEnvRootTop(void);
 Env* addEnv(Env*);
-int addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Object, std::string MemType);
-Expr_AST* findIdInHierarchy(Env* p, IdExpr_AST* Id);
-Expr_AST* findNameInHierarchy(Env* p, std::string Name);
-Env* findFrameInHierarchy(Env* p, std::string Name);
 void printEnvAncestorInfo(Env*);
+
+// ct basic type & arrays of basic type management
+int addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Object, std::string MemType);
+VarDecl_AST* findVarByIdId(Env* p, IdExpr_AST* Id);
+VarDecl_AST* findVarByName(Env* p, std::string Name);
+Env* findVarFrame(Env* p, std::string Name);
 
 // runtime globals
 class Symbol_Table;
 extern std::map<std::string, Symbol_Table> ST;
 void printSTInfo(void);
 
+// Table for: basic types; arrays of basic types
 // Compile-time object, part of a linked list of (ct) Symbol Tables, each
 // a (name, <basic type>/class) pair
 // Handling 'name' here isn't the most logical, but will do (name=table name).
 // Name is needed to maintain the run-time version of the STs.
-// ****TO DO (track): can type_ instead use a IdExpr_AST* second object?*****
 class Env{
 public:
     Env(Env* P = 0)
@@ -68,7 +70,7 @@ public:
 
     Env* getPrior(void) const { return prior_; }
     std::string getTableName(void) const { return name_; }
-    std::map<std::string, Expr_AST*> getType(void) const { return type_; } 
+    std::map<std::string, VarDecl_AST*> getType(void) const { return type_; } 
 
     int findName(std::string entry_Name)
     {
@@ -78,14 +80,14 @@ public:
 	    return 0;
     }
 
-    Env& insertName(std::string new_Name, Expr_AST* t)
+    Env& insertName(std::string new_Name, VarDecl_AST* t)
     {
 	if ( (-1 == findName(new_Name)) )
 	    type_[new_Name] = t;
 	return *this;
     }
 
-    Expr_AST* readName(std::string search_Name)
+    VarDecl_AST* readName(std::string search_Name)
     {
 	if ( (-1 == findName(search_Name)) )
 	    return 0;
@@ -97,7 +99,7 @@ private:
     static int count_;
     std::string name_;
     Env* prior_;
-    std::map<std::string, Expr_AST*> type_;
+    std::map<std::string, VarDecl_AST*> type_;
 };
 
 // Run-time symbol table information

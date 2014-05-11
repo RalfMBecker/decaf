@@ -448,6 +448,12 @@ public:
 	insertLine(line, iR_List);
     }
 
+//    void visit(ArrayVarDecl_AST* V)
+    //  {
+
+
+
+
     void visit(Assign_AST* V)
     {
 	// empty assignment?
@@ -740,6 +746,31 @@ public:
 	return tmp_Stream.str();
     }
 
+    // helper functions for run-time stack growth/shrinking
+    void shrinkStackVec(std::string Env, std::vector<std::string> V)
+    {
+	label_Vec labels;
+	token Op(tok_st_less);
+	SSA_Entry* line;
+
+	std::vector<std::string>::const_iterator iter;
+	for ( iter = V.begin(); iter != V.end(); iter++ ){
+	    line = new SSA_Entry(labels, Op, *iter, "", "", Env);
+	    insertLine(line, iR_List);
+	}
+    }
+
+    // typically extended item by item (but shrunk by the sum of these
+    // extensions; see prior helper function)
+    void growStack(std::string Env, std::string Name)
+    {
+	label_Vec labels;
+	token Op(tok_st_more);
+	SSA_Entry* line;
+	line = new SSA_Entry(labels, Op, Name, "", "", Env);
+	insertLine(line, iR_List);
+    }
+
     // debugging function
     void printLabels(label_Vec labels)
     {
@@ -755,6 +786,8 @@ public:
 private:
 static int count_Tmp_;
 static int count_Lab_;
+
+static std::vector<std::string> runtime_StackAdj_; // for variable length arrays
 
 static std::string label_Break_;
 static std::string label_Cont_;

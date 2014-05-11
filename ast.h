@@ -580,7 +580,7 @@ class VarDecl_AST: public Stmt_AST{
 public:
 VarDecl_AST(IdExpr_AST* Id)
     : Stmt_AST(Id, 0), name_( (Id->Op()).Lex() ), type_(Id->Type()), 
-	width_(Id->TypeW())
+	width_(Id->TypeW()), expr_(Id)
     {
 	setAddr(Id->Op().Lex());
 	if (option_Debug)
@@ -592,6 +592,7 @@ VarDecl_AST(IdExpr_AST* Id)
     std::string Name(void) const { return name_; }
     token Type(void) const { return type_; }
     int Width(void) const { return width_; }
+    IdExpr_AST* Expr(void) const { return expr_; }
 
     virtual void forceWidth(int W) { width_ = W; }
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -600,6 +601,7 @@ private:
     std::string name_; // all vars for easier access only
     token type_;
     int width_;
+    IdExpr_AST* expr_; // to avoid some casts
 };
 
 // Bounds: integer expressions allowed -
@@ -616,16 +618,15 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
 	std::vector<Expr_AST*>::const_iterator iter;
 
 	for ( iter = D->begin(); iter != D->end(); iter++){
-	    if ( (tok_intV == ((*iter)->Type()).Tok() ) ) 
+	    if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
 		all_IntVals_ = 0;
 	}	
 	// allocate at compile-time, when possible
 	if (all_IntVals_){
 	    int width = Name->TypeW();
-	    for ( iter = D->begin(); iter != D->end(); iter++){
-		width += atoi ( ((*iter)->Type()).Lex().c_str() );
-		this->forceWidth(width);
-	    }
+	    for ( iter = D->begin(); iter != D->end(); iter++)
+		width *= atoi ( ((*iter)->Op()).Lex().c_str() );
+	    this->forceWidth(width);
 	}
 	else // create marker that we need run-time stack adjustment
 	    this->forceWidth(0);
