@@ -66,11 +66,15 @@ public:
 	std::stringstream tmp;
 	tmp << "Env" << ++count_;
 	name_ = tmp.str();
+	runtime_StackAdj_ = std::vector<std::string>();
     }
 
     Env* getPrior(void) const { return prior_; }
     std::string getTableName(void) const { return name_; }
     std::map<std::string, VarDecl_AST*> getType(void) const { return type_; } 
+
+    void addAdj(std::string New_Adj) { runtime_StackAdj_.push_back(New_Adj); }
+    std::vector<std::string> getAdj(void) const { return runtime_StackAdj_; }
 
     int findName(std::string entry_Name)
     {
@@ -100,6 +104,8 @@ private:
     std::string name_;
     Env* prior_;
     std::map<std::string, VarDecl_AST*> type_;
+    std::vector<std::string> runtime_StackAdj_; // for variable length arrays
+
 };
 
 // Run-time symbol table information

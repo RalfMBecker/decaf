@@ -1,0 +1,44 @@
+-----------------------------------------------
+code generated for ./files/decafn_15.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 28
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 24
+
+b	Type: int
+	MemType: stack
+	Offset: 24
+	Width: 4
+
+c	Type: int
+	MemType: stack
+	Offset: 28
+	Width: 0
+
+Info for table Env2
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,       int             (Env1)
+    3                          =:         b,         1             (Env1)
+    4                          =:        t1,         4             (Env1)
+    5                          *:        t2,         b,         b  (Env1)
+    6                          *:        t3,        t1,        t2  (Env1)
+    7                          *:        t4,        t3,         2  (Env1)
+    8                          -:        t5,         b,         1  (Env1)
+    9                          *:        t6,        t4,        t5  (Env1)
+   10                     stack+:        t6                        (Env1)
+   11                        dec:         c,       int             (Env1)
+   12                         ==:        t7,         b,         0  (Env1)
+   13                    iffalse:        t7,      goto,        L1  (Env1)
+   14                          =:         b,         1             (Env2)
+   15             L1:        nop:                                  (Env1)

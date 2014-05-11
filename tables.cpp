@@ -121,8 +121,6 @@ makeEnvRootTop(void)
 // Builder to maintain parallel compile-time and run-time info about 
 // variables in a scope (new link in ct ll rooted at root_Env; new entry
 // into rt map ST)
-// ***TO DO: add delete() method to visitor (easiest probably if we
-//           add an Env* env_ object somewhere (Block_AST? Node_AST?)
 Env*
 addEnv(Env* Prior)
 {

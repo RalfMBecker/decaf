@@ -51,6 +51,7 @@ class Block_AST;
 class StmtList_AST;
 class Stmt_AST;
 class VarDecl_AST;
+class ArrayVarDecl_AST;
 class Assign_AST;
 class IfType_AST;
 class If_AST;
@@ -83,6 +84,7 @@ public:
     virtual void visit(StmtList_AST*) = 0;
     virtual void visit(Stmt_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
+    virtual void visit(ArrayVarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
     virtual void visit(IfType_AST*) = 0;
     virtual void visit(If_AST*) = 0;
@@ -212,9 +214,9 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 // Arithmetic, logical, basic, and access (array) types
 class Expr_AST: public Stmt_AST{
 public:
-Expr_AST(token Type=token(), token OpTor=token(), 
+Expr_AST(token Type=token(), token OpTok = token(), 
 	 Node_AST* lc=0, Node_AST* rc=0)
-    : Stmt_AST(lc, rc), type_(Type), op_(OpTor)
+    : Stmt_AST(lc, rc), type_(Type), op_(OpTok)
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -249,10 +251,10 @@ Expr_AST(token Type=token(), token OpTor=token(),
     // for use in classes and arrays
     virtual void forceWidth(int w) { typeW_ = w; }
 	
-    token Type(void) const { return type_; }
-    token Op(void) const { return op_; }
-    int TypeW(void) const { return typeW_; }
-    int TypeP(void) const { return typeP_; }
+    virtual token Type(void) const { return type_; }
+    virtual token Op(void) const { return op_; }
+    virtual int TypeW(void) const { return typeW_; }
+    virtual int TypeP(void) const { return typeP_; }
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -589,10 +591,10 @@ VarDecl_AST(IdExpr_AST* Id)
 
     ~VarDecl_AST() {}
 
-    std::string Name(void) const { return name_; }
-    token Type(void) const { return type_; }
-    int Width(void) const { return width_; }
-    IdExpr_AST* Expr(void) const { return expr_; }
+    virtual std::string Name(void) const { return name_; }
+    virtual token Type(void) const { return type_; }
+    virtual int Width(void) const { return width_; }
+    virtual IdExpr_AST* Expr(void) const { return expr_; }
 
     virtual void forceWidth(int W) { width_ = W; }
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -646,6 +648,7 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
     ~ArrayVarDecl_AST() { delete dims_; }
 
     int allInts(void) const { return all_IntVals_; }
+    std::vector<Expr_AST*>* Dims(void) const { return dims_; }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 

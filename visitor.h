@@ -448,11 +448,68 @@ public:
 	insertLine(line, iR_List);
     }
 
-//    void visit(ArrayVarDecl_AST* V)
-    //  {
+    // ** TO DO: could expressions of type || && need special treatment?
+    //           (as they emit labels?)
+    void visit(ArrayVarDecl_AST* V)
+    {
+	Env* pFrame = V->getEnv();
+	std::string frame = pFrame->getTableName();
+	std::string target;
+	token Op;
+	std::string LHS;
+	std::string RHS;
+	SSA_Entry* line;
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
+	if ( !(V->allInts()) ){
+	    std::ostringstream tmp_Stream;
 
+	    // account for width of basic type
+	    target = makeTmp();
+	    Op = token(tok_eq);
+	    tmp_Stream << V->Expr()->TypeW();
+	    LHS = tmp_Stream.str();
+	    line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	    insertLine(line, iR_List);
 
+	    // generate dimension bounds, and multiply them;
+	    std::vector<Expr_AST*>::iterator iter;
+	    std::vector<Expr_AST*> dims = *(V->Dims());
+
+	    // retrieve the dimenstions, and successively multiply them
+	    Op = token(tok_mult);
+	    for ( iter = dims.begin(); iter != dims.end(); iter++ ){
+		if ( dynamic_cast<IntExpr_AST*>(*iter) ){
+		    LHS = target;
+		    RHS = (*iter)->Addr();
+		    target = makeTmp();
+		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    insertLine(line, iR_List);
+		}
+		else{
+		    (*iter)->accept(this);
+		    LHS = target;
+		    RHS = last_Tmp_;
+		    target = makeTmp();
+		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    insertLine(line, iR_List);
+		}
+	    }
+
+	    // make room on stack
+	    // ** TO DO: might change what is emitted when closer to making
+	    //           the assembly backend
+	    growStack(frame, target);
+	}
+
+	target = V->LChild()->Addr();
+	Op = token(tok_dec);
+	LHS = V->Type().Lex();
+
+	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	insertLine(line, iR_List);
+    }
 
     void visit(Assign_AST* V)
     {
@@ -736,7 +793,9 @@ public:
     {
 	std::ostringstream tmp_Stream;
 	tmp_Stream << "t" << ++count_Tmp_;
-	return tmp_Stream.str();
+	std::string ret = tmp_Stream.str();
+	last_Tmp_ = ret; // for arrays with integer expression bounds
+	return ret;
     }
 
     std::string makeLabel(void)
@@ -787,7 +846,7 @@ private:
 static int count_Tmp_;
 static int count_Lab_;
 
-static std::vector<std::string> runtime_StackAdj_; // for variable length arrays
+static std::string last_Tmp_; // for variable length arrays
 
 static std::string label_Break_;
 static std::string label_Cont_;
