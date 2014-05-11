@@ -40,7 +40,7 @@ extern Env* top_Env;
 
 Env* makeEnvRootTop(void);
 Env* addEnv(Env*);
-int addIdToEnv(Env* pEnv, IdExpr_AST* new_Object, std::string MemType);
+int addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Object, std::string MemType);
 Expr_AST* findIdInHierarchy(Env* p, IdExpr_AST* Id);
 Expr_AST* findNameInHierarchy(Env* p, std::string Name);
 Env* findFrameInHierarchy(Env* p, std::string Name);

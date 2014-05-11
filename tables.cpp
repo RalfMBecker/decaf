@@ -135,9 +135,36 @@ addEnv(Env* Prior)
 }
 
 // pEnv will be used during compile-time, so go via this ll
-// ***** TO DO: ADJUST TO DIFFERENT TYPE WHEN CLASSES/FUNCTIONS ADDED *****
+// Use: only for objects for which space can be allocated at compile-time
+//      ( basic types; arrays with integer indices )
 int
-addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
+addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Id, std::string MemType)
+//addVarDeclToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
+{
+    if ( (0 == pEnv) || (root_Env == pEnv) ) return -1;
+    std::string Name = new_Id->Name();
+    // add to Env* entry of Env ll rooted at root_Env
+    if ( (0 == pEnv->findName(Name) ) ) // already in tables
+	return -1;
+    pEnv->insertName(Name, dynamic_cast<Expr_AST*>(new_Id->LChild()) );
+
+    // add into rt table ST, in the sub-table determined through 
+    // the matching Env* pointer into the corresponding ct ll above
+    std::string table_Name = pEnv->getTableName();
+    std::map<std::string, Symbol_Table>::iterator iter;
+    std::string Type(new_Id->Type().Lex());
+    int Width(new_Id->Width());
+
+    if ( (ST.end() == (iter = ST.find(table_Name))) )
+	return -2;
+    (iter->second).insertName(Name, Type, MemType, Width);
+
+    return 0;
+}
+
+/*
+int
+addVarDeclToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
 {
     if ( (0 == pEnv) || (root_Env == pEnv) ) return -1;
     std::string Name = new_Id->Addr();
@@ -159,6 +186,7 @@ addIdToEnv(Env* pEnv, IdExpr_AST* new_Id, std::string MemType)
 
     return 0;
 }
+*/
 
 Expr_AST*
 findNameInHierarchy(Env* p, std::string Name)

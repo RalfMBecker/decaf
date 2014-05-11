@@ -14,7 +14,9 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <sstream>
+#include <cstdlib>
 #include "lexer.h"
 
 extern int option_Debug;
@@ -244,7 +246,7 @@ Expr_AST(token Type=token(), token OpTor=token(),
 	    return -1;
     }
 
-    // for use in classes
+    // for use in classes and arrays
     virtual void forceWidth(int w) { typeW_ = w; }
 	
     token Type(void) const { return type_; }
@@ -533,7 +535,7 @@ RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 
 };
 
-// implement (logical) ! (chaining not allowed)
+// implement (logical) !
 class NotExpr_AST: public LogicalExpr_AST{
 public:
 NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
@@ -574,30 +576,84 @@ Cont_AST(void)
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
-// ***To DO:  give array declarations their own class (?)***
 class VarDecl_AST: public Stmt_AST{
 public:
 VarDecl_AST(IdExpr_AST* Id)
-    : Stmt_AST(Id, 0), type_(Id->Type())
+    : Stmt_AST(Id, 0), name_( (Id->Op()).Lex() ), type_(Id->Type()), 
+	width_(Id->TypeW())
     {
 	setAddr(Id->Op().Lex());
 	if (option_Debug)
-	    std::cout<< "\tcreated Decl_AST with addr = " << addr_ << "\n";
+	    std::cout<< "\tcreated VarDecl_AST with name = " << addr_ << "\n";
     }
 
+    ~VarDecl_AST() {}
+
+    std::string Name(void) const { return name_; }
     token Type(void) const { return type_; }
+    int Width(void) const { return width_; }
 
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
+    virtual void forceWidth(int W) { width_ = W; }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
+    std::string name_; // all vars for easier access only
     token type_;
+    int width_;
 };
+
+// Bounds: integer expressions allowed -
+//         if all integers, can add at compile-time
+//         if not, adjust stack at run-time (handled in visitor)
+// Access: bound-checked 
+class ArrayVarDecl_AST: public VarDecl_AST{
+public:
+ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
+    : VarDecl_AST(Name), dims_(D)
+    {
+	num_Dims_ = dims_->size();
+	all_IntVals_ = 1;	
+	std::vector<Expr_AST*>::const_iterator iter;
+
+	for ( iter = D->begin(); iter != D->end(); iter++){
+	    if ( (tok_intV == ((*iter)->Type()).Tok() ) ) 
+		all_IntVals_ = 0;
+	}	
+	// allocate at compile-time, when possible
+	if (all_IntVals_){
+	    int width = Name->TypeW();
+	    for ( iter = D->begin(); iter != D->end(); iter++){
+		width += atoi ( ((*iter)->Type()).Lex().c_str() );
+		this->forceWidth(width);
+	    }
+	}
+	else // create marker that we need run-time stack adjustment
+	    this->forceWidth(0);
+
+	if (option_Debug){
+	    std::cout << "\tcreated ArrayVarDecl_AST with name = " << addr_;
+	    std::cout << ", " << num_Dims_ << " dimensions, ";
+	    if (all_IntVals_){
+		std::cout << "compile-time allocated with width ";
+		std::cout << this->Width() << "\n";
+	    }
+	    else
+		std::cout << "and expression bounds (allocated at run-time)\n";
+	}  
+    }
+
+    ~ArrayVarDecl_AST() { delete dims_; }
+
+    int allInts(void) const { return all_IntVals_; }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    std::vector<Expr_AST*>* dims_;
+    int num_Dims_;
+    int all_IntVals_;
+};
+
 
 class Assign_AST: public Stmt_AST{
 public:

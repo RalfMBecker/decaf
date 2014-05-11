@@ -482,12 +482,70 @@ parseIterExprList(void)
 /*********************************
 *  Statement parsers
 *********************************/
+// process dimensions of an array
+std::vector<Expr_AST*>*
+parseDims(void)
+{
+    if ( (-1 == match(0, tok_sqopen, 0)) )
+	errExit(0, "invalid use of parseDims() (should point at [)");
+
+    std::vector<Expr_AST*>* dims = new std::vector<Expr_AST*>;
+    while ( (0 == match(0, tok_sqopen, 1)) ){
+	if ( (0 == match(0, tok_sqclosed, 0)) ){
+	    parseError(next_Token.Lex(), "array dimension not specified");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+
+	Expr_AST* e = dispatchExpr();
+	if (errorIn_Progress){
+	    parseError(next_Token.Lex(), "while processing array dimensions");
+	    return 0;
+	}
+
+	tokenType t = (e->Type()).Tok();
+	if ( (tok_int != t) && (tok_intV != t) ){
+	    parseError(e->Addr(), "array dimensions must be of integer type");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	dims->push_back(e);
+	if ( (-1 == match(0, tok_sqclosed, 1)) ){
+	    punctError( (next_Token.Lex())[0], 0);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+    }
+
+    return dims;
+}
+
+// array-decl -> type id[expr] [ [expr] ]* (all expr must be of integer type)
+// Children:
+// - the IdExpr_AST* embodies all non-size related information
+// - dimensions handled in vector form (dims)
+ArrayVarDecl_AST*
+parseArrayVarDecl(IdExpr_AST* Name)
+{
+    ArrayVarDecl_AST* ret;
+    std::vector<Expr_AST*>* dims = parseDims();
+    if (errorIn_Progress)
+	ret = 0;
+    else
+	ret = new ArrayVarDecl_AST(Name, dims);
+    // ** TO DO: allow initialization to follow?
+
+    return ret;
+}
+
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
+//         arrary-decl;
 // Shadowing: allowed
 // invariant: - exiting, we confirm ';' (decl), or move back to Id (dec+init)
 //            - entering, points at Id
 // Note: if we initialize, prepare to call parseAssign() after
+// **TO DO: monitor if we use this function also for heap
 VarDecl_AST* 
 parseVarDecl(token Type)
 {
@@ -503,41 +561,51 @@ parseVarDecl(token Type)
 	return 0;
     }
 
-    // handle arrays
-    token op_Token = next_Token;
-    if ( (0 == match(1, tok_sqopen, 0)) ){
-	if (errorIn_Progress) return 0;
-	; // ****TO DO: this can catch arrays****
-    }
+    IdExpr_AST* new_Id;
+    new_Id = new IdExpr_AST(Type, next_Token);
+    token t_Id = next_Token; // to reset after '='
+    token t_Table = getNextToken(); 
     if (errorIn_Progress) return 0;
 
-
-    // declare new Id object even if we later see a syntax error (this is fine)
-    IdExpr_AST* new_Id;
-    new_Id = new IdExpr_AST(Type, op_Token);
-    int err_Code;
-    const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
-    // **TO DO: monitor if also for heap***
-    if ( (0!= (err_Code = addIdToEnv(top_Env, new_Id, "stack"))) )
-	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
-
-    switch(next_Token.Tok()){
+    VarDecl_AST* ret;
+    switch(t_Table.Tok()){
     case tok_semi: // we are done - declaration only
+	ret = new VarDecl_AST(new_Id);
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	break;
     case tok_eq: // prepare to call parseAssign() next
+	ret = new VarDecl_AST(new_Id);
 	putBack('=');
-	next_Token = op_Token;
+	next_Token = t_Id;
+	break;
+    case tok_sqopen:
+	ret = parseArrayVarDecl(new_Id);
+	getNextToken();
+	if (errorIn_Progress) return 0;
 	break;
     default: 
-	std::string e_M2 = "expected \'=\', \';\', or \'[\' instead";	
+	std::string e_M2 = "expected \'=\', \';\', or \'[\'";	
 	parseError(next_Token.Lex(), e_M2);
 	errorIn_Progress = 1;
 	return 0;
     }
 
-    return new VarDecl_AST(new_Id);
+    // insert what can definitely be inserted at run-time (c. (*))
+    int is_Basic = (tok_semi == t_Table.Tok()) || (tok_eq == t_Table.Tok());  
+    int isCt_Array = (tok_sqopen == t_Table.Tok()) && 
+	( (dynamic_cast<ArrayVarDecl_AST*>(ret)->allInts()) ); 
+    if ( is_Basic || isCt_Array ){
+	int err_Code;
+	const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
+	if ( (0!= (err_Code = addVarDeclToEnv(top_Env, ret, "stack"))) )
+	    errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
+    }
+    else{
+	; // ** TO DO: insert rt-style array into Env
+    }
+
+    return ret;
 }
 
 // assign -> idExpr [= Expr; | ; ] 

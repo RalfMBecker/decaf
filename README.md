@@ -10,8 +10,11 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 (4) types: bool currently disallowed; octal integers legal; double must be
            decimal,
 
-(5) arrays: C/C++ semantics; consciously not range-checked; can to be
-            placed on stack and heap,
+(5) arrays: integer expressions bounds, bound-checked (as per CFG); but
+            placeable on both stack and heap. In case of integer expression
+            bounds (as opposed to integers proper), combined with stack
+            allocation, this leads to run-time (visitor level) stack
+            growth (entering scope), and shrinking (leaving scope),
 
 (6) assignment expressions: can be chained,
  
