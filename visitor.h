@@ -35,12 +35,20 @@ extern int option_Debug;
 class MakeIR_Visitor: public AST_Visitor{
 public:
     // address-less objects
-    void visit(Node_AST* V) { return; }
-    void visit(Expr_AST* V){ return; }
+    void visit(Node_AST* V) 
+    {
+	if (option_Debug) std::cout << "visiting Node_AST...\n";
+    }
+
+    void visit(Expr_AST* V)
+    {
+	if (option_Debug) std::cout << "visiting Expr_AST...\n";
+    }
 
     // objects with address set by default ctor
     void visit(Tmp_AST* V) 
     {
+	if (option_Debug) std::cout << "\tvisiting TMP_AST...\n";
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -50,6 +58,7 @@ public:
 
     void visit(IntExpr_AST* V) 
     {
+	if (option_Debug) std::cout << "\tvisiting IntExpr_AST...\n";
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -58,6 +67,7 @@ public:
     }
     void visit(FltExpr_AST* V) 
     {
+	if (option_Debug) std::cout << "\tvisiting FltExpr_AST...\n";
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -67,6 +77,7 @@ public:
 
     void visit(IdExpr_AST* V) 
     {
+	if (option_Debug) std::cout << "\tvisiting IdExpr_AST...\n";
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -79,6 +90,7 @@ public:
 
     void visit(NOP_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting NOP_AST...\n";
 	needs_Label_ = 0;
  
 	label_Vec labels = active_Labels_;
@@ -96,6 +108,7 @@ public:
     // objects needing addr update
     void visit(ArithmExpr_AST* V)
     {  
+	if (option_Debug) std::cout << "\tvisiting ArithmExpr_AST...\n";
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -122,6 +135,7 @@ public:
 
     void visit(CoercedExpr_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting CoercedExpr_AST...\n";
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -154,6 +168,7 @@ public:
 
     void visit(UnaryArithmExpr_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting UnaryArithmExpr_AST...\n";
 	needs_Label_ = 0;
 	std::string e = "parsing error detected when visiting UnaryArExpr_AST";
 	if ( (0 != V->LChild()) )
@@ -177,6 +192,7 @@ public:
     // no address update needed, but kept among expression visitor types
     void visit(AssignExpr_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting AssignExpr_AST...\n";
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -213,7 +229,7 @@ public:
     //               LC RC                => unroll first to get right labels
     void visit(OrExpr_AST* V)
     {
-	if (option_Debug) std::cout << "entering visitor or...\n";
+	if (option_Debug) std::cout << "\tvisiting OrExpr_AST...\n";
  
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
@@ -251,8 +267,6 @@ public:
     // RHS is in position V->RChild()->LChild()
     void doOr(OrExpr_AST* V, std::string cond_Res, std::string cond_End)
     {
-	if (option_Debug) std::cout << "entering visitor doOr...\n";
-
 	std::string cond_First = makeLabel();
 
 	// make iffalse SSA entry
@@ -299,8 +313,7 @@ public:
     // Compare OrExpr_AST visitor for logic
     void visit(AndExpr_AST* V)
     {
-	if (option_Debug) std::cout << "entering visitor and...\n";
-
+	if (option_Debug) std::cout << "\tvisiting AndExpr_AST...\n";
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -337,8 +350,6 @@ public:
     // RHS is in position V->RChild()->LChild()
     void doAnd(AndExpr_AST* V, std::string cond_Res, std::string cond_End)
     {
-	if (option_Debug) std::cout << "entering visitor doAnd...\n";
-
 	std::string cond_First = makeLabel();
 
 	// make iftrue SSA entry
@@ -384,6 +395,7 @@ public:
 
     void visit(RelExpr_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting RelExpr_AST...\n";
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -410,6 +422,7 @@ public:
 
     void visit(NotExpr_AST* V)
     {
+	if (option_Debug) std::cout << "\tvisiting NotExpr_AST...\n";
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -429,12 +442,31 @@ public:
     }
 
     // Statements begin
-    void visit(Block_AST* V) { return; }
-    void visit(StmtList_AST* V) { return; }
-    void visit(Stmt_AST* V) { return; } 
+    void visit(Block_AST* V)
+    {
+	if (option_Debug) std::cout << "visiting Block_AST...\n";
+    }
+
+    void visit(StmtList_AST* V)
+    {
+	if (option_Debug) std::cout << "visiting StmtList_AST...\n";
+    }
+
+    void visit(Stmt_AST* V) 
+    {
+	if (option_Debug) std::cout << "visiting Stmt_AST...\n";
+    }
+
+    void visit(EOB_AST* V)
+    {
+	if (option_Debug) std::cout << "visiting EOB_AST...\n";
+	Env* frame = V->getEnv();
+	shrinkStackVec(frame);
+    }
 
     void visit(VarDecl_AST* V)
     {
+	if (option_Debug) std::cout << "visiting VarDecl_AST...\n";
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
 
@@ -450,8 +482,10 @@ public:
 
     // ** TO DO: could expressions of type || && need special treatment?
     //           (as they emit labels?)
+    // ** TO DO: array bound check
     void visit(ArrayVarDecl_AST* V)
     {
+	if (option_Debug) std::cout << "visiting ArrayVarDecl_AST...\n";
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
 	std::string target;
@@ -500,19 +534,26 @@ public:
 	    // make room on stack
 	    // ** TO DO: might change what is emitted when closer to making
 	    //           the assembly backend
-	    growStack(frame, target);
+	    growStack(pFrame, target);
 	}
 
+	// declare the array
 	target = V->LChild()->Addr();
 	Op = token(tok_dec);
 	LHS = V->Type().Lex();
+	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	insertLine(line, iR_List);
 
+	// link the new array to its memory location
+	Op = token(tok_lea);
+	LHS = "%esp";
 	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
     }
 
     void visit(Assign_AST* V)
     {
+	if (option_Debug) std::cout << "visiting Assign_AST...\n";
 	// empty assignment?
 	if ( (0 == V->RChild()) )
 	    return;
@@ -532,6 +573,7 @@ public:
     // walk down the tree (see visitor If_AST)
     void visit(IfType_AST* V) 
     {
+	if (option_Debug) std::cout << "visiting IfType_AST...\n";
 	while ( (dynamic_cast<IfType_AST*>(V->LChild())) )
 	    V = dynamic_cast<IfType_AST*>(V->LChild());
 	V->accept(this);
@@ -551,6 +593,7 @@ public:
     // Note: we walk to the bottom left through visitor IfType_AST.
     void visit(If_AST* V)
     {
+	if (option_Debug) std::cout << "visiting If_AST...\n";
 	// dispatch expr - labels handled through global active_Labels_
 	needs_Label_ = 1;
 	V->LChild()->accept(this);
@@ -604,6 +647,7 @@ public:
 
     void doElseIf(If_AST* V, std::string if_Done)
     {
+	if (option_Debug) std::cout << "visiting doElseIf...\n";
 	// dispatch expr (no labels outside {if- else if - else} scope possible)
 	V->LChild()->accept(this);
 
@@ -663,6 +707,7 @@ public:
  
     void doElse(Else_AST* V, std::string if_Done)
     {
+	if (option_Debug) std::cout << "visiting Else_AST...\n";
 	// make stmt (block) SSA entry (entries)
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
@@ -679,6 +724,7 @@ public:
     // (while: (0, cond, 0) )
     void visit(For_AST* V)
     {
+	if (option_Debug) std::cout << "visiting For_AST...\n";
 	// establish frame for for scope, and get expr-list ready
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
@@ -759,6 +805,7 @@ public:
     // stmt -> break;
     void visit(Break_AST* V)
     {
+	if (option_Debug) std::cout << "visiting Break_AST...\n";
 	// make goto SSA entry
 	label_Vec labels;
 	Env* pFrame = V->getEnv();
@@ -772,6 +819,7 @@ public:
     // stmt -> continue;
     void visit(Cont_AST* V)
     {
+	if (option_Debug) std::cout << "visiting Cont_AST...\n";
 	// make goto SSA entry
 	label_Vec labels;
 	Env* pFrame = V->getEnv();
@@ -806,27 +854,39 @@ public:
     }
 
     // helper functions for run-time stack growth/shrinking
-    void shrinkStackVec(std::string Env, std::vector<std::string> V)
+    void shrinkStackVec(Env* Frame)
     {
+	std::vector<std::string> V = Frame->getAdj();
+	if (V.empty())
+	    return;
+	std::string frame_Str = Frame->getTableName();
+
 	label_Vec labels;
-	token Op(tok_st_less);
+	token Op(tok_plus);
+	std::string target = "%esp";
+	std::string LHS = "%esp";
 	SSA_Entry* line;
 
 	std::vector<std::string>::const_iterator iter;
 	for ( iter = V.begin(); iter != V.end(); iter++ ){
-	    line = new SSA_Entry(labels, Op, *iter, "", "", Env);
+	    line = new SSA_Entry(labels, Op, target, LHS, *iter, frame_Str);
 	    insertLine(line, iR_List);
 	}
     }
 
     // typically extended item by item (but shrunk by the sum of these
     // extensions; see prior helper function)
-    void growStack(std::string Env, std::string Name)
+    void growStack(Env* Frame, std::string Name)
     {
+	Frame->addAdj(Name);
+
+	std::string frame_Str = Frame->getTableName();
 	label_Vec labels;
-	token Op(tok_st_more);
+	token Op(tok_minus);
+	std::string target = "%esp";
+	std::string LHS = "%esp";
 	SSA_Entry* line;
-	line = new SSA_Entry(labels, Op, Name, "", "", Env);
+	line = new SSA_Entry(labels, Op, target, LHS, Name, frame_Str);
 	insertLine(line, iR_List);
     }
 

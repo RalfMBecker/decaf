@@ -50,6 +50,7 @@ class NOP_AST;
 class Block_AST;
 class StmtList_AST;
 class Stmt_AST;
+class EOB_AST;
 class VarDecl_AST;
 class ArrayVarDecl_AST;
 class Assign_AST;
@@ -83,6 +84,7 @@ public:
     virtual void visit(Block_AST*) = 0;
     virtual void visit(StmtList_AST*) = 0;
     virtual void visit(Stmt_AST*) = 0;
+    virtual void visit(EOB_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(ArrayVarDecl_AST*) = 0;
     virtual void visit(Assign_AST*) = 0;
@@ -207,6 +209,21 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 	Visitor->visit(this);
     }
 };
+
+
+// End of Block marker (used to clean up after arrays with integer
+// expression bounds)
+class EOB_AST: public Stmt_AST{
+public:
+EOB_AST(void)
+    : Stmt_AST(0, 0)
+    {
+	if (option_Debug) std::cout << "\tcreated an EOB_AST...\n";
+    }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+}; 
+
 
 /************************************************
 * Expression parent class & lists of expressions

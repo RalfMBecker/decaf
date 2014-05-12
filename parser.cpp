@@ -984,6 +984,10 @@ parseBlock(void)
 	    pSL = 0;
 	}
 	else{
+	    // for management of arrays with integer expression dimensions
+	    Stmt_AST* RHS = new EOB_AST();
+	    pSL = new StmtList_AST(pSL, RHS);
+
 	    top_Env = top_Env->getPrior();
 	    frame_Depth--;
 	}
@@ -1033,7 +1037,7 @@ parseStmtListCtd(StmtList_AST* LHS)
 	    RHS = parseBlock();
 	    if (!RHS) return 0;
 	    break;
-	case '}': // if we skip by one in errorResetStmt(), we get stuck. 
+	case '}':
 	    if ( (0 < frame_Depth) )
 		return LHS;
 	    else
