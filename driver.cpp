@@ -29,6 +29,7 @@ initFrontEnd(std::string Str)
     makeTypePrecTable();
     makeWidthTable(); 
     makeEnvRootTop();
+    makeRtErrorTable();
 
     std::string tmp_Str = ("" == Str)?"std::cin":Str; 
     std::cout << "-----------------------------------------------\n";
@@ -76,5 +77,12 @@ startParse(void)
    }
     else
 	std::cerr << "---no valid statements found---\n";
+
+
+
+    makeRtErrorTargetTable(iR_RtError_Targets);
+    printIR_List(iR_RtError_Targets);
+
+
 }
 

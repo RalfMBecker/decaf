@@ -628,10 +628,10 @@ private:
 //         if all integers, can add at compile-time
 //         if not, adjust stack at run-time (handled in visitor)
 // Note:   for one file only, there is no need for a true run-time check:
-//         at least theoretically, we could calculate if the dimensions
-//         expressions evaluate to a positive integer. As implemented
-//         throughout, this extends to run-time error check after also
-//         a linker is added (e.g., extern variables from other files 
+//         at least theoretically, we could calculate if the dimension
+//         expressions evaluate to a positive integer. The implementation
+//         chosen extends to run-time error checks after a linker is
+//         (hypothetically) added (e.g., extern variables from other files 
 //         filled in). 
 class ArrayVarDecl_AST: public VarDecl_AST{
 public:

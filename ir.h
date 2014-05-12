@@ -24,11 +24,19 @@
 // forward declaration
 class Env;
 class SSA_Entry;
+class RtError_Type;
+class Ds_Object;
 
 typedef std::map<int, SSA_Entry*> ir_Rep;
 // from ir.cpp
 extern ir_Rep iR_List;
 extern ir_Rep iR_List_2;
+extern ir_Rep iR_RtError_Targets;
+extern std::map<int, RtError_Type*> rtError_Table;
+extern std::vector<Ds_Object*> Ds_Table;
+
+void makeRtErrorTable(void);
+void makeRtErrorTargetTable(ir_Rep& Target);
 
 void insertLine(SSA_Entry*, ir_Rep&, int Reset = 0);
 void printIR_List(ir_Rep const&);
@@ -112,6 +120,37 @@ private:
     std::string rHS_;
     std::string frame_;
     std::string line_;
+};
+
+// Run-time error management
+class RtError_Type{
+public:
+RtError_Type(std::string L, std::string M, std::string D)
+    : label_(L), msg_(M), ds_Addr_(D) {}
+
+    std::string Label(void) const { return label_; }
+    std::string Msg(void) const { return msg_; }
+    std::string Ds_Addr(void) const { return ds_Addr_; }
+
+private:
+    std::string label_;
+    std::string msg_;
+    std::string ds_Addr_;
+};
+
+class Ds_Object{
+public:
+Ds_Object(std::string N, std::string D, std::string V)
+    : name_(N), directive_(D), value_(V) {}
+
+    std::string Name(void) const { return name_; }
+    std::string Directive(void) const { return directive_; }
+    std::string Value(void) const { return value_; }
+
+private:
+    std::string name_;
+    std::string directive_;
+    std::string value_; // **TO DO: extend for general global initialized vars
 };
 
 #endif

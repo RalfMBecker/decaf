@@ -190,7 +190,6 @@ findVarFrame(Env* p, std::string Name)
     return 0;
 }
 
-// debugging functions
 void
 printEnvAncestorInfo(Env* p)
 {
@@ -246,5 +245,4 @@ printSTInfo()
 	std::cout << "\n";
 	}
     }
-
 }

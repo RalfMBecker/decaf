@@ -33,7 +33,7 @@ int typePriority(std::string const&);
 int typeWidth(std::string const&);
 int opPriority(token t);
 
-// compile time static declaration check
+// forward declarations
 class Env;
 extern Env* root_Env;
 extern Env* top_Env;
@@ -56,8 +56,6 @@ void printSTInfo(void);
 // Table for: basic types; arrays of basic types
 // Compile-time object, part of a linked list of (ct) Symbol Tables, each
 // a (name, <basic type>/class) pair
-// Handling 'name' here isn't the most logical, but will do (name=table name).
-// Name is needed to maintain the run-time version of the STs.
 class Env{
 public:
     Env(Env* P = 0)
@@ -130,7 +128,7 @@ private:
 
 // Run-time object to manage storage allocation
 // Name created by the corresponding compile-time object, and fed
-// from maker function addItToEnv(). 
+// from maker function addIdToEnv(). 
 // Offset: rel offset to beginning of mem area that will be reserved 
 //         for objects in the scope managed by this Symbol_Table, by
 //         heap and stack area

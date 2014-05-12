@@ -43,7 +43,7 @@ enum tokenType{
     // AST types and actions
     tok_err = -100, tok_ID = -101, tok_tmp = -102, tok_cast = -103, 
     tok_dec = -104, tok_iffalse = -105, tok_iftrue = -106, tok_goto = -107, 
-    tok_nop = -108, tok_lea = -109,
+    tok_nop = -108, tok_lea = -109, tok_syscall = -110,
 };
 
 class token{
@@ -121,7 +121,8 @@ public:
 	case tok_nop: lexeme_ = "nop"; break;
 	case tok_err: lexeme_ = Lex; break;
 	case tok_lea: lexeme_ = "lea"; break;
-	default: // no throwing error - counter to "Effective C++" (ctor)
+	case tok_syscall: lexeme_ = "syscall"; break;
+	default: // no throwing error - counter to  "Effective C++" (ctor)
 	    break;
 	}
     }
