@@ -10,7 +10,7 @@ ir_Rep iR_List_2; // nop's removed
 ir_Rep iR_RtError_Targets;
 
 // run-time error management 
-std::map<int, RtError_Type*> rtError_Table;
+std::vector<RtError_Type*> rtError_Table;
 std::vector<Ds_Object*> Ds_Table;
 
 std::vector<std::string>
@@ -92,29 +92,38 @@ printIR_List(ir_Rep const& List)
 void
 makeRtErrorTable(void)
 {
-    static int count ;
+    // private variables of the embedded class
+    std::string name, directive, value;
+    directive = ".asciiz";
+    // private variables of an ReError_Type*
+    std::string label;
+    Ds_Object* pDS;
+    RtError_Type* pRT;
 
     // array bound checks: negative integer index
-    std::string label = "L_e0";
-    std::string msg = "Error near %d: array bound negative (%s)";
-    std::string dsA = "E_neg";
-    RtError_Type* pRT = new RtError_Type(label, msg, dsA);
-    rtError_Table[count++] = pRT;
+    name = "E_neg";
+    value = "Error near %d: array bound negative (%s)";
+    pDS = new Ds_Object(name, directive, value);
+    Ds_Table.push_back(pDS);
+
+    label = "L_e0";
+    pRT = new RtError_Type(label, pDS);
+    rtError_Table.push_back(pRT);
 
     // array bound checks: requested larger than dimenstion
-    label = "L_e1";
-    msg = "Error near %d: index out of bounds (%s)";
-    dsA = "E_bounds";
-    pRT = new RtError_Type(label, msg, dsA);
-    rtError_Table[count++] = pRT;
-}
+    name = "E_bounds";
+    value = "Error near %d: index out of bounds (%s)";
+    pDS = new Ds_Object(name, directive, value);
+    Ds_Table.push_back(pDS);
 
+    label = "L_e1";
+    pRT = new RtError_Type(label, pDS);
+    rtError_Table.push_back(pRT);
+}
 
 void
 makeRtErrorTargetTable(ir_Rep& Target)
 {
-    std::map<int, RtError_Type*>::const_iterator iter;
-
     std::vector<std::string> labels;
     std::string frame = "";
     std::string target, LHS, RHS;
@@ -131,13 +140,14 @@ makeRtErrorTargetTable(ir_Rep& Target)
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame); 
     insertLine(line, iR_RtError_Targets);
 
+    std::vector<RtError_Type*>::const_iterator iter;
     // each error loads its specific message, then hands it on
     for ( iter = rtError_Table.begin(); iter != rtError_Table.end(); iter++){
-	labels.push_back( (iter->second)->Label() );
+	labels.push_back( (*iter)->Label() );
 	op = token(tok_mov);
 	target = "%eax";
 	LHS = "$";
-	LHS += (iter->second)->Ds_Addr();
+	LHS += (*iter)->Ds_Addr();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_RtError_Targets);
 	labels.clear();
@@ -160,27 +170,6 @@ makeRtErrorTargetTable(ir_Rep& Target)
     target = "exit";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
     insertLine(line, iR_RtError_Targets);
-}
-
-// If we need it (emitError_Section = 1), initialize with error msg strings
-// This table manager and makeRtErrorTable manage information relating to 
-// the same object/action; but they are not automatically linked. Not ideal,
-// but for now ok as it only handles a few run-time error messages.
-void
-makeDsObjectTable(void)
-{
-    std::string name, directive, value;
-    directive = ".asciiz";
-
-    name = "E_neg";
-    value = "Error near %d: array bound negative (%s)";
-    Ds_Object* pDS = new Ds_Object(name, directive, value);
-    Ds_Table.push_back(pDS);
-
-    name = "E_bounds";
-    value = "Error near %d: index out of bounds (%s)";
-    pDS = new Ds_Object(name, directive, value);
-    Ds_Table.push_back(pDS);
 }
 
 void

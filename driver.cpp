@@ -31,7 +31,6 @@ initFrontEnd(std::string Str)
     makeWidthTable(); 
     makeEnvRootTop();
     makeRtErrorTable();
-    makeDsObjectTable();
 
     std::string tmp_Str = ("" == Str)?"std::cin":Str; 
     std::cout << "-----------------------------------------------\n";
