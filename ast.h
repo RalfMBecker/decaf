@@ -623,10 +623,16 @@ private:
     IdExpr_AST* expr_; // to avoid some casts
 };
 
+// Access: bound-checked 
 // Bounds: integer expressions allowed -
 //         if all integers, can add at compile-time
 //         if not, adjust stack at run-time (handled in visitor)
-// Access: bound-checked 
+// Note:   for one file only, there is no need for a true run-time check:
+//         at least theoretically, we could calculate if the dimensions
+//         expressions evaluate to a positive integer. As implemented
+//         throughout, this extends to run-time error check after also
+//         a linker is added (e.g., extern variables from other files 
+//         filled in). 
 class ArrayVarDecl_AST: public VarDecl_AST{
 public:
 ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)

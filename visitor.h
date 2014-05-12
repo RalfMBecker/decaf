@@ -49,6 +49,7 @@ public:
     void visit(Tmp_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting TMP_AST...\n";
+
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -59,6 +60,7 @@ public:
     void visit(IntExpr_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting IntExpr_AST...\n";
+
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -68,6 +70,7 @@ public:
     void visit(FltExpr_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting FltExpr_AST...\n";
+
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -78,6 +81,7 @@ public:
     void visit(IdExpr_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting IdExpr_AST...\n";
+
 	if (needs_Label_){
 	    insertNOP(active_Labels_, V->getEnv()->getTableName());
 	    active_Labels_.clear();
@@ -91,8 +95,8 @@ public:
     void visit(NOP_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting NOP_AST...\n";
-	needs_Label_ = 0;
- 
+
+	needs_Label_ = 0; 
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
 
@@ -109,6 +113,7 @@ public:
     void visit(ArithmExpr_AST* V)
     {  
 	if (option_Debug) std::cout << "\tvisiting ArithmExpr_AST...\n";
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -136,6 +141,7 @@ public:
     void visit(CoercedExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting CoercedExpr_AST...\n";
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -169,6 +175,7 @@ public:
     void visit(UnaryArithmExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting UnaryArithmExpr_AST...\n";
+
 	needs_Label_ = 0;
 	std::string e = "parsing error detected when visiting UnaryArExpr_AST";
 	if ( (0 != V->LChild()) )
@@ -193,6 +200,7 @@ public:
     void visit(AssignExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting AssignExpr_AST...\n";
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -314,6 +322,7 @@ public:
     void visit(AndExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting AndExpr_AST...\n";
+
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -396,6 +405,7 @@ public:
     void visit(RelExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting RelExpr_AST...\n";
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -423,6 +433,7 @@ public:
     void visit(NotExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting NotExpr_AST...\n";
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -460,6 +471,7 @@ public:
     void visit(EOB_AST* V)
     {
 	if (option_Debug) std::cout << "visiting EOB_AST...\n";
+
 	Env* frame = V->getEnv();
 	shrinkStackVec(frame);
     }
@@ -467,6 +479,7 @@ public:
     void visit(VarDecl_AST* V)
     {
 	if (option_Debug) std::cout << "visiting VarDecl_AST...\n";
+
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
 
@@ -486,6 +499,13 @@ public:
     void visit(ArrayVarDecl_AST* V)
     {
 	if (option_Debug) std::cout << "visiting ArrayVarDecl_AST...\n";
+
+	std::ostringstream tmp_Stream;
+	tmp_Stream << V->Line();
+	std::string lNo = tmp_Stream.str();
+	tmp_Stream.str(""); // flushing is meaningless for string objects
+                        // as there is no natural device attached to flush to
+
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
 	std::string target;
@@ -497,8 +517,6 @@ public:
 	active_Labels_.clear();
 
 	if ( !(V->allInts()) ){
-	    std::ostringstream tmp_Stream;
-
 	    // account for width of basic type
 	    target = makeTmp();
 	    Op = token(tok_eq);
@@ -514,11 +532,12 @@ public:
 	    // retrieve the dimenstions, and successively multiply them
 	    Op = token(tok_mult);
 	    for ( iter = dims.begin(); iter != dims.end(); iter++ ){
-		if ( dynamic_cast<IntExpr_AST*>(*iter) ){
+		if ( dynamic_cast<IntExpr_AST*>(*iter) || 
+		     (dynamic_cast<IdExpr_AST*>(*iter)) ){
 		    LHS = target;
 		    RHS = (*iter)->Addr();
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    line = new SSA_Entry(labels, Op, target,LHS,RHS,frame, lNo);
 		    insertLine(line, iR_List);
 		}
 		else{
@@ -526,7 +545,7 @@ public:
 		    LHS = target;
 		    RHS = last_Tmp_;
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    line = new SSA_Entry(labels, Op, target,LHS,RHS,frame, lNo);
 		    insertLine(line, iR_List);
 		}
 	    }
@@ -544,16 +563,22 @@ public:
 	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
 
-	// link the new array to its memory location
-	Op = token(tok_lea);
-	LHS = "%esp";
-	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
-	insertLine(line, iR_List);
+	if ( !(V->allInts()) ){
+	    // link the new array to its memory location
+	    Op = token(tok_lea);
+	    LHS = "%esp";
+	    line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	    insertLine(line, iR_List);
+	}
     }
+
+//.section .data
+//rtError_<name>: .asciiz "test.dat"
 
     void visit(Assign_AST* V)
     {
 	if (option_Debug) std::cout << "visiting Assign_AST...\n";
+
 	// empty assignment?
 	if ( (0 == V->RChild()) )
 	    return;
@@ -574,6 +599,7 @@ public:
     void visit(IfType_AST* V) 
     {
 	if (option_Debug) std::cout << "visiting IfType_AST...\n";
+
 	while ( (dynamic_cast<IfType_AST*>(V->LChild())) )
 	    V = dynamic_cast<IfType_AST*>(V->LChild());
 	V->accept(this);
@@ -648,6 +674,7 @@ public:
     void doElseIf(If_AST* V, std::string if_Done)
     {
 	if (option_Debug) std::cout << "visiting doElseIf...\n";
+
 	// dispatch expr (no labels outside {if- else if - else} scope possible)
 	V->LChild()->accept(this);
 
@@ -708,6 +735,7 @@ public:
     void doElse(Else_AST* V, std::string if_Done)
     {
 	if (option_Debug) std::cout << "visiting Else_AST...\n";
+
 	// make stmt (block) SSA entry (entries)
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
@@ -725,6 +753,7 @@ public:
     void visit(For_AST* V)
     {
 	if (option_Debug) std::cout << "visiting For_AST...\n";
+
 	// establish frame for for scope, and get expr-list ready
 	Env* pFrame = V->getEnv();
 	std::string frame_Str = pFrame->getTableName();
@@ -806,6 +835,7 @@ public:
     void visit(Break_AST* V)
     {
 	if (option_Debug) std::cout << "visiting Break_AST...\n";
+
 	// make goto SSA entry
 	label_Vec labels;
 	Env* pFrame = V->getEnv();
@@ -820,6 +850,7 @@ public:
     void visit(Cont_AST* V)
     {
 	if (option_Debug) std::cout << "visiting Cont_AST...\n";
+
 	// make goto SSA entry
 	label_Vec labels;
 	Env* pFrame = V->getEnv();

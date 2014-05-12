@@ -37,9 +37,11 @@ ir_Rep removeNOPs(ir_Rep const&);
 class SSA_Entry{
 public: 
 SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target, 
-	  std::string LHS, std::string RHS, std::string Frame)
-    : labels_(Labels),op_(Op),target_(Target),lHS_(LHS),rHS_(RHS),frame_(Frame)
-    { }
+	  std::string LHS, std::string RHS, std::string Frame, 
+	  std::string Line = "") 
+    : labels_(Labels), op_(Op), target_(Target), lHS_(LHS), rHS_(RHS),
+	frame_(Frame), line_(Line) // add line only for objects which can
+    { }                            // throw a run-time error
 
     SSA_Entry(SSA_Entry const& r)
     {
@@ -49,6 +51,7 @@ SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target,
 	lHS_ = r.LHS();
 	rHS_ = r.RHS();
 	frame_ = r.Frame();
+	line_ = r.Line();
     }
 
     void print() const
@@ -99,6 +102,7 @@ SSA_Entry(std::vector<std::string> Labels, token Op, std::string Target,
     std::string LHS(void) const { return lHS_; }
     std::string RHS(void) const { return rHS_; }
     std::string Frame(void) const { return frame_;}
+    std::string Line(void) const { return line_; }
 
 private:
     std::vector<std::string> labels_;
@@ -107,6 +111,7 @@ private:
     std::string lHS_;
     std::string rHS_;
     std::string frame_;
+    std::string line_;
 };
 
 #endif
