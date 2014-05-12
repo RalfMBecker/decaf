@@ -8,6 +8,7 @@
 
 #include <sstream>
 #include <ostream>
+#include <iomanip>
 #include <string>
 #include <map>
 #include <vector>
@@ -37,6 +38,8 @@ extern std::vector<Ds_Object*> Ds_Table;
 
 void makeRtErrorTable(void);
 void makeRtErrorTargetTable(ir_Rep& Target);
+void makeDsObjectTable(void);
+void printDataSection(void);
 
 void insertLine(SSA_Entry*, ir_Rep&, int Reset = 0);
 void printIR_List(ir_Rep const&);
@@ -146,6 +149,30 @@ Ds_Object(std::string N, std::string D, std::string V)
     std::string Name(void) const { return name_; }
     std::string Directive(void) const { return directive_; }
     std::string Value(void) const { return value_; }
+
+    void print() const
+    {
+	std::ostringstream tmp_Stream;
+	std::string tmp_String;
+
+	tmp_Stream << std::resetiosflags(std::ios::adjustfield);
+	tmp_Stream << std::setiosflags(std::ios::left);
+	tmp_String = name_;
+	tmp_String += ":";
+	tmp_Stream.width(10);
+	tmp_Stream << tmp_String;
+
+	tmp_Stream << std::resetiosflags(std::ios::adjustfield);
+	tmp_Stream << std::setiosflags(std::ios::right);
+	tmp_Stream.width(7);
+	tmp_Stream << directive_;
+
+	tmp_Stream.width(50);
+	tmp_Stream << value_;
+	tmp_Stream << "\n";
+
+	std::cout << tmp_Stream.str();
+    }
 
 private:
     std::string name_;

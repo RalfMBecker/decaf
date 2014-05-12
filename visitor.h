@@ -572,9 +572,6 @@ public:
 	}
     }
 
-//.section .data
-//rtError_<name>: .asciiz "test.dat"
-
     void visit(Assign_AST* V)
     {
 	if (option_Debug) std::cout << "visiting Assign_AST...\n";

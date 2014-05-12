@@ -32,6 +32,13 @@ Info for table Env2
 Memory allocation - stack: 0
                      heap: 0
 
+---------------------------------------------------
+.section.data
+
+E_neg:    .asciiz          Error near %d: array bound negative (%s)
+E_bounds: .asciiz           Error near %d: index out of bounds (%s)
+---------------------------------------------------
+
     1                        dec:         a,       int             (Env1)
     2                        dec:         b,       int             (Env1)
     3                          =:         b,         1             (Env1)

@@ -31,6 +31,7 @@ initFrontEnd(std::string Str)
     makeWidthTable(); 
     makeEnvRootTop();
     makeRtErrorTable();
+    makeDsObjectTable();
 
     std::string tmp_Str = ("" == Str)?"std::cin":Str; 
     std::cout << "-----------------------------------------------\n";
@@ -67,6 +68,9 @@ startParse(void)
     if ( (0 != pFirst_Node) ){
 	printSTInfo();
 	pFirst_Node->accept(new MakeIR_Visitor);
+
+	if (emitRtError_Section)
+	    printDataSection();
 
 	if ( !(option_optLevel) )	
 	    printIR_List(iR_List);

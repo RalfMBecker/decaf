@@ -86,27 +86,30 @@ printIR_List(ir_Rep const& List)
     }
 }
 
-// run-time error management object
+// Run-time error management object
+// Note : when adding anything here, update makeDsObjectTable() as well
+// Should we change table to vector? (original design was different)
 void
 makeRtErrorTable(void)
 {
+    static int count ;
+
     // array bound checks: negative integer index
     std::string label = "L_e0";
-    std::string msg = "Error near %d: array bound negative";
+    std::string msg = "Error near %d: array bound negative (%s)";
     std::string dsA = "E_neg";
     RtError_Type* pRT = new RtError_Type(label, msg, dsA);
-    rtError_Table[0] = pRT;
+    rtError_Table[count++] = pRT;
 
     // array bound checks: requested larger than dimenstion
     label = "L_e1";
-    msg = "Error near %d: index out of bounds";
+    msg = "Error near %d: index out of bounds (%s)";
     dsA = "E_bounds";
     pRT = new RtError_Type(label, msg, dsA);
-    rtError_Table[1] = pRT;
+    rtError_Table[count++] = pRT;
 }
 
-// TO DO: conditionally do all this after switching on global, indicating
-//        a dynamic array has been declared
+
 void
 makeRtErrorTargetTable(ir_Rep& Target)
 {
@@ -159,6 +162,46 @@ makeRtErrorTargetTable(ir_Rep& Target)
     insertLine(line, iR_RtError_Targets);
 }
 
-//std::vector<Ds_Object> Ds_Table;
-//Ds_Object(std::string N, std::string D, std::string V)
+// If we need it (emitError_Section = 1), initialize with error msg strings
+// This table manager and makeRtErrorTable manage information relating to 
+// the same object/action; but they are not automatically linked. Not ideal,
+// but for now ok as it only handles a few run-time error messages.
+void
+makeDsObjectTable(void)
+{
+    std::string name, directive, value;
+    directive = ".asciiz";
+
+    name = "E_neg";
+    value = "Error near %d: array bound negative (%s)";
+    Ds_Object* pDS = new Ds_Object(name, directive, value);
+    Ds_Table.push_back(pDS);
+
+    name = "E_bounds";
+    value = "Error near %d: index out of bounds (%s)";
+    pDS = new Ds_Object(name, directive, value);
+    Ds_Table.push_back(pDS);
+}
+
+void
+printDataSection(void)
+{
+    std::cout << "---------------------------------------------------\n";
+    // print header
+    std::ostringstream tmp_Stream;
+    tmp_Stream.width(8);
+    tmp_Stream << ".section";
+    tmp_Stream.width(6);
+    tmp_Stream << ".data\n\n";
+    std::cout << tmp_Stream.str();
+    tmp_Stream.str("");
+
+    // print global variables in data section
+    std::vector<Ds_Object*>::const_iterator iter;
+    for ( iter = Ds_Table.begin(); iter != Ds_Table.end(); iter++ )
+	(*iter)->print();
+    std::cout << "---------------------------------------------------\n\n";
+}
+
+
 
