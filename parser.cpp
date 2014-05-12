@@ -29,6 +29,9 @@ extern int errorIn_Progress;
 extern int option_Debug;
 int frame_Depth = 0; // track depth of scope nesting (used in error handling)
 int break_Enabled = 0;
+int emitRtError_Section = 0; // if we encounter an array declaration whose
+// dimensions are integer expressions, we prepare an error handling environment
+// at run-time (at IR level).
 
 /***************************************
 *  Helper functions
@@ -533,8 +536,11 @@ parseArrayVarDecl(IdExpr_AST* Name)
     std::vector<Expr_AST*>* dims = parseDims();
     if (errorIn_Progress)
 	ret = 0;
-    else
+    else{
 	ret = new ArrayVarDecl_AST(Name, dims);
+	if ( !(ret->allInts()) )
+	    emitRtError_Section = 1;
+    }
     // ** TO DO: allow initialization to follow?
 
     return ret;

@@ -17,6 +17,7 @@ extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity
 
 extern int no_lex_Errors;
 extern int no_par_Errors;
+extern int emitRtError_Section;
 
 std::istream* input;
 int option_Debug = 0;
@@ -78,11 +79,9 @@ startParse(void)
     else
 	std::cerr << "---no valid statements found---\n";
 
-
-
-    makeRtErrorTargetTable(iR_RtError_Targets);
-    printIR_List(iR_RtError_Targets);
-
-
+    if (emitRtError_Section){
+	makeRtErrorTargetTable(iR_RtError_Targets);
+	printIR_List(iR_RtError_Targets);
+    }
 }
 

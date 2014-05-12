@@ -92,14 +92,14 @@ makeRtErrorTable(void)
 {
     // array bound checks: negative integer index
     std::string label = "L_e0";
-    std::string msg = "array bound negative";
+    std::string msg = "Error near %d: array bound negative";
     std::string dsA = "E_neg";
     RtError_Type* pRT = new RtError_Type(label, msg, dsA);
     rtError_Table[0] = pRT;
 
     // array bound checks: requested larger than dimenstion
     label = "L_e1";
-    msg = "index out of bounds";
+    msg = "Error near %d: index out of bounds";
     dsA = "E_bounds";
     pRT = new RtError_Type(label, msg, dsA);
     rtError_Table[1] = pRT;
@@ -114,35 +114,50 @@ makeRtErrorTargetTable(ir_Rep& Target)
 
     std::vector<std::string> labels;
     std::string frame = "";
-    token op = token(tok_nop);
     std::string target, LHS, RHS;
+
+    // some NOPs for visual clarity
+    token op = token(tok_nop);
     SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame); 
     insertLine(line, iR_RtError_Targets);
     insertLine(line, iR_RtError_Targets);
 
+    // emit a syscall exit to not fall into this section
     op = token(tok_syscall);
+    target = "exit";
+    line = new SSA_Entry(labels, op, target, LHS, RHS, frame); 
+    insertLine(line, iR_RtError_Targets);
+
+    // each error loads its specific message, then hands it on
     for ( iter = rtError_Table.begin(); iter != rtError_Table.end(); iter++){
 	labels.push_back( (iter->second)->Label() );
-	target = "printf";
+	op = token(tok_mov);
+	target = "%eax";
+	LHS = "$";
+	LHS += (iter->second)->Ds_Addr();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_RtError_Targets);
 	labels.clear();
+	LHS = "";
 
-	target = "exit";
+	op = token(tok_goto);
+	target = "L_eExit";
 	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-	insertLine(line, iR_RtError_Targets);	
+	insertLine(line, iR_RtError_Targets);
     }
+
+    // common exit point
+    op = token(tok_syscall);
+    labels.push_back("L_eExit");
+    target = "printf";
+    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+    insertLine(line, iR_RtError_Targets);
+    labels.clear();
+
+    target = "exit";
+    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+    insertLine(line, iR_RtError_Targets);
 }
-
-
-
-// std::map<int, RtError_Type*> rtError_Table;
-//insertLine(SSA_Entry* Line, ir_Rep& List, int Reset)
-//void
-//printRtErrorTable(void){
-//ir_Rep iR_RtError_Targets;
-
-
 
 //std::vector<Ds_Object> Ds_Table;
 //Ds_Object(std::string N, std::string D, std::string V)
