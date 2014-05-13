@@ -35,8 +35,8 @@ Memory allocation - stack: 0
 ---------------------------------------------------
 .section.data
 
-E_neg:    .asciiz          Error near %d: array bound negative (%s)
-E_bounds: .asciiz           Error near %d: index out of bounds (%s)
+E_neg:    .asciiz        "Error near %d: array bound negative (%s)"
+E_bounds: .asciiz         "Error near %d: index out of bounds (%s)"
 ---------------------------------------------------
 
     1                        dec:         a,       int             (Env1)
@@ -72,6 +72,5 @@ E_bounds: .asciiz           Error near %d: index out of bounds (%s)
    31           L_e0:        mov:      %eax,    $E_neg                 ()
    32                       goto:   L_eExit                            ()
    33           L_e1:        mov:      %eax, $E_bounds                 ()
-   34                       goto:   L_eExit                            ()
-   35        L_eExit:    syscall:    printf                            ()
-   36                    syscall:      exit                            ()
+   34        L_eExit:    syscall:    printf                            ()
+   35                    syscall:      exit                            ()

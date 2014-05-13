@@ -1,6 +1,7 @@
 -----------------------------------------------
 code generated for ./files/decafe_6.dec
 -----------------------------------------------
+Warning near 3:14: In (a) - variable used un-initialized
 Error near 4:6: Syntax error (break) - illegal without enclosing for/while
 Warning near 4:7: unused expression
 Error near 5:8: Syntax error (else) - else without leading if
@@ -10,6 +11,7 @@ Error near 8:8: Syntax error (else) - else without leading if
 Error near 14:5: Syntax error (else) - '=' or ';' expected
 
 found 5 syntactic/semantic errors
+found 3 warnings
 
 Info for table Env1
 ---------------------------------------------------

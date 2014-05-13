@@ -16,6 +16,7 @@ token getNextToken(void);
 
 int no_lex_Errors = 0;
 int no_par_Errors = 0;
+int no_Warnings = 0;
 
 const int MAX_MSG = 120;
 
@@ -204,6 +205,7 @@ void
 parseWarning(std::string tok_Str, std::string com_Str) 
 {
     errorBase(0);
+    no_Warnings++;
 
     if ( ("" != tok_Str) ){
 	std::ostringstream tmp_Str;

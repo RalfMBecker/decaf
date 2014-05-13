@@ -4,6 +4,8 @@ code generated for ./files/decafn_11.dec
 Warning near 10:4: '=' in if-conditional - did you mean '=='?
 Warning near 14:20: '=' in for-conditional - did you mean '=='?
 
+found 2 warnings
+
 Info for table Env1
 ---------------------------------------------------
 Memory allocation - stack: 8

@@ -1,8 +1,12 @@
 -----------------------------------------------
 code generated for ./files/decafn_12.dec
 -----------------------------------------------
+Warning near 5:16: In (a) - variable used un-initialized
+Warning near 8:13: In (b) - variable used un-initialized
 Warning near 11:7: '=' in if-conditional - did you mean '=='?
 Warning near 13:7: unused expression
+
+found 4 warnings
 
 Info for table Env1
 ---------------------------------------------------

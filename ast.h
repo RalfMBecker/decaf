@@ -338,15 +338,23 @@ private:
 // ***parts of a fct declaration can probably be folded into this
 class IdExpr_AST: public Expr_AST{
 public:
-IdExpr_AST(token Type, token Op)
-    : Expr_AST(Type, Op, 0, 0) 
+IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
+    : Expr_AST(Type, Op, 0, 0), initialized_(I), warning_Emitted_(W)
     { 
 	setAddr(Op.Lex());
 	if (option_Debug) std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
 
+    int isInitialized(void) const { return initialized_; }
+    int WarningEmitted(void) const { return warning_Emitted_; }
+    void Initialize(void) { initialized_ = 1; }
+    void Warned(void) { warning_Emitted_ = 1; }
+
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
+private:
+    int initialized_;
+    int warning_Emitted_;
 };
 
 // ***TO DO: revisit when used (in progress)***
@@ -480,6 +488,7 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
     : Expr_AST(token(Id->Type()), token(tok_eq), Id, Expr) 
     {
 	setAddr(Id->Op().Lex());
+	Id->Initialize();
 	if (option_Debug)
 	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
     }
@@ -688,6 +697,7 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
     : Stmt_AST(Id, Expr)
     {
 	setAddr(Id->Op().Lex());
+	Id->Initialize();
 	if (option_Debug)
 	    std::cout << "\tcreated Assign_AST with LHS = " << addr_ << "\n";
     }

@@ -87,22 +87,20 @@ printIR_List(ir_Rep const& List)
 }
 
 // Run-time error management object
-// Note : when adding anything here, update makeDsObjectTable() as well
-// Should we change table to vector? (original design was different)
 void
 makeRtErrorTable(void)
 {
-    // private variables of the embedded class
+    // private variables of the embedded class object (type Ds_Object*)
     std::string name, directive, value;
     directive = ".asciiz";
-    // private variables of an ReError_Type*
+    // private variables of an RtError_Type*
     std::string label;
     Ds_Object* pDS;
     RtError_Type* pRT;
 
     // array bound checks: negative integer index
     name = "E_neg";
-    value = "Error near %d: array bound negative (%s)";
+    value = "\"Error near %d: array bound negative (%s)\"";
     pDS = new Ds_Object(name, directive, value);
     Ds_Table.push_back(pDS);
 
@@ -112,7 +110,7 @@ makeRtErrorTable(void)
 
     // array bound checks: requested larger than dimenstion
     name = "E_bounds";
-    value = "Error near %d: index out of bounds (%s)";
+    value = "\"Error near %d: index out of bounds (%s)\"";
     pDS = new Ds_Object(name, directive, value);
     Ds_Table.push_back(pDS);
 
@@ -141,7 +139,7 @@ makeRtErrorTargetTable(ir_Rep& Target)
     insertLine(line, iR_RtError_Targets);
 
     std::vector<RtError_Type*>::const_iterator iter;
-    // each error loads its specific message, then hands it on
+    // each error readies its specific message before handing it on
     for ( iter = rtError_Table.begin(); iter != rtError_Table.end(); iter++){
 	labels.push_back( (*iter)->Label() );
 	op = token(tok_mov);
@@ -153,10 +151,12 @@ makeRtErrorTargetTable(ir_Rep& Target)
 	labels.clear();
 	LHS = "";
 
-	op = token(tok_goto);
-	target = "L_eExit";
-	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-	insertLine(line, iR_RtError_Targets);
+	if ( (rtError_Table.back() != *iter) ){ 
+	    op = token(tok_goto);
+	    target = "L_eExit";
+	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	    insertLine(line, iR_RtError_Targets);
+	}
     }
 
     // common exit point

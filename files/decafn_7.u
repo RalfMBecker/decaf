@@ -1,6 +1,9 @@
 -----------------------------------------------
 code generated for ./files/decafn_7.dec
 -----------------------------------------------
+Warning near 5:14: In (a) - variable used un-initialized
+
+found 1 warning
 
 Info for table Env1
 ---------------------------------------------------

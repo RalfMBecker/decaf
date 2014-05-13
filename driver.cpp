@@ -50,19 +50,25 @@ startParse(void)
     getNextToken();
     pFirst_Node = parseBlock();
 
+    if ( (no_lex_Errors) || (no_par_Errors) || (no_Warnings) )
+	std::cerr << "\n";
     std::string plural;
     if (no_lex_Errors){
-	std::cerr << "\nfound " << no_lex_Errors << " lexical error";
+	std::cerr << "found " << no_lex_Errors << " lexical error";
 	plural = ( (1 < no_lex_Errors) )?"s\n":"\n";
 	std::cerr << plural;
     }
-    else
-	std::cerr << "\n";
     if (no_par_Errors){
 	std::cerr << "found "<< no_par_Errors << " syntactic/semantic error";
-	plural = ( (1 < no_par_Errors) )?"s\n\n":"\n\n";
+	plural = ( (1 < no_par_Errors) )?"s\n":"\n";
 	std::cerr << plural;
     }
+    if (no_Warnings){
+	std::cerr << "found "<< no_Warnings << " warning";
+	plural = ( (1 < no_Warnings) )?"s\n":"\n";
+	std::cerr << plural;
+    }
+    std::cout << "\n";
 
     if ( (0 != pFirst_Node) ){
 	printSTInfo();

@@ -34,6 +34,7 @@ const int MAX_TEXT = 32;
 
 extern int no_lex_Errors;
 extern int no_par_Errors;
+extern int no_Warnings;
 
 int panicModeFwd(void);
 void errExit(int pError, const char* format, ...);

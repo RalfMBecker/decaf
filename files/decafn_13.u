@@ -1,9 +1,12 @@
 -----------------------------------------------
 code generated for ./files/decafn_13.dec
 -----------------------------------------------
+Warning near 3:14: In (a) - variable used un-initialized
 Warning near 4:2: unused expression
 Warning near 7:6: unused expression
 Warning near 12:6: unused expression
+
+found 4 warnings
 
 Info for table Env1
 ---------------------------------------------------

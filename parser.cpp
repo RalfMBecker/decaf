@@ -163,6 +163,24 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 /***********************************************
 * Expression parsers (+ primary switchboard)
 ***********************************************/
+
+// which: 0 - both; 1 - LHS only; 2 - RHS only
+void
+checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
+{
+    IdExpr_AST* pId;
+    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
+	 !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
+	pId->Warned();
+	parseWarning(pId->Addr(), "variable used un-initialized");
+    }
+    if ( (0 != RHS) && (pId = dynamic_cast<IdExpr_AST*>(RHS)) && 
+	 (pId) && !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
+	pId->Warned();
+	parseWarning(pId->Addr(), "variable used un-initialized");
+    }
+}
+
 Expr_AST* parsePrimaryExpr(void);
 int logOp_Tot = 0;
 
@@ -237,15 +255,19 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 	switch(binOp1.Tok()){
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
 	case tok_mod: 
+	    checkInitialized(LHS, RHS);
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
 	case tok_eq: // validity check above
+	    checkInitialized(0, RHS);
 	    LHS = new AssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
 	    break;
 	case tok_log_or: 
+	    checkInitialized(LHS, RHS);
 	    LHS = new OrExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_and:
+	    checkInitialized(LHS, RHS);
 	    LHS = new AndExpr_AST(LHS, RHS);
 	    break;
 	case tok_log_eq: case tok_log_ne: case tok_lt:
@@ -255,6 +277,7 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 		errorIn_Progress = 1;
 		return 0;
 	    }
+	    checkInitialized(LHS, RHS);
 	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
 	default:
@@ -383,6 +406,8 @@ dispatchPrefixExpr(token t)
     }
 
     // apply prefixes successively
+    if ( !(tok_Vec.empty()) && (ret) )
+	checkInitialized(ret, 0);
     std::vector<token>::const_reverse_iterator iter;
     for (iter = tok_Vec.rbegin(); iter != tok_Vec.rend(); iter++)
 	ret = new UnaryArithmExpr_AST(*iter, ret);
@@ -660,6 +685,7 @@ parseAssign(void)
 
     if ( !(dynamic_cast<IdExpr_AST*>(LHS)) ) // in case we coerced
 	errExit(0, "logical flaw in use of function parseAssign");
+    checkInitialized(0, RHS);
     Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
     getNextToken();
     if (errorIn_Progress) return 0;

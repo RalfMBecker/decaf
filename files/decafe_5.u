@@ -2,10 +2,12 @@
 code generated for ./files/decafe_5.dec
 -----------------------------------------------
 Error near 5:8: Syntax error (else) - else without leading if
+Warning near 6:7: In (b) - variable used un-initialized
 Warning near 13:3: '=' in if-conditional - did you mean '=='?
 Error near 17:16: Syntax error ()) - Expected primary expression
 
 found 2 syntactic/semantic errors
+found 2 warnings
 
 Info for table Env1
 ---------------------------------------------------
