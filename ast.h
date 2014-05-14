@@ -363,36 +363,19 @@ class ArrayVarDecl_AST;
 // set up status variables to reflect this.
 // ** TO DO: Cannot be coerced when LValue
 class ArrayIdExpr_AST: public IdExpr_AST{
-
 public:
 ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
-		ArrayVarDecl_AST* Base, std::string OS = "")
+		std::vector<std::string>* Final, ArrayVarDecl_AST* Base,
+		std::string OS = "")
     : IdExpr_AST(Type, Op, 1, 1), all_IntVals_(AI), dims_(Access), 
-	offset_(OS), base_(Base)
+	dims_Final_(Final), base_(Base), offset_(OS) 
     {
-	std::ostringstream tmp_Stream;
-
-	int num_Dims = dims_->size();
-
-	dims_Final_ = new std::vector<std::string>;
-	dims_Final_->reserve(num_Dims);
-	if (all_IntVals_){
-	    std::vector<Expr_AST*>::const_iterator iter;
-	    tmp_Stream << addr_;
-	    for ( iter = dims_->begin(); iter != dims_->end(); iter++ ){
-		std::string tmp_String;
-		dims_Final_->push_back( (*iter)->Addr() );
-		tmp_Stream << "[" << tmp_String << "]";
-	    }
-	    tmp_Stream << "\n";
-	}
-
 	if (option_Debug){
 	    std::cout << "\tcreated ArrayIdExpr_AST (";
 	    if (all_IntVals_)
 		std::cout << "access compile-time resolved)\n";
 	    else
-		std::cout << tmp_Stream.str() << ")\n";
+		std::cout << "access compile-time resolved)\n";
 	}
     }
 
@@ -402,9 +385,9 @@ private:
     int all_IntVals_;
     std::vector<Expr_AST*>* dims_;
     std::vector<std::string>* dims_Final_;
+    ArrayVarDecl_AST* base_;
     std::string offset_; // usually filled in at run-time; in case of both
                          // access and bounds all integers, at compile-time
-    ArrayVarDecl_AST* base_;
 };
 
 class IntExpr_AST: public Expr_AST{
@@ -648,9 +631,9 @@ VarDecl_AST(IdExpr_AST* Id)
 
     virtual std::string Name(void) const { return name_; }
     virtual token Type(void) const { return type_; }
+
     virtual int Width(void) const { return width_; }
     virtual IdExpr_AST* Expr(void) const { return expr_; }
-
     virtual void forceWidth(int W) { width_ = W; }
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
@@ -703,6 +686,7 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
     ~ArrayVarDecl_AST() { delete dims_; }
 
     int allInts(void) const { return all_IntVals_; }
+    int numDims(void) const { return num_Dims_; }
     std::vector<Expr_AST*>* Dims(void) const { return dims_; }
     std::vector<std::string>* DimsFinal(void) const { return dims_Final_; }
 

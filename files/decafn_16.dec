@@ -1,0 +1,15 @@
+{
+    int a[2][3];
+    int b = 1; 
+    int c[b*b][2][b-1];
+
+    a[0][0] = 1;
+    a[0][1] = a[0][0];
+
+    if (b == 0)
+	b = 1;
+
+    // would not catch if c (array) used as an index
+    // ** TO DO
+    int d[3][b][b+1][2];
+}

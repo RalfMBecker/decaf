@@ -110,6 +110,123 @@ parseFltExpr(void)
     return res;
 }
 
+std::vector<Expr_AST*>* parseDims(void);
+
+// ** TO DO: ensure that we point at "["
+// ** TO DO: dynamic_cast<ArrayVarDecl_AST*> the rv in parseIdExpr 
+//           "defined" check, then send on as arg type below
+IdExpr_AST*
+parseArrayIdExpr(ArrayVarDecl_AST* Base)
+{
+    std::vector<Expr_AST*>* dims_V = parseDims();
+    if (errorIn_Progress)
+	return 0;
+
+    // validity check, and pre-processing for all-integer dims arrays
+    int all_Ints = 1;
+    std::vector<Expr_AST*>::const_iterator iter;
+    for ( iter = dims_V->begin(); iter != dims_V->end(); iter++){
+	if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
+	    all_Ints = 0;
+    }
+
+    // As for a compile-time bound check both vectors need to be of full 
+    // integer type, process dims_Final_ first when possible
+    int num_Dims = Base->numDims();
+    std::vector<std::string>* dims_Final = new std::vector<std::string>;
+    dims_Final->reserve(num_Dims);
+    if (all_Ints){
+	std::vector<Expr_AST*>::const_iterator iter;
+	for ( iter = dims_V->begin(); iter != dims_V->end(); iter++ )
+	    dims_Final->push_back( (*iter)->Addr() );
+    }
+
+    // Get offset ** TO DO: enter example calculation from phone
+    int offset_V; // ** TO DO: use this loop to also get offset
+
+    // Now perform bound checks, when possible (return error and leave)
+    if ( (all_Ints) && (Base->allInts()) )
+	;
+
+
+    token type = (Base->Expr())->Type();
+    token op = (Base->Expr())->Op();
+    std::string offset;
+    std::ostringstream tmp_Stream;
+    tmp_Stream << offset_V;
+    offset = tmp_Stream.str();
+    ArrayIdExpr_AST* ret;
+    ret = new ArrayIdExpr_AST(type, op, all_Ints,dims_V,dims_Final,Base,offset);
+
+    return ret;
+}
+
+//ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
+//		std::vector<std::string>* Final, ArrayVarDecl_AST* Base,
+//		std::string OS = "")
+
+
+/*
+	std::vector<std::string> 
+	std::string this_DimStr;
+	int this_Dim;
+	for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
+	    this_DimStr = ((*iter)->Op()).Lex();
+	    if ( 0 >= (this_Dim = atoi( this_DimStr.c_str() )) ){
+		parseError(this_DimStr, "array dimension must be non-negative");
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	    else
+
+	}
+    }
+*/
+
+/*
+    ArrayVarDecl_AST* ret;
+    std::vector<Expr_AST*>* dim_V = parseDims();
+    if (errorIn_Progress)
+	return 0;
+
+    // validity check, and pre-processing for all-integer dims arrays
+    int all_IntVals = 1;
+    std::vector<Expr_AST*>::const_iterator iter;
+    for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
+	if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
+	    all_IntVals = 0;
+    }
+
+    // Allocate and "> 0" check at compile-time, when possible.
+    // Note As we check for bound violations only after building the entire
+    // dimension vector, error recover will step over the next instruction
+    int width = Name->TypeW();
+    if (all_IntVals){
+	std::string this_DimStr;
+	int this_Dim;
+	for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
+	    this_DimStr = ((*iter)->Op()).Lex();
+	    if ( 0 >= (this_Dim = atoi( this_DimStr.c_str() )) ){
+		parseError(this_DimStr, "array dimension must be non-negative");
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	    else
+		width *= atoi(this_DimStr.c_str());
+	}
+    }
+    else // create marker that we need run-time stack adjustment
+	width = 0;
+
+    ret = new ArrayVarDecl_AST(Name, dim_V, all_IntVals, width);
+    if ( !(all_IntVals) )
+	emitRtError_Section = 1;
+
+    return ret;
+*/
+
+
+
 // ******TO DO: NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // id -> alpha* [alphanum | _]*
 // Used for *reading an ID*, not its definition
