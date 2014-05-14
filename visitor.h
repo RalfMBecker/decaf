@@ -495,15 +495,13 @@ public:
 
     // ** TO DO: could expressions of type || && need special treatment?
     //           (as they emit labels?)
-    // ** TO DO: array bound check
     void visit(ArrayVarDecl_AST* V)
     {
 	if (option_Debug) std::cout << "visiting ArrayVarDecl_AST...\n";
 
 	std::ostringstream tmp_Stream;
-	tmp_Stream << V->Line();
-	std::string lNo = tmp_Stream.str();
-	tmp_Stream.str(""); // flushing is meaningless for string objects
+//	tmp_Stream << V->Line();
+//	tmp_Stream.str(""); // flushing is meaningless for string objects
                         // as there is no natural device attached to flush to
 
 	Env* pFrame = V->getEnv();
@@ -534,25 +532,34 @@ public:
 	    for ( iter = dims.begin(); iter != dims.end(); iter++ ){
 		if ( dynamic_cast<IntExpr_AST*>(*iter) || 
 		     (dynamic_cast<IdExpr_AST*>(*iter)) ){
+		    // calculate bound, and store result for future reference
 		    LHS = target;
 		    RHS = (*iter)->Addr();
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target,LHS,RHS,frame, lNo);
+		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
+		    V->addToDimsFinal(RHS); // used if we later need dims
 		}
 		else{
+		    // calculate bound, and store result for future reference
 		    (*iter)->accept(this);
 		    LHS = target;
 		    RHS = last_Tmp_;
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target,LHS,RHS,frame, lNo);
+		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
+		    V->addToDimsFinal(RHS);
 		}
-	    }
+		// jump and continue if (expr > 0)
+		std::string new_L = makeLabel();
+		compCheckAndJump(new_L, token(tok_lt), "0", RHS, frame);
 
+		// prepare jump to runtime error by pushing variables
+		int lNo = V->Line();
+		std::string var = V->Addr();
+		pushLnoAndVar(lNo, var, new_L, LABEL_ZERO_BOUND, frame);
+	    }
 	    // make room on stack
-	    // ** TO DO: might change what is emitted when closer to making
-	    //           the assembly backend
 	    growStack(pFrame, target);
 	}
 
@@ -890,14 +897,14 @@ public:
 	std::string frame_Str = Frame->getTableName();
 
 	label_Vec labels;
-	token Op(tok_plus);
+	token op(tok_plus);
 	std::string target = "%esp";
 	std::string LHS = "%esp";
 	SSA_Entry* line;
 
 	std::vector<std::string>::const_iterator iter;
 	for ( iter = V.begin(); iter != V.end(); iter++ ){
-	    line = new SSA_Entry(labels, Op, target, LHS, *iter, frame_Str);
+	    line = new SSA_Entry(labels, op, target, LHS, *iter, frame_Str);
 	    insertLine(line, iR_List);
 	}
     }
@@ -910,12 +917,61 @@ public:
 
 	std::string frame_Str = Frame->getTableName();
 	label_Vec labels;
-	token Op(tok_minus);
+	token op(tok_minus);
 	std::string target = "%esp";
 	std::string LHS = "%esp";
 	SSA_Entry* line;
-	line = new SSA_Entry(labels, Op, target, LHS, Name, frame_Str);
+	line = new SSA_Entry(labels, op, target, LHS, Name, frame_Str);
 	insertLine(line, iR_List);
+    }
+
+    void compCheckAndJump(std::string Label, token Op, std::string LHS, 
+			  std::string RHS, std::string Frame)
+    {
+	std::vector<std::string> labels;
+	SSA_Entry* line;
+
+	std::string target = makeTmp();
+	line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+
+	Op = token(tok_iftrue);
+	LHS = "goto";
+	RHS = Label;
+	line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+    }
+
+    void pushLnoAndVar(int lNo, std::string Var,std::string Label_1, 
+		       std::string Label_2, std::string Frame) 
+    {
+	std::ostringstream tmp_Stream;
+	std::vector<std::string> labels;
+	token op;
+	std::string target;
+	std::string LHS, RHS;
+	SSA_Entry* line;
+
+	// push line number
+	op = token(tok_pushl);
+	tmp_Stream << lNo;
+	target = tmp_Stream.str();
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+
+	// push variable name (** TO DO - make BSS first)
+
+	// jump to error code
+	labels.clear();
+	target = Label_2;
+	op = token(tok_goto);
+	RHS = LHS = "";
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+
+	// emit jump target
+	labels.push_back(Label_1);
+	insertNOP(labels, Frame);
     }
 
     // debugging function

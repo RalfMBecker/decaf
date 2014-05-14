@@ -104,17 +104,17 @@ makeRtErrorTable(void)
     pDS = new Ds_Object(name, directive, value);
     Ds_Table.push_back(pDS);
 
-    label = "L_e0";
+    label = LABEL_ZERO_BOUND;
     pRT = new RtError_Type(label, pDS);
     rtError_Table.push_back(pRT);
 
     // array bound checks: requested larger than dimenstion
-    name = "E_bounds";
+    name = "E_bound";
     value = "\"Error near %d: index out of bounds (%s)\"";
     pDS = new Ds_Object(name, directive, value);
     Ds_Table.push_back(pDS);
 
-    label = "L_e1";
+    label = LABEL_UPPER_BOUND;
     pRT = new RtError_Type(label, pDS);
     rtError_Table.push_back(pRT);
 }
@@ -142,10 +142,9 @@ makeRtErrorTargetTable(ir_Rep& Target)
     // each error readies its specific message before handing it on
     for ( iter = rtError_Table.begin(); iter != rtError_Table.end(); iter++){
 	labels.push_back( (*iter)->Label() );
-	op = token(tok_mov);
-	target = "%eax";
-	LHS = "$";
-	LHS += (*iter)->Ds_Addr();
+	op = token(tok_pushl);
+	target = "$";
+	target += (*iter)->Ds_Addr();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_RtError_Targets);
 	labels.clear();

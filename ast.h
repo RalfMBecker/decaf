@@ -648,9 +648,11 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
     : VarDecl_AST(Name), dims_(D)
     {
 	num_Dims_ = dims_->size();
-	all_IntVals_ = 1;	
-	std::vector<Expr_AST*>::const_iterator iter;
+	dims_Final_ = new std::vector<std::string>;
+	dims_Final_->reserve(num_Dims_);
 
+	all_IntVals_ = 1;
+	std::vector<Expr_AST*>::const_iterator iter;
 	for ( iter = D->begin(); iter != D->end(); iter++){
 	    if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
 		all_IntVals_ = 0;
@@ -681,6 +683,9 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
 
     int allInts(void) const { return all_IntVals_; }
     std::vector<Expr_AST*>* Dims(void) const { return dims_; }
+    std::vector<std::string>* DimsFinal(void) const { return dims_Final_; }
+
+    void addToDimsFinal(std::string V) { dims_Final_->push_back(V); }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
@@ -688,6 +693,9 @@ private:
     std::vector<Expr_AST*>* dims_;
     int num_Dims_;
     int all_IntVals_;
+    std::vector<std::string>* dims_Final_; // run-time filled in: array bounds'
+    // final expression after evaluating the expressions in dims_ (as strings,
+    // either an integer or a tmp variable), for reference later in visitor
 };
 
 
