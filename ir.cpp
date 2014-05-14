@@ -159,13 +159,14 @@ makeRtErrorTargetTable(ir_Rep& Target)
     }
 
     // common exit point
-    op = token(tok_syscall);
+    op = token(tok_call);
     labels.push_back("L_eExit");
     target = "printf";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
     insertLine(line, iR_RtError_Targets);
     labels.clear();
 
+    op = token(tok_syscall);
     target = "exit";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
     insertLine(line, iR_RtError_Targets);
@@ -177,9 +178,9 @@ printDataSection(void)
     std::cout << "---------------------------------------------------\n";
     // print header
     std::ostringstream tmp_Stream;
-    tmp_Stream.width(8);
+    tmp_Stream.width(10);
     tmp_Stream << ".section";
-    tmp_Stream.width(6);
+    tmp_Stream.width(8);
     tmp_Stream << ".data\n\n";
     std::cout << tmp_Stream.str();
     tmp_Stream.str("");

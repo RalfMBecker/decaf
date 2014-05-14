@@ -500,10 +500,6 @@ public:
 	if (option_Debug) std::cout << "visiting ArrayVarDecl_AST...\n";
 
 	std::ostringstream tmp_Stream;
-//	tmp_Stream << V->Line();
-//	tmp_Stream.str(""); // flushing is meaningless for string objects
-                        // as there is no natural device attached to flush to
-
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
 	std::string target;
@@ -529,6 +525,7 @@ public:
 
 	    // retrieve the dimenstions, and successively multiply them
 	    Op = token(tok_mult);
+	    std::string l_ErrTarget = makeLabel(); // begin error processing
 	    for ( iter = dims.begin(); iter != dims.end(); iter++ ){
 		if ( dynamic_cast<IntExpr_AST*>(*iter) || 
 		     (dynamic_cast<IdExpr_AST*>(*iter)) ){
@@ -551,14 +548,14 @@ public:
 		    V->addToDimsFinal(RHS);
 		}
 		// jump and continue if (expr > 0)
-		std::string new_L = makeLabel();
-		compCheckAndJump(new_L, token(tok_lt), "0", RHS, frame);
-
-		// prepare jump to runtime error by pushing variables
-		int lNo = V->Line();
-		std::string var = V->Addr();
-		pushLnoAndVar(lNo, var, new_L, LABEL_ZERO_BOUND, frame);
+		compAndJumpFalse(l_ErrTarget, token(tok_lt), "0", RHS, frame);
 	    }
+
+	    // prepare jump to runtime error by pushing variables
+	    int lNo = V->Line();
+	    std::string var = V->Addr();
+	    pushLnoAndVar(lNo, var, l_ErrTarget, LABEL_ZERO_BOUND, frame);
+
 	    // make room on stack
 	    growStack(pFrame, target);
 	}
@@ -874,8 +871,10 @@ public:
 
     std::string makeTmp(void)
     {
+	static int count = 0;
+
 	std::ostringstream tmp_Stream;
-	tmp_Stream << "t" << ++count_Tmp_;
+	tmp_Stream << "t" << ++count;
 	std::string ret = tmp_Stream.str();
 	last_Tmp_ = ret; // for arrays with integer expression bounds
 	return ret;
@@ -883,12 +882,15 @@ public:
 
     std::string makeLabel(void)
     {
+	static int count = 0;
+
 	std::ostringstream tmp_Stream;
-	tmp_Stream << "L" << ++count_Lab_;
+	tmp_Stream << "L" << ++count;
 	return tmp_Stream.str();
     }
 
-    // helper functions for run-time stack growth/shrinking
+    // Helper function for run-time stack growth (see comment to companion,
+    // growStack())
     void shrinkStackVec(Env* Frame)
     {
 	std::vector<std::string> V = Frame->getAdj();
@@ -909,8 +911,9 @@ public:
 	}
     }
 
-    // typically extended item by item (but shrunk by the sum of these
-    // extensions; see prior helper function)
+    // Helper function for run-time stack management.
+    // Typically,stack is  extended item by item (but shrunk by the sum of 
+    // these extensions; see shrinkStackVec())
     void growStack(Env* Frame, std::string Name)
     {
 	Frame->addAdj(Name);
@@ -925,7 +928,9 @@ public:
 	insertLine(line, iR_List);
     }
 
-    void compCheckAndJump(std::string Label, token Op, std::string LHS, 
+    // Compare two variables, and jump to 'Label' if false (currently
+    // only used for run-time arrays)
+    void compAndJumpFalse(std::string Label, token Op, std::string LHS, 
 			  std::string RHS, std::string Frame)
     {
 	std::vector<std::string> labels;
@@ -935,15 +940,23 @@ public:
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
 
-	Op = token(tok_iftrue);
+	Op = token(tok_iffalse);
 	LHS = "goto";
 	RHS = Label;
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
     }
 
-    void pushLnoAndVar(int lNo, std::string Var,std::string Label_1, 
-		       std::string Label_2, std::string Frame) 
+    // Before jumping to error section (which prints the error, and exit),
+    // push identifying information to the stack (currently only for 
+    // run-time array declaration).
+    // goto end
+    // pushl var
+    // pushl lineNo
+    // goto error_Section
+    // end nop
+    void pushLnoAndVar(int lNo, std::string Var,std::string Label_ErrTarget, 
+		       std::string Label_ErrExit, std::string Frame) 
     {
 	std::ostringstream tmp_Stream;
 	std::vector<std::string> labels;
@@ -951,27 +964,66 @@ public:
 	std::string target;
 	std::string LHS, RHS;
 	SSA_Entry* line;
+	std::string label_End;
 
-	// push line number
+	// goto to jump to end of this function (when falling through)
+	op = token(tok_goto);
+	target = label_End = makeLabel();
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+	labels.clear();
+
+	// push variable name
+	labels.push_back(Label_ErrTarget);
 	op = token(tok_pushl);
-	tmp_Stream << lNo;
+	tmp_Stream << "$";
+	tmp_Stream << makeDsErrVar(Var);
 	target = tmp_Stream.str();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
+	tmp_Stream.str(""); // flushing is meaningless for string objects
+	labels.clear();  // as there is no natural device attached to flush to
 
-	// push variable name (** TO DO - make BSS first)
+	// push line number
+	tmp_Stream << "$" << lNo;
+	target = tmp_Stream.str();
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+	tmp_Stream.str("");
+	labels.clear();
 
 	// jump to error code
-	labels.clear();
-	target = Label_2;
+	target = Label_ErrExit;
 	op = token(tok_goto);
-	RHS = LHS = "";
 	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
 
 	// emit jump target
-	labels.push_back(Label_1);
+	labels.push_back(label_End);
 	insertNOP(labels, Frame);
+    }
+
+    // In the error section, to print the name of the variable in error, 
+    // push it into the Ds section so other functions can retrieve it.
+    std::string makeDsErrVar(std::string Value)
+    {
+	static int count = 0;
+
+	std::ostringstream tmp_Stream;
+	std:: string directive = ".asciiz";
+	std::string name = "Evar_";
+	Ds_Object* pDs;
+
+	tmp_Stream << name << count++;
+	name = tmp_Stream.str();
+	tmp_Stream.str("");
+
+	tmp_Stream << "\"" << Value << "\"";
+	Value = tmp_Stream.str();
+	pDs = new Ds_Object(name, directive, Value);
+	Ds_Table.push_back(pDs);
+
+	return name;
     }
 
     // debugging function
@@ -987,8 +1039,6 @@ public:
     }
 
 private:
-static int count_Tmp_;
-static int count_Lab_;
 
 static std::string last_Tmp_; // for variable length arrays
 

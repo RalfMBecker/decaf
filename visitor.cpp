@@ -5,9 +5,6 @@
 
 #include "visitor.h"
 
-int MakeIR_Visitor::count_Tmp_ = 0;
-int MakeIR_Visitor::count_Lab_ = 0;
-
 std::string MakeIR_Visitor::last_Tmp_ = "";
 
 std::string MakeIR_Visitor::label_Break_ = "";
