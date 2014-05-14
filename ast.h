@@ -644,28 +644,14 @@ private:
 //         filled in). 
 class ArrayVarDecl_AST: public VarDecl_AST{
 public:
-ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D)
-    : VarDecl_AST(Name), dims_(D)
+ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
+    : VarDecl_AST(Name), dims_(D), all_IntVals_(I)
     {
 	num_Dims_ = dims_->size();
 	dims_Final_ = new std::vector<std::string>;
 	dims_Final_->reserve(num_Dims_);
 
-	all_IntVals_ = 1;
-	std::vector<Expr_AST*>::const_iterator iter;
-	for ( iter = D->begin(); iter != D->end(); iter++){
-	    if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
-		all_IntVals_ = 0;
-	}	
-	// allocate at compile-time, when possible
-	if (all_IntVals_){
-	    int width = Name->TypeW();
-	    for ( iter = D->begin(); iter != D->end(); iter++)
-		width *= atoi ( ((*iter)->Op()).Lex().c_str() );
-	    this->forceWidth(width);
-	}
-	else // create marker that we need run-time stack adjustment
-	    this->forceWidth(0);
+	this->forceWidth(W);
 
 	if (option_Debug){
 	    std::cout << "\tcreated ArrayVarDecl_AST with name = " << addr_;

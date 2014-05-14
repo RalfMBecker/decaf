@@ -510,6 +510,8 @@ public:
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
 
+	// All dimensions = integers handled in parser; if at least one
+	// dimension is an integer expression, handled here. 
 	if ( !(V->allInts()) ){
 	    // account for width of basic type
 	    target = makeTmp();
@@ -551,7 +553,7 @@ public:
 		compAndJumpFalse(l_ErrTarget, token(tok_lt), "0", RHS, frame);
 	    }
 
-	    // prepare jump to runtime error by pushing variables
+	    // prepare jump to runtime error by pushing lNo & variable name
 	    int lNo = V->Line();
 	    std::string var = V->Addr();
 	    pushLnoAndVar(lNo, var, l_ErrTarget, LABEL_ZERO_BOUND, frame);
@@ -912,7 +914,7 @@ public:
     }
 
     // Helper function for run-time stack management.
-    // Typically,stack is  extended item by item (but shrunk by the sum of 
+    // Typically,stack is extended item by item (but shrunk by the sum of 
     // these extensions; see shrinkStackVec())
     void growStack(Env* Frame, std::string Name)
     {

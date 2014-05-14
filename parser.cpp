@@ -17,6 +17,7 @@
 ********************************************************************/
 
 #include <vector>
+#include <cstdlib>
 #include "lexer.h"
 #include "ast.h"
 #include "error.h"
@@ -529,7 +530,8 @@ parseDims(void)
 
 	Expr_AST* e = dispatchExpr();
 	if (errorIn_Progress){
-	    parseError(next_Token.Lex(), "while processing array dimensions");
+	    // parseError(next_Token.Lex(), "illegal array dimension");
+	    // commented out to avoid double-reporting of an error
 	    return 0;
 	}
 
@@ -558,15 +560,42 @@ ArrayVarDecl_AST*
 parseArrayVarDecl(IdExpr_AST* Name)
 {
     ArrayVarDecl_AST* ret;
-    std::vector<Expr_AST*>* dims = parseDims();
+    std::vector<Expr_AST*>* dim_V = parseDims();
     if (errorIn_Progress)
-	ret = 0;
-    else{
-	ret = new ArrayVarDecl_AST(Name, dims);
-	if ( !(ret->allInts()) )
-	    emitRtError_Section = 1;
+	return 0;
+
+    // validity check, and pre-processing for all-integer dims arrays
+    int all_IntVals = 1;
+    std::vector<Expr_AST*>::const_iterator iter;
+    for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
+	if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
+	    all_IntVals = 0;
     }
-    // ** TO DO: allow initialization to follow?
+
+    // Allocate and "> 0" check at compile-time, when possible.
+    // Note As we check for bound violations only after building the entire
+    // dimension vector, error recover will step over the next instruction
+    int width = Name->TypeW();
+    if (all_IntVals){
+	std::string this_DimStr;
+	int this_Dim;
+	for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
+	    this_DimStr = ((*iter)->Op()).Lex();
+	    if ( 0 >= (this_Dim = atoi( this_DimStr.c_str() )) ){
+		parseError(this_DimStr, "array dimension must be non-negative");
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	    else
+		width *= atoi(this_DimStr.c_str());
+	}
+    }
+    else // create marker that we need run-time stack adjustment
+	width = 0;
+
+    ret = new ArrayVarDecl_AST(Name, dim_V, all_IntVals, width);
+    if ( !(all_IntVals) )
+	emitRtError_Section = 1;
 
     return ret;
 }

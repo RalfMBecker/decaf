@@ -4,6 +4,7 @@
 ./files/decafe_4.dec
 ./files/decafe_5.dec
 ./files/decafe_6.dec
+./files/decafe_7.dec
 ./files/decafn_1.dec
 ./files/decafn_2.dec
 ./files/decafn_3.dec
