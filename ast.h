@@ -33,7 +33,7 @@ class Node_AST;
 class Expr_AST;
 class Tmp_AST;
 class IdExpr_AST;
-class IdArrayExpr_AST;
+class ArrayIdExpr_AST;
 class IntExpr_AST;
 class FltExpr_AST;
 class ArithmExpr_AST;
@@ -67,7 +67,7 @@ public:
     virtual void visit(Expr_AST*) = 0;
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
-    virtual void visit(IdArrayExpr_AST*) = 0;
+    virtual void visit(ArrayIdExpr_AST*) = 0;
     virtual void visit(IntExpr_AST*) = 0;
     virtual void visit(FltExpr_AST*) = 0;
     virtual void visit(ArithmExpr_AST*) = 0;
@@ -357,25 +357,54 @@ private:
     int warning_Emitted_;
 };
 
-// ***TO DO: revisit when used (in progress)***
-// Cannot be coerced.
-class IdArrayExpr_AST: public IdExpr_AST{
-public:
-    IdArrayExpr_AST(token Type, token Op, int Size)
-	: IdExpr_AST(Type, Op), size_(Size)
-    {
-	if ( (-1 != typeW_) )
-	    typeW_ *= size_;
-	if (option_Debug)
-	    std::cout << "\tcreated an array with Id = " << addr_  << "\n";
-    }
+class ArrayVarDecl_AST;
 
-    int Size(void) const { return size_; }
+// As we don't check for initialization before access in the array case,
+// set up status variables to reflect this.
+// ** TO DO: Cannot be coerced when LValue
+class ArrayIdExpr_AST: public IdExpr_AST{
+
+public:
+ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
+		ArrayVarDecl_AST* Base, std::string OS = "")
+    : IdExpr_AST(Type, Op, 1, 1), all_IntVals_(AI), dims_(Access), 
+	offset_(OS), base_(Base)
+    {
+	std::ostringstream tmp_Stream;
+
+	int num_Dims = dims_->size();
+
+	dims_Final_ = new std::vector<std::string>;
+	dims_Final_->reserve(num_Dims);
+	if (all_IntVals_){
+	    std::vector<Expr_AST*>::const_iterator iter;
+	    tmp_Stream << addr_;
+	    for ( iter = dims_->begin(); iter != dims_->end(); iter++ ){
+		std::string tmp_String;
+		dims_Final_->push_back( (*iter)->Addr() );
+		tmp_Stream << "[" << tmp_String << "]";
+	    }
+	    tmp_Stream << "\n";
+	}
+
+	if (option_Debug){
+	    std::cout << "\tcreated ArrayIdExpr_AST (";
+	    if (all_IntVals_)
+		std::cout << "access compile-time resolved)\n";
+	    else
+		std::cout << tmp_Stream.str() << ")\n";
+	}
+    }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
-    int size_;
+    int all_IntVals_;
+    std::vector<Expr_AST*>* dims_;
+    std::vector<std::string>* dims_Final_;
+    std::string offset_; // usually filled in at run-time; in case of both
+                         // access and bounds all integers, at compile-time
+    ArrayVarDecl_AST* base_;
 };
 
 class IntExpr_AST: public Expr_AST{
@@ -648,8 +677,14 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
     : VarDecl_AST(Name), dims_(D), all_IntVals_(I)
     {
 	num_Dims_ = dims_->size();
+
 	dims_Final_ = new std::vector<std::string>;
 	dims_Final_->reserve(num_Dims_);
+	if (all_IntVals_){
+	    std::vector<Expr_AST*>::const_iterator iter;
+	    for ( iter = D->begin(); iter != D->end(); iter++ )
+		dims_Final_->push_back( (*iter)->Addr() );
+	}
 
 	this->forceWidth(W);
 
@@ -662,7 +697,7 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
 	    }
 	    else
 		std::cout << "and expression bounds (allocated at run-time)\n";
-	}  
+	}
     }
 
     ~ArrayVarDecl_AST() { delete dims_; }

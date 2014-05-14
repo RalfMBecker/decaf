@@ -90,7 +90,7 @@ public:
     }
 
     // ** TO DO
-    void visit(IdArrayExpr_AST*) { return; }
+    void visit(ArrayIdExpr_AST*) { return; }
 
     void visit(NOP_AST* V)
     {
