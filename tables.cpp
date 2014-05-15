@@ -72,8 +72,10 @@ opPriority(token t)
 void
 makeTypePrecTable(void)
 {
-    typePrec_Table["int"] = 10;
-    typePrec_Table["double"] = 20;
+    token t = token(tok_int);
+    typePrec_Table[t.Lex()] = 10;
+    t = token(tok_double);
+    typePrec_Table[t.Lex()] = 20;
 }
 
 int
@@ -104,7 +106,7 @@ addToWidthTable(std::string Name, int Width)
 }
 
 int
-typeWidth(std::string const& Type)
+typeWidth(const std::string& Type)
 {
     if ( (typeWidth_Table.end() != typeWidth_Table.find(Type)) )
 	return typeWidth_Table[Type];

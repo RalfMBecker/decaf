@@ -139,91 +139,54 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 	    dims_Final->push_back( (*iter)->Addr() );
     }
 
-    // Get offset ** TO DO: enter example calculation from phone
-    int offset_V; // ** TO DO: use this loop to also get offset
-
     // Now perform bound checks, when possible (return error and leave)
-    if ( (all_Ints) && (Base->allInts()) )
-	; // USE operator[] vector access for easier comparison; no iter
+    // Recall that arrays are 0-based (0 - (len-1) valid access)
+    int offset_V = tok_null;
+    if ( (all_Ints) && (Base->allInts()) ){
+	// collect info for offset
+	offset_V = 0;
+	int size_Parents = 1;
+	int width = (Base->Expr())->TypeW();
+ 
+	for ( int i = (num_Dims - 1); i >= 0; i-- ){
+	    int tmp_Bound = atoi( (*(Base->DimsFinal()))[i].c_str() );
+	    std::string tmp_ValueStr = (*dims_Final)[i];
+	    int tmp_Value = atoi( tmp_ValueStr.c_str() );
+	    if ( (0 > tmp_Value) || (tmp_Bound <= tmp_Value) ){
+		parseError(tmp_ValueStr, "index out of array bounds");
+		errorIn_Progress = 1;
+		return 0;
+	    }
 
+	    offset_V += tmp_Value * size_Parents * width;
+	    size_Parents *= tmp_Bound;
+	}
+    }
+    // Get offset: Calculation example
+    // Basics:      width(integer) = 8; 0-based array; result ret = 0 to start
+    // Declaration: int a[5][10][20]
+    // Access:      a[3][4][9]
+    //     size_Parents(sp)           added to ret
+    //          1                    9*sp*8 = 9*1*8         (1)
+    //        1 * 20               4*sp*8 = 4*(1*20)*8      (2)
+    //      1 * 20 * 10           3*sp*8 = 3*(1*20*10)*8    (3)
+    // Result: ret = (1) + (2) + (3)
 
     token type = (Base->Expr())->Type();
     token op = (Base->Expr())->Op();
-    std::string offset;
-    std::ostringstream tmp_Stream;
-    tmp_Stream << offset_V;
-    offset = tmp_Stream.str();
+    std::string off;
+    if ( (tok_null == offset_V) )
+	off = "";
+    else{
+	std::ostringstream tmp_Stream;
+	tmp_Stream << offset_V;
+	off = tmp_Stream.str();
+    }
     ArrayIdExpr_AST* ret;
-    ret = new ArrayIdExpr_AST(type, op, all_Ints,dims_V,dims_Final,Base,offset);
+    ret = new ArrayIdExpr_AST(type, op, all_Ints, dims_V, dims_Final,Base, off);
 
     return ret;
 }
-
-//ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
-//		std::vector<std::string>* Final, ArrayVarDecl_AST* Base,
-//		std::string OS = "")
-
-
-/*
-	std::vector<std::string> 
-	std::string this_DimStr;
-	int this_Dim;
-	for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
-	    this_DimStr = ((*iter)->Op()).Lex();
-	    if ( 0 >= (this_Dim = atoi( this_DimStr.c_str() )) ){
-		parseError(this_DimStr, "array dimension must be non-negative");
-		errorIn_Progress = 1;
-		return 0;
-	    }
-	    else
-
-	}
-    }
-*/
-
-/*
-    ArrayVarDecl_AST* ret;
-    std::vector<Expr_AST*>* dim_V = parseDims();
-    if (errorIn_Progress)
-	return 0;
-
-    // validity check, and pre-processing for all-integer dims arrays
-    int all_IntVals = 1;
-    std::vector<Expr_AST*>::const_iterator iter;
-    for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
-	if ( (tok_intV != ((*iter)->Op()).Tok() ) ) 
-	    all_IntVals = 0;
-    }
-
-    // Allocate and "> 0" check at compile-time, when possible.
-    // Note As we check for bound violations only after building the entire
-    // dimension vector, error recover will step over the next instruction
-    int width = Name->TypeW();
-    if (all_IntVals){
-	std::string this_DimStr;
-	int this_Dim;
-	for ( iter = dim_V->begin(); iter != dim_V->end(); iter++){
-	    this_DimStr = ((*iter)->Op()).Lex();
-	    if ( 0 >= (this_Dim = atoi( this_DimStr.c_str() )) ){
-		parseError(this_DimStr, "array dimension must be non-negative");
-		errorIn_Progress = 1;
-		return 0;
-	    }
-	    else
-		width *= atoi(this_DimStr.c_str());
-	}
-    }
-    else // create marker that we need run-time stack adjustment
-	width = 0;
-
-    ret = new ArrayVarDecl_AST(Name, dim_V, all_IntVals, width);
-    if ( !(all_IntVals) )
-	emitRtError_Section = 1;
-
-    return ret;
-*/
-
-
 
 // ******TO DO: NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // id -> alpha* [alphanum | _]*

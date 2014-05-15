@@ -397,7 +397,7 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
 //	if ( (0 != base_) ) delete base_; // to use delete operator on base_,
 	// a forward declaration of ArrayVarDecl_AST is not enough. We would
 	// need to physically put the entire class ahead, which doesn't
-	// fit the logical structure of this files. Hence, we accept a 
+	// fit the logical structure of this file. Hence, we accept a 
 	// memory leak for base_ (which will be cleaned up after 'exit')
     }
 
