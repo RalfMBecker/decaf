@@ -108,10 +108,15 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
     : parent_(0), lChild_(lC), rChild_(rC), line_(line_No), col_(col_No),
 	addr_(""), env_(top_Env)
     {
-	if ( (0 != lChild_) )
+	if ( (0 != lChild_) ){
 	    lChild_->setParent(this);
-	if ( (0 != rChild_) )
+	    lChild_->RefCountPlus();
+	}
+	if ( (0 != rChild_) ){
 	    rChild_->setParent(this);
+	    rChild_->RefCountPlus();
+	}
+	ref_Count_ = 1;
     }
 
     ~Node_AST() {}
@@ -126,6 +131,10 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
 
     void setParent(Node_AST* Par) { parent_ = Par; }
     virtual void setAddr(std::string Addr) { addr_ = Addr; }
+
+    int RefCount(void) const { return ref_Count_; }
+    void RefCountPlus(void) { ref_Count_++; }
+    void RefCountMinus(void) { ref_Count_--; }
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -145,6 +154,8 @@ protected:
     std::string addr_;
     Env* env_;
     static int label_Count_;
+    int ref_Count_; // Objects might be a child of several other objects
+                    // (this matters when de-allocating memory)
 };
 
 /***************************************
@@ -345,12 +356,12 @@ IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
 	if (option_Debug) std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
 
-    int isInitialized(void) const { return initialized_; }
-    int WarningEmitted(void) const { return warning_Emitted_; }
-    void Initialize(void) { initialized_ = 1; }
-    void Warned(void) { warning_Emitted_ = 1; }
+    virtual int isInitialized(void) const { return initialized_; }
+    virtual int WarningEmitted(void) const { return warning_Emitted_; }
+    virtual void Initialize(void) { initialized_ = 1; }
+    virtual void Warned(void) { warning_Emitted_ = 1; }
 
-    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int initialized_;
@@ -379,7 +390,18 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
 	}
     }
 
-    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    ~ArrayIdExpr_AST()
+    {
+	if ( (0 != dims_) ) delete dims_; 
+	if ( (0 != dims_Final_) ) delete dims_Final_; 
+//	if ( (0 != base_) ) delete base_; // to use delete operator on base_,
+	// a forward declaration of ArrayVarDecl_AST is not enough. We would
+	// need to physically put the entire class ahead, which doesn't
+	// fit the logical structure of this files. Hence, we accept a 
+	// memory leak for base_ (which will be cleaned up after 'exit')
+    }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int all_IntVals_;
@@ -683,7 +705,11 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
 	}
     }
 
-    ~ArrayVarDecl_AST() { delete dims_; }
+    ~ArrayVarDecl_AST() 
+    {
+	if ( (0 != dims_) ) delete dims_;
+	if ( (0 != dims_Final_) ) delete dims_Final_;
+    }
 
     int allInts(void) const { return all_IntVals_; }
     int numDims(void) const { return num_Dims_; }

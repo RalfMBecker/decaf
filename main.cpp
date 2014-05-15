@@ -76,6 +76,7 @@ main(int argc, char* argv[])
     collectParts();
     startParse();
 
+    cleanUp();
     delete input;
     exit(EXIT_SUCCESS);
 }

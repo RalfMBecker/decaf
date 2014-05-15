@@ -89,8 +89,8 @@ typePriority(std::string const& Type)
 void
 makeWidthTable(void)
 {
-    typeWidth_Table["int"] = 4;
-    typeWidth_Table["double"] = 8;
+    typeWidth_Table["int"] = TYPE_WIDTH_INT;
+    typeWidth_Table["double"] = TYPE_WIDTH_FLT;
 }
 
 // add class width in bytes, as needed (no shadowing assumed)

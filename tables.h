@@ -14,6 +14,9 @@
 #include "lexer.h"
 #include "ast.h"
 
+#define TYPE_WIDTH_INT 4
+#define TYPE_WIDTH_FLT 8
+
 void errExit(int, const char* format, ...);
 
 // forward declarations
@@ -54,7 +57,7 @@ extern std::map<std::string, Symbol_Table> ST;
 void printSTInfo(void);
 
 // Table for: basic types; arrays of basic types
-// Compile-time object, part of a linked list of (ct) Symbol Tables, each
+// Compile-time object, part of a linked list of (rt) Symbol Tables, each
 // a (name, <basic type>/class) pair
 class Env{
 public:
@@ -65,6 +68,7 @@ public:
 	tmp << "Env" << ++count_;
 	name_ = tmp.str();
 	runtime_StackAdj_ = std::vector<std::string>();
+	if ( (0 != P) ) prior_->addChild(this);
     }
 
     Env* getPrior(void) const { return prior_; }
@@ -73,6 +77,9 @@ public:
 
     void addAdj(std::string New_Adj) { runtime_StackAdj_.push_back(New_Adj); }
     std::vector<std::string> getAdj(void) const { return runtime_StackAdj_; }
+
+    std::vector<Env*> Children(void) const { return children_; }
+    void addChild(Env* C) { children_.push_back(C); }
 
     int findName(std::string entry_Name)
     {
@@ -103,7 +110,8 @@ private:
     Env* prior_;
     std::map<std::string, VarDecl_AST*> type_;
     std::vector<std::string> runtime_StackAdj_; // for variable length arrays
-
+    std::vector<Env*> children_; // only use: to be able to de-allocate
+    // the multi-ary tree starting at root_Env
 };
 
 // Run-time symbol table information

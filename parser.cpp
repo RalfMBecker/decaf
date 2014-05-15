@@ -12,8 +12,6 @@
 *                 (using Panic Mode recovery) 
 * Note (errors): Warning in '='/'==' case for 'if' is off by a line
 *
-* Mem Leaks: will add a function to delete AST*s and Env* later
-*
 ********************************************************************/
 
 #include <vector>
@@ -146,7 +144,7 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 
     // Now perform bound checks, when possible (return error and leave)
     if ( (all_Ints) && (Base->allInts()) )
-	;
+	; // USE operator[] vector access for easier comparison; no iter
 
 
     token type = (Base->Expr())->Type();

@@ -24,6 +24,70 @@ int option_Debug = 0;
 int option_optLevel = 0; // 0 - remove NOPs
 
 void
+deallocateAST(Node_AST* P)
+{
+    if ( (0 == P) ) 
+	return;
+ 
+    if ( (0 != P->LChild()) )
+	deallocateAST(P->LChild());
+    if ( (0 != P->RChild()) )
+	deallocateAST(P->RChild());
+
+    if (0 != P){
+	if ( (1 < P->RefCount()) )
+	    P->RefCountMinus();
+	else
+	    delete P;
+    }
+}
+
+// initial call: root_Env
+void
+deallocateEnv(Env* P)
+{ 
+    std::vector<Env*>::iterator iter;
+    std::vector<Env*> c = P->Children();
+    if ( !(c.empty()) ){
+	for ( iter = c.begin(); iter != c.end(); iter++ )
+	    deallocateEnv(*iter);
+    }
+    delete P;
+}
+
+void
+deallocateIR(void)
+{
+    if ( !(rtError_Table.empty()) ){
+	std::vector<RtError_Type*>::iterator iter;
+	std::vector<RtError_Type*> t;	
+	for ( iter = t.begin(); iter != t.end(); iter++ )
+	    if ( (0 != *iter) ) delete *iter;
+    }
+
+    if ( !(Ds_Table.empty()) ){
+	std::vector<Ds_Object*>::iterator iter;
+	std::vector<Ds_Object*> t;
+	for ( iter = t.begin(); iter != t.end(); iter++ )
+	    if ( (0 != *iter) ) delete *iter;
+    }
+}
+
+void
+deallocate(Node_AST* P)
+{
+    deallocateAST(P);
+    deallocateEnv(root_Env);
+    deallocateIR();
+}
+
+void
+cleanUp(void)
+{
+    deallocate(pFirst_Node);
+}
+
+void
 initFrontEnd(std::string Str)
 {
     makeBinOpTable();
@@ -44,6 +108,7 @@ collectParts() // will collect parts (functions, classes, main,...)
 
 }
 
+// ** TO DO: name no longer reflectes its use; consider breaking into pieces
 void
 startParse(void)
 {

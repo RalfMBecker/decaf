@@ -12,5 +12,6 @@ extern int no_par_Errors;
 void initFrontEnd(std::string);
 void collectParts(void);
 void startParse(void);
+void cleanUp(void);
 
 #endif
