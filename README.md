@@ -9,7 +9,10 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
     branch ( int a, b; if expr (a = 1); b = a; ), we do not emit a warning;
     however, see "arrays" for the case of arrays,
 
-(3) type coercion/conversion: for basic types, as in C/C++,  
+(3) type coercion/conversion: for basic types, as in C/C++, except special
+    case: if LHS is an ArrayIdExpr_AST object (eg, a[i]), we coerce to its
+    type when type of LHS differs from type of RHS (as we don't allow for
+    heterogenous arrays, either that, or make it an error),
 
 (4) strings: debating copy semantics; syntax by and large as in C,   
 

@@ -198,6 +198,8 @@ parseIdExpr(std::string Name)
     if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
 
     // TO DO: once we also catch fcts, might need change
+    std::string e_Msg1 = "array index not specified - illegal access";
+    std::string e_Msg2 = "attempt to access non-array as an array";
     Expr_AST* pId;
     VarDecl_AST* pVD;
     if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
@@ -205,26 +207,48 @@ parseIdExpr(std::string Name)
 	errorIn_Progress = 1;
 	return 0;
     }
-    pId = pVD->Expr();
 
     if ( (0 == match(1, tok_rdopen, 0)) ){
 	if (errorIn_Progress) return 0;
 	; // TO DO: this can catch function definitions
     }
-    else if ( (0 == match(0, tok_sqopen, 0)) )
-	; // TO DO: this can catch arrays
-    else
-	return pId;
+    // array
+    else if ( (0 == match(0, tok_sqopen, 0)) ){
+	if ( !(dynamic_cast<ArrayVarDecl_AST*>(pVD)) ){
+	    parseError(pVD->Addr(), e_Msg2);
+	    errorIn_Progress = 1;
+	    pId = 0;
+	}
+	else
+	    pId = parseArrayIdExpr(dynamic_cast<ArrayVarDecl_AST*>(pVD));
+    }
+    // basic type
+    else{ // ** TO DO: monitor for changes after functions added
+	if (dynamic_cast<ArrayVarDecl_AST*>(pVD)){
+	    parseError(pVD->Addr(), e_Msg1);
+	    errorIn_Progress = 1;
+	    pId = 0;
+	}
+	else
+	    pId = pVD->Expr();
+    }
     if (errorIn_Progress) return 0;
 
-    return 0; // to suppress gcc warning
+    return pId;
 }
 
+/***********************************************
+* Expression parsers (+ primary switchboard)
+***********************************************/
+
+// Note: if LHS is a[i] (ArrayIdExpr), we coerce to its type when types differ.
 int // 0: no coercion; 1: coerced LHS; 2: coerced RHS
 checkForCoercion(Expr_AST* LHS, Expr_AST* RHS)
 {
     if ( (LHS->TypeP() == RHS->TypeP()) )
 	return 0;
+    else if ( dynamic_cast<ArrayIdExpr_AST*>(LHS) ) // keep as separate case
+	return 2;                                   // for clarity
     else if ( (LHS->TypeP() < RHS->TypeP()) )
 	return 1;
     else
@@ -239,24 +263,25 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
     return new CoercedExpr_AST(pTmp, Expr);
 }
 
-/***********************************************
-* Expression parsers (+ primary switchboard)
-***********************************************/
-
+// For arrays, no initialization check. For clarity, make an extra 'if' case
 // which: 0 - both; 1 - LHS only; 2 - RHS only
 void
 checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
 {
     IdExpr_AST* pId;
-    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
-	 !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
-	pId->Warned();
-	parseWarning(pId->Addr(), "variable used un-initialized");
-    }
-    if ( (0 != RHS) && (pId = dynamic_cast<IdExpr_AST*>(RHS)) && 
-	 (pId) && !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
-	pId->Warned();
-	parseWarning(pId->Addr(), "variable used un-initialized");
+    if ( !(dynamic_cast<ArrayIdExpr_AST*>(LHS)) ){
+	    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
+		 !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
+		pId->Warned();
+		parseWarning(pId->Addr(), "variable used un-initialized");
+	    }
+	}
+    if ( !(dynamic_cast<ArrayIdExpr_AST*>(RHS)) ){
+	if ( (0 != RHS) && (pId = dynamic_cast<IdExpr_AST*>(RHS)) && 
+	     (pId) && !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
+	    pId->Warned();
+	    parseWarning(pId->Addr(), "variable used un-initialized");
+	}
     }
 }
 

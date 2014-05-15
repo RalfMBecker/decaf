@@ -349,7 +349,7 @@ private:
 // ***parts of a fct declaration can probably be folded into this
 class IdExpr_AST: public Expr_AST{
 public:
-IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
+IdExpr_AST(token Type, token Op, int I = 0, int W = 0, int Array = 0)
     : Expr_AST(Type, Op, 0, 0), initialized_(I), warning_Emitted_(W)
     { 
 	setAddr(Op.Lex());
@@ -357,8 +357,9 @@ IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
     }
 
     virtual int isInitialized(void) const { return initialized_; }
-    virtual int WarningEmitted(void) const { return warning_Emitted_; }
     virtual void Initialize(void) { initialized_ = 1; }
+
+    virtual int WarningEmitted(void) const { return warning_Emitted_; }
     virtual void Warned(void) { warning_Emitted_ = 1; }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }

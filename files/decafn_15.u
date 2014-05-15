@@ -84,7 +84,7 @@ Evar_1:   .asciiz                                               "d"
    41                    iffalse:       t20,      goto,        L4  (Env1)
    42                       goto:        L5                        (Env1)
    43             L4:      pushl:   $Evar_1                        (Env1)
-   44                      pushl:       $11                        (Env1)
+   44                      pushl:        $9                        (Env1)
    45                       goto:      L_e0                        (Env1)
    46             L5:        nop:                                  (Env1)
    47                          -:      %esp,      %esp,       t19  (Env1)
