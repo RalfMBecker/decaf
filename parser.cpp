@@ -110,9 +110,6 @@ parseFltExpr(void)
 
 std::vector<Expr_AST*>* parseDims(void);
 
-// ** TO DO: ensure that we point at "["
-// ** TO DO: dynamic_cast<ArrayVarDecl_AST*> the rv in parseIdExpr 
-//           "defined" check, then send on as arg type below
 IdExpr_AST*
 parseArrayIdExpr(ArrayVarDecl_AST* Base)
 {
@@ -184,6 +181,11 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
     }
     ArrayIdExpr_AST* ret;
     ret = new ArrayIdExpr_AST(type, op, all_Ints, dims_V, dims_Final,Base, off);
+    if (all_Ints){
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "(-$" <<  offset_V << ")" << Base->Addr();
+	ret->setAddr(tmp_Stream.str());
+    }
 
     return ret;
 }

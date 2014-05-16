@@ -346,7 +346,6 @@ private:
     static int count_;
 };
 
-// ***parts of a fct declaration can probably be folded into this
 class IdExpr_AST: public Expr_AST{
 public:
 IdExpr_AST(token Type, token Op, int I = 0, int W = 0, int Array = 0)
@@ -373,7 +372,6 @@ class ArrayVarDecl_AST;
 
 // As we don't check for initialization before access in the array case,
 // set up status variables to reflect this.
-// ** TO DO: Cannot be coerced when LValue
 class ArrayIdExpr_AST: public IdExpr_AST{
 public:
 ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
@@ -387,7 +385,7 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
 	if (option_Debug){
 	    std::cout << "\tcreated ArrayIdExpr_AST (";
 	    if (all_IntVals_)
-		std::cout << "access compile-time resolved)\n";
+		std::cout << Addr() << ")\n";
 	    else
 		std::cout << "access compile-time resolved)\n";
 	}
@@ -410,7 +408,11 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
     virtual std::vector<Expr_AST*>* Dims(void) { return dims_;}
 
     virtual std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
-    virtual void addToDimsFinal(std::string V) { dims_Final_->push_back(V); }
+    virtual void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
+    virtual void addToDimsFinalFront(std::string V) 
+    {
+	dims_Final_->insert(dims_Final_->begin(), V);
+    }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
@@ -538,7 +540,16 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
 	if (option_Debug)
 	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
     }
-
+/*
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+*/
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 };
@@ -727,8 +738,12 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
     int numDims(void) const { return num_Dims_; }
     std::vector<Expr_AST*>* Dims(void) const { return dims_; }
 
-    std::vector<std::string>* DimsFinal(void) const { return dims_Final_; }
-    void addToDimsFinal(std::string V) { dims_Final_->push_back(V); }
+    std::vector<std::string>* DimsFinal(void) const {return dims_Final_;}
+    virtual void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
+    virtual void addToDimsFinalFront(std::string V) 
+    {
+	dims_Final_->insert(dims_Final_->begin(), V);
+    }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 

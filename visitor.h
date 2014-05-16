@@ -108,12 +108,14 @@ public:
 	insertNOP(labels, frame);
 	labels.clear();
 
-	// Bound check // ** TO DO: include offset calculation!!!!
 	// For easier access, localize some private variables
 	ArrayVarDecl_AST* defined = V->Base(); // eg, array bounds
 	if ( (V->numDims() != defined->numDims()) )
 	    errExit(0, "fatal logic error in calculating array dimensions");
 	int size = V->numDims();
+	tmp_Stream << defined->Expr()->TypeW();
+	std::string width = tmp_Stream.str();
+	tmp_Stream.str("");
 	int def_HasFinals = V->allInts(); // always here, but still need (*)
 	int acc_HasFinals = defined->allInts();
 	// recall that define->DimsFinal() already has calculated bounds
@@ -121,13 +123,31 @@ public:
 	std::vector<Expr_AST*> access_Expr = *(V->Dims());
 	std::vector<std::string> access = *(V->DimsFinal());
 
+	// Bound check
 	// All dimensions = integers handled in parser; if at least one
 	// dimension is an integer expression, handled here. 
-	if ( !(def_HasFinals && acc_HasFinals) ){  // (*) (compl. of ctor)
-	    std::string e_zero = makeLabel(); // begin error processing
+	if ( !(def_HasFinals && acc_HasFinals) ){  // (compl. of ctor)
+	    // labels to the beginning of error processing (0/bound check)
+	    std::string e_zero = makeLabel();
 	    std::string e_bound = makeLabel();
-	    int i = 0;
-	    for ( i = 0; i < size; i++ ){
+
+	    // initialize offset calculation variables (c. parseArrayIdExpr())
+	    std::string offset;
+	    std::string size_Par;
+	    op = token(tok_eq);
+	    target = offset = makeTmp();
+	    LHS = "0";
+	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	    insertLine(line, iR_List);
+	    target = size_Par = makeTmp();
+	    LHS = "1";
+	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	    insertLine(line, iR_List);
+
+	    // Iterate per dimension: bound check, then update offset/size_P
+	    // Bounds are checked from last to first, as the offset update 
+	    // is easier that way, .
+	    for ( int i = (size-1); i >= 0; i-- ){
 		Expr_AST* a_Expr = access_Expr[i];
 		std::string a_Str;
 		std::string d_Str = bounds[i];
@@ -136,18 +156,30 @@ public:
 		    a_Str = a_Expr->Addr();
 		}
 		else{
-		    // calculate bound, and store result for future reference
 		    a_Expr->accept(this);
 		    a_Str = last_Tmp_;
 		}
-		V->addToDimsFinal(a_Str);
+		V->addToDimsFinalFront(a_Str); // we are building backwards
+
 		// jump and continue if (expr < 0) or (expr > bound)
 		compAndJumpFalse(e_zero, token(tok_le), "0", a_Str, frame);
 		compAndJumpFalse(e_bound, token(tok_gt), d_Str,a_Str,frame);
+
+		// update offset and size_Par
+		adj_Offset(offset, a_Str, size_Par, d_Str, frame);
 	    }
+	    // account for type width (bytes), and finalize address
+	    op = token(tok_mult);
+	    target = offset;
+	    LHS = "4";
+	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	    insertLine(line, iR_List);
+	    tmp_Stream << "(-" <<  offset << ")" << defined->Addr();
+	    V->setAddr(tmp_Stream.str());
+
 	    // prepare jump to runtime error by pushing lNo & variable name
 	    int lNo = V->Line();
-	    std::string var = V->Addr();
+	    std::string var = defined->Addr();
 	    pushLnoAndVar(lNo, var, e_zero, LABEL_ZERO_BOUND, frame, 1);
 	    pushLnoAndVar(lNo, var, e_bound, LABEL_UPPER_BOUND, frame, 2);
 	}
@@ -598,7 +630,7 @@ public:
 		    target = makeTmp();
 		    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
-		    V->addToDimsFinal(RHS); // used if we later need dims
+		    V->addToDimsFinalEnd(RHS); // used if we later need dims
 		}
 		else{
 		    // calculate bound, and store result for future reference
@@ -608,7 +640,7 @@ public:
 		    target = makeTmp();
 		    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
-		    V->addToDimsFinal(RHS);
+		    V->addToDimsFinalEnd(RHS);
 		}
 		// jump and continue if (expr > 0)
 		compAndJumpFalse(l_ErrTarget, token(tok_lt), "0", RHS, frame);
@@ -1031,12 +1063,10 @@ public:
 	std::string target;
 	std::string LHS, RHS;
 	SSA_Entry* line;
-//	std::string label_End;
 
 	// goto to jump to end of this function (when falling through)
 	if ( (0 == N) || (1 == N) ){
 	op = token(tok_goto);
-//	target = label_End = makeLabel();
 	target = label_End = makeLabel();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
@@ -1082,7 +1112,7 @@ public:
 	static int count = 0;
 
 	std::ostringstream tmp_Stream;
-	std:: string directive = ".asciiz";
+	std:: string directive = ".asciz";
 	std::string name = "Evar_";
 	Ds_Object* pDs;
 
@@ -1097,6 +1127,35 @@ public:
 
 	return name;
     }
+
+    // update offset & size_Parents when new dimension bound-checked
+    // offset_V += index * size_Parents; (1)
+    // size_Parents *= last_Dimension;   (2)
+    void adj_Offset(std::string Offset, std::string Index, std::string size_P, 
+		    std::string Dim, std::string Frame)
+    {
+	// handle (1)
+	label_Vec labels;
+	token op = token(tok_mult);
+	std::string target = makeTmp();
+	std::string LHS = Index;
+	std::string RHS = size_P;
+	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+
+	op = token(tok_plus);
+	RHS = target;
+	target = LHS = Offset;
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+
+	// handle (2)
+	op = token(tok_mult);
+	target = LHS = size_P;
+	RHS = Dim;
+	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+	insertLine(line, iR_List);
+    }	
 
     // debugging function
     void printLabels(label_Vec labels)

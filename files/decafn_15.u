@@ -37,8 +37,8 @@ Memory allocation - stack: 0
 
 E_neg:    .asciiz        "Error near %d: array bound negative (%s)"
 E_bound:  .asciiz         "Error near %d: index out of bounds (%s)"
-Evar_0:   .asciiz                                               "c"
-Evar_1:   .asciiz                                               "d"
+Evar_0:    .asciz                                               "c"
+Evar_1:    .asciz                                               "d"
 ---------------------------------------------------
 
     1                        dec:         a,       int             (Env1)
