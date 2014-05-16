@@ -89,8 +89,69 @@ public:
 	needs_Label_ = 0;
     }
 
-    // ** TO DO
-    void visit(ArrayIdExpr_AST*) { return; }
+    void visit(ArrayIdExpr_AST* V)
+    {
+	if (option_Debug) std::cout << "visiting ArrayIdExpr_AST...\n";
+
+	std::ostringstream tmp_Stream;
+	Env* pFrame = V->getEnv();
+	std::string frame = pFrame->getTableName();
+	std::string target;
+	token op;
+	std::string LHS;
+	std::string RHS;
+	SSA_Entry* line;
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+
+	// for safer label handling, print out a NOP
+	insertNOP(labels, frame);
+	labels.clear();
+
+	// Bound check // ** TO DO: include offset calculation!!!!
+	// For easier access, localize some private variables
+	ArrayVarDecl_AST* defined = V->Base(); // eg, array bounds
+	if ( (V->numDims() != defined->numDims()) )
+	    errExit(0, "fatal logic error in calculating array dimensions");
+	int size = V->numDims();
+	int def_HasFinals = V->allInts(); // always here, but still need (*)
+	int acc_HasFinals = defined->allInts();
+	// recall that define->DimsFinal() already has calculated bounds
+	std::vector<std::string> bounds = *(defined->DimsFinal());
+	std::vector<Expr_AST*> access_Expr = *(V->Dims());
+	std::vector<std::string> access = *(V->DimsFinal());
+
+	// All dimensions = integers handled in parser; if at least one
+	// dimension is an integer expression, handled here. 
+	if ( !(def_HasFinals && acc_HasFinals) ){  // (*) (compl. of ctor)
+	    std::string e_zero = makeLabel(); // begin error processing
+	    std::string e_bound = makeLabel();
+	    int i = 0;
+	    for ( i = 0; i < size; i++ ){
+		Expr_AST* a_Expr = access_Expr[i];
+		std::string a_Str;
+		std::string d_Str = bounds[i];
+ 		if ( dynamic_cast<IntExpr_AST*>(a_Expr) || 
+		     (dynamic_cast<IdExpr_AST*>(a_Expr)) ){
+		    a_Str = a_Expr->Addr();
+		}
+		else{
+		    // calculate bound, and store result for future reference
+		    a_Expr->accept(this);
+		    a_Str = last_Tmp_;
+		}
+		V->addToDimsFinal(a_Str);
+		// jump and continue if (expr < 0) or (expr > bound)
+		compAndJumpFalse(e_zero, token(tok_le), "0", a_Str, frame);
+		compAndJumpFalse(e_bound, token(tok_gt), d_Str,a_Str,frame);
+	    }
+	    // prepare jump to runtime error by pushing lNo & variable name
+	    int lNo = V->Line();
+	    std::string var = V->Addr();
+	    pushLnoAndVar(lNo, var, e_zero, LABEL_ZERO_BOUND, frame, 1);
+	    pushLnoAndVar(lNo, var, e_bound, LABEL_UPPER_BOUND, frame, 2);
+	}
+    }
 
     void visit(NOP_AST* V)
     {
@@ -503,7 +564,7 @@ public:
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
 	std::string target;
-	token Op;
+	token op;
 	std::string LHS;
 	std::string RHS;
 	SSA_Entry* line;
@@ -515,10 +576,10 @@ public:
 	if ( !(V->allInts()) ){
 	    // account for width of basic type
 	    target = makeTmp();
-	    Op = token(tok_eq);
+	    op = token(tok_eq);
 	    tmp_Stream << V->Expr()->TypeW();
 	    LHS = tmp_Stream.str();
-	    line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	    line = new SSA_Entry(labels, op, target, LHS, "", frame);
 	    insertLine(line, iR_List);
 
 	    // generate dimension bounds, and multiply them;
@@ -526,7 +587,7 @@ public:
 	    std::vector<Expr_AST*> dims = *(V->Dims());
 
 	    // retrieve the dimenstions, and successively multiply them
-	    Op = token(tok_mult);
+	    op = token(tok_mult);
 	    std::string l_ErrTarget = makeLabel(); // begin error processing
 	    for ( iter = dims.begin(); iter != dims.end(); iter++ ){
 		if ( dynamic_cast<IntExpr_AST*>(*iter) || 
@@ -535,7 +596,7 @@ public:
 		    LHS = target;
 		    RHS = (*iter)->Addr();
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
 		    V->addToDimsFinal(RHS); // used if we later need dims
 		}
@@ -543,9 +604,9 @@ public:
 		    // calculate bound, and store result for future reference
 		    (*iter)->accept(this);
 		    LHS = target;
-		    RHS = last_Tmp_;
+		    RHS = last_Tmp_; // note how order of RHS->target matters
 		    target = makeTmp();
-		    line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
+		    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 		    insertLine(line, iR_List);
 		    V->addToDimsFinal(RHS);
 		}
@@ -564,16 +625,16 @@ public:
 
 	// declare the array
 	target = V->LChild()->Addr();
-	Op = token(tok_dec);
+	op = token(tok_dec);
 	LHS = V->Type().Lex();
-	line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	line = new SSA_Entry(labels, op, target, LHS, "", frame);
 	insertLine(line, iR_List);
 
 	if ( !(V->allInts()) ){
 	    // link the new array to its memory location
-	    Op = token(tok_lea);
+	    op = token(tok_lea);
 	    LHS = "%esp";
-	    line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	    line = new SSA_Entry(labels, op, target, LHS, "", frame);
 	    insertLine(line, iR_List);
 	}
     }
@@ -952,28 +1013,35 @@ public:
     // Before jumping to error section (which prints the error, and exit),
     // push identifying information to the stack (currently only for 
     // run-time array declaration).
-    // goto end
+    // N: 0 - print both; 1 - print first only; 2 - print last only
+    // (assume a call with 2 is called right after a call with 1 - careful)
+    // goto end (if N = 0, 1)
     // pushl var
     // pushl lineNo
     // goto error_Section
-    // end nop
+    // end nop (if N = 1, 2)
     void pushLnoAndVar(int lNo, std::string Var,std::string Label_ErrTarget, 
-		       std::string Label_ErrExit, std::string Frame) 
+		       std::string Label_ErrExit, std::string Frame, int N = 0) 
     {
+	static std::string label_End;
+
 	std::ostringstream tmp_Stream;
 	std::vector<std::string> labels;
 	token op;
 	std::string target;
 	std::string LHS, RHS;
 	SSA_Entry* line;
-	std::string label_End;
+//	std::string label_End;
 
 	// goto to jump to end of this function (when falling through)
+	if ( (0 == N) || (1 == N) ){
 	op = token(tok_goto);
+//	target = label_End = makeLabel();
 	target = label_End = makeLabel();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
 	labels.clear();
+	}
 
 	// push variable name
 	labels.push_back(Label_ErrTarget);
@@ -1001,8 +1069,10 @@ public:
 	insertLine(line, iR_List);
 
 	// emit jump target
-	labels.push_back(label_End);
-	insertNOP(labels, Frame);
+	if ( (0 == N) || (2 == N) ){
+	    labels.push_back(label_End);
+	    insertNOP(labels, Frame);
+	}
     }
 
     // In the error section, to print the name of the variable in error, 

@@ -188,7 +188,6 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
     return ret;
 }
 
-// ******TO DO: NEEDS EXTENSION ONCE FUNCTIONS ALLOWED***********
 // id -> alpha* [alphanum | _]*
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
@@ -197,7 +196,6 @@ parseIdExpr(std::string Name)
 {
     if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
 
-    // TO DO: once we also catch fcts, might need change
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
     Expr_AST* pId;
@@ -210,7 +208,7 @@ parseIdExpr(std::string Name)
 
     if ( (0 == match(1, tok_rdopen, 0)) ){
 	if (errorIn_Progress) return 0;
-	; // TO DO: this can catch function definitions
+	; // ** TO DO: this can catch functions
     }
     // array
     else if ( (0 == match(0, tok_sqopen, 0)) ){

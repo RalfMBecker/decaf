@@ -20,3 +20,4 @@
 ./files/decafn_13.dec
 ./files/decafn_14.dec
 ./files/decafn_15.dec
+./files/decafn_16.dec

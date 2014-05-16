@@ -378,10 +378,12 @@ class ArrayIdExpr_AST: public IdExpr_AST{
 public:
 ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
 		std::vector<std::string>* Final, ArrayVarDecl_AST* Base,
-		std::string OS = "")
+		std::string OS = "", int D = 0)
     : IdExpr_AST(Type, Op, 1, 1), all_IntVals_(AI), dims_(Access), 
 	dims_Final_(Final), base_(Base), offset_(OS) 
     {
+	num_Dims_ = dims_->size();
+
 	if (option_Debug){
 	    std::cout << "\tcreated ArrayIdExpr_AST (";
 	    if (all_IntVals_)
@@ -402,6 +404,14 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
 	// memory leak for base_ (which will be cleaned up after 'exit')
     }
 
+    int allInts(void) const { return all_IntVals_; }
+    virtual int numDims(void) const { return num_Dims_; }
+    virtual ArrayVarDecl_AST* Base(void) const { return base_; } 
+    virtual std::vector<Expr_AST*>* Dims(void) { return dims_;}
+
+    virtual std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
+    virtual void addToDimsFinal(std::string V) { dims_Final_->push_back(V); }
+
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
@@ -411,6 +421,7 @@ private:
     ArrayVarDecl_AST* base_;
     std::string offset_; // usually filled in at run-time; in case of both
                          // access and bounds all integers, at compile-time
+    int num_Dims_;
 };
 
 class IntExpr_AST: public Expr_AST{
@@ -715,8 +726,8 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
     int allInts(void) const { return all_IntVals_; }
     int numDims(void) const { return num_Dims_; }
     std::vector<Expr_AST*>* Dims(void) const { return dims_; }
-    std::vector<std::string>* DimsFinal(void) const { return dims_Final_; }
 
+    std::vector<std::string>* DimsFinal(void) const { return dims_Final_; }
     void addToDimsFinal(std::string V) { dims_Final_->push_back(V); }
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }

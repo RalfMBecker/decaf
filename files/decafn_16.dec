@@ -4,10 +4,13 @@
     int c[b*b][2][b-1];
 
     a[0][0] = 1;
-    a[0][1] = a[0][0];
+    a[0][1] = a[0][0];      // both arrays: integers
+    a[0][2] = c[b][b-1][3]; // LHS: integers; RHS: integer expressions
+    a[2-b][2] = a[1][1];    // LHS: integer expressions; RHS: integers
+    a[b][b*2] = a[4][b/2];  // both arrays: integer expressions
 
     if (b == 0)
 	b = 1;
 
-    int d[3][b][b+1][2];
+//    int d[3][b][b+1][2];
 }
