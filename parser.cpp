@@ -113,9 +113,19 @@ std::vector<Expr_AST*>* parseDims(void);
 IdExpr_AST*
 parseArrayIdExpr(ArrayVarDecl_AST* Base)
 {
+    int num_Dims = Base->numDims();
     std::vector<Expr_AST*>* dims_V = parseDims();
     if (errorIn_Progress)
 	return 0;
+    // cast to suppress warning of signed/unsigned comparison
+    else if ( (static_cast<int>(dims_V->size()) != num_Dims) ){
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "access dimensions (" << dims_V->size();
+	tmp_Stream << ") don't match the declaration of " << Base->Name();
+	parseError(Base->Name(), tmp_Stream.str());
+	errorIn_Progress = 1;
+	return 0;
+    }
 
     // validity check, and pre-processing for all-integer dims arrays
     int all_Ints = 1;
@@ -127,7 +137,6 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 
     // As for a compile-time bound check both vectors need to be of full 
     // integer type, process dims_Final_ first when possible
-    int num_Dims = Base->numDims();
     std::vector<std::string>* dims_Final = new std::vector<std::string>;
     dims_Final->reserve(num_Dims);
     if (all_Ints){
@@ -202,12 +211,12 @@ parseIdExpr(std::string Name)
     std::string e_Msg2 = "attempt to access non-array as an array";
     Expr_AST* pId;
     VarDecl_AST* pVD;
+
     if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
 	varAccessError(next_Token.Lex(), 0);
 	errorIn_Progress = 1;
 	return 0;
     }
-
     if ( (0 == match(1, tok_rdopen, 0)) ){
 	if (errorIn_Progress) return 0;
 	; // ** TO DO: this can catch functions
@@ -240,7 +249,6 @@ parseIdExpr(std::string Name)
 /***********************************************
 * Expression parsers (+ primary switchboard)
 ***********************************************/
-
 // Note: if LHS is a[i] (ArrayIdExpr), we coerce to its type when types differ.
 int // 0: no coercion; 1: coerced LHS; 2: coerced RHS
 checkForCoercion(Expr_AST* LHS, Expr_AST* RHS)
@@ -646,7 +654,7 @@ parseDims(void)
 	}
 	dims->push_back(e);
 	if ( (-1 == match(0, tok_sqclosed, 1)) ){
-	    punctError( (next_Token.Lex())[0], 0);
+	    punctError(']', 0);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -773,14 +781,12 @@ parseAssign(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
 
-    // access error (**TO DO: handle arrays too)
     Expr_AST* LHS = parseIdExpr(next_Token.Lex());
     if ( (0 == LHS) ){
 	// varAccessError(next_Token.Lex(), 0); report at IdExpr level
 	errorIn_Progress = 1;
 	return 0;
     }
-    // **TO DO: allow for array access too
 
     Expr_AST* RHS;
     switch(next_Token.Tok()){
@@ -793,7 +799,7 @@ parseAssign(void)
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
 	if ( (0 == RHS) ){
-	    parseError(next_Token.Lex(), "invalid assignment");
+	    parseError(LHS->Addr(), "invalid assignment");
 	    errorIn_Progress = 1;
 	    return 0;
 	}

@@ -1,13 +1,15 @@
 {
-    int a[0][3];
-    int e;
-    int b = 1; 
-    int c[b*b][2][b-1];
+    int a[5][3];
+    int b;
+
+    a = 1;           // array as non-array
+    b[4] = 2;        // non-array as array
+    b = a[1];        // dimension error
+    a[2][3][4] = b;
+    b = a[2][3];     // compile-time detectable out-of-bounds access
+    b = a[2][2;      // closing bracket missing
+
 
     if (b == 0)
 	b = 1;
-
-    // would not catch if c (array) used as an index
-    // ** TO DO
-    int d[3][b][b+1][2];
 }

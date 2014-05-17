@@ -540,16 +540,7 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
 	if (option_Debug)
 	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
     }
-/*
-    virtual void accept(AST_Visitor* Visitor)
-    {
-	if ( (0!= this->lChild_) )
-	    this->lChild_->accept(Visitor);
-	if ( (0!= this->rChild_) )
-	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
-    }
-*/
+
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 };
