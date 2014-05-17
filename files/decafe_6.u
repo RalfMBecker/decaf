@@ -8,7 +8,7 @@ Error near 5:8: Syntax error (else) - else without leading if
 Error near 6:9: Syntax error - missing token ())
 Warning near 7:6: unused expression
 Error near 8:8: Syntax error (else) - else without leading if
-Error near 14:5: Syntax error (else) - '=' or ';' expected
+Error near 14:5: Syntax error (else) - ';', '=', '+=', '-=', '*=', or '/=' expected
 
 found 5 syntactic/semantic errors
 found 3 warnings

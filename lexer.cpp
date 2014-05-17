@@ -61,6 +61,9 @@ putBack(char c)
 
 token
 getNextToken(void) { return (next_Token = getTok()); }
+//next_Token = getTok();
+//std::cout << "next token = " << next_Token.Lex() << "\n";
+//return next_Token; }
 
 token
 checkReserved(std::string Str)
@@ -513,8 +516,15 @@ getTok()
 	    }
 	} // end loop for type 2 comments
 	else{ // found a '/' char
-	    id_Str = last_Char;
-	    return token(tok_div);
+	    if ( ('=' == last_Char) ){
+		id_Str = "/=";
+		getNext();
+		return token(tok_assign_div);
+	    }
+	    else{
+		id_Str = "/";
+		return token(tok_div);
+	    }
 	}
 
 	// If we come here, we are at in one of two situations:
@@ -526,7 +536,7 @@ getTok()
 	}
 	else 
 	    return token(tok_eof);
-    }
+}
 
     // did we hit EOF?
     if ( (EOF == last_Char) )
@@ -595,6 +605,31 @@ getTok()
 	else
 	    return token(tok_sqopen);
     }
+    if ( ('+' == last_Char) ){
+	if ( ('=' == getNext()) ){
+	    getNext();
+	    return token(tok_assign_plus);
+	}
+	else
+	    return token(tok_plus);
+    }
+    if ( ('-' == last_Char) ){
+	if ( ('=' == getNext()) ){
+	    getNext();
+	    return token(tok_assign_minus);
+	}
+	else
+	    return token(tok_minus);
+    }
+    if ( ('*' == last_Char) ){
+	if ( ('=' == getNext()) ){
+	    getNext();
+	    return token(tok_assign_mult);
+	}
+	else
+	    return token(tok_mult);
+    }
+    // "/=" handled during handling of comments
 
     // If we come here, we are down to single character operators and 
     // punctuation symbols, and illegal characters (sent as token(tok_err)).

@@ -293,6 +293,17 @@ checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
     }
 }
 
+int
+isModAssign(token T)
+{
+    tokenType tt = T.Tok();
+    if ( (tok_assign_plus == tt) || (tok_assign_minus == tt) || 
+	 (tok_assign_mult == tt) || (tok_assign_div == tt) )
+	return 1;
+    else
+	return 0;
+}
+
 Expr_AST* parsePrimaryExpr(void);
 int logOp_Tot = 0;
 
@@ -304,8 +315,11 @@ int logOp_Tot = 0;
 //         prec_3: precedence of '*'      precedence of '-'
 // The way we track recursion, could go bad for deeply recursive infix (> 99).
 // Restriction should be added to a full description of the compiler/language.
+// Allowing for chained assignments:
+// 2nd operator's precedence (prec_0) is handed on to a recursive call of
+// parseInfixRHS(), then compared to the precedence of the newly read operator.
 Expr_AST* 
-parseInfixRHS(int prec_1, Expr_AST* LHS)
+parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 { 
     if (option_Debug) std::cout << "entering parseInfixRHS...\n";
 
@@ -313,21 +327,55 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
     std::string const err_Msg2 = "illegal chaining of logical operators";
     std::string const err_Msg3 = "illegal assignment: lvalue expected";
     for (;;){
-	int prec_2 = opPriority(next_Token.Tok());
+	int prec_2;
+	int mod_Ass = isModAssign(next_Token);
+	int go_Right = 0;
+	if ( !mod_Ass ){
+	    prec_2 = opPriority(next_Token.Tok());
+	    go_Right = (prec_2 == prec_0) && (tok_eq == next_Token.Tok());
+	}
+	else{
+	    prec_2 = opPriority(tok_eq); 
+	    go_Right = (prec_2 == prec_0);
+	}
+ 
 	if (option_Debug)
 	    std::cout << "current token (1) = " << next_Token.Lex() << "\n";
 
-	if ( (prec_2 < prec_1) )
+	if ( (prec_2 < prec_1) && !go_Right )
 	    return LHS;
-	token binOp1 = next_Token; // store it for later op creation
+	// store it for later op creation
+	token binOp1 = (isModAssign(next_Token))?token(tok_eq):next_Token; 
 
-	getNextToken();
-	if (errorIn_Progress) return 0;
-	Expr_AST* RHS = parsePrimaryExpr();
-	if ( (!RHS) ){
-	    parseError(next_Token.Lex(), err_Msg);
-	    errorIn_Progress = 1;
-	    return 0;
+	Expr_AST* RHS;
+	if ( !mod_Ass ){
+	    getNextToken();
+	    if (errorIn_Progress) return 0;
+	    RHS = parsePrimaryExpr();
+	    if ( (!RHS) ){
+		parseError(next_Token.Lex(), err_Msg);
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	}
+	else{
+	    RHS = LHS;
+	    switch(next_Token.Tok()){
+	    case tok_assign_plus:
+		next_Token = token(tok_assign_plus);
+		break;
+	    case tok_assign_minus:
+		next_Token = token(tok_assign_minus);
+		break;
+	    case tok_assign_mult:
+		next_Token = token(tok_assign_mult);
+		break;
+	    case tok_assign_div:
+		next_Token = token(tok_assign_div);
+		break;
+	    default:
+		errExit(0, "illegal use of function parseInfixRHS()");
+	    }
 	}
 
 	int prec_3 = opPriority(next_Token.Tok());
@@ -336,9 +384,12 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	// Note: as we next read a Primary_Expr (which dispatches '-', 
 	//       '!'), this handles a prefix expr following fine.
-	if (prec_2 < prec_3){ // flip from l-r, to r-l (at least for one step)
-	    RHS = parseInfixRHS(prec_2 + 1, RHS); // keep going l-r until 
-	    if ( (!RHS) ){
+	token t = next_Token;
+	mod_Ass = (tok_eq == t.Tok()) || isModAssign(t); // mod or '='
+	go_Right = (prec_2 == prec_3) && mod_Ass;
+	if ( (prec_2 < prec_3) || go_Right){ // flip from l-r, to r-l, until
+	    RHS = parseInfixRHS(prec_2 + 1, prec_2, RHS); // reverted
+	    if ( (!RHS) ){           
 		parseError(next_Token.Lex(), err_Msg);
 		errorIn_Progress = 1;
 		return 0;
@@ -347,9 +398,14 @@ parseInfixRHS(int prec_1, Expr_AST* LHS)
 
 	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
 	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
-	if ( ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ) || 
+	if ( ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ) ||
 	     (0 == RHS) || !(dynamic_cast<Expr_AST*>(RHS)) ){
-	    parseError(next_Token.Lex(), err_Msg3);
+	    if (dynamic_cast<IdExpr_AST*>(LHS))
+		parseError(LHS->Addr(), err_Msg3);
+	    else if ( !(0 == RHS) )
+		parseError(RHS->Addr(), err_Msg3);
+	    else
+		parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -411,7 +467,7 @@ parseInfixList(Expr_AST* LHS)
     if ( (tok_parclosed == next_Token.Tok()) || (tok_semi == next_Token.Tok()) )
 	ret = LHS;
     else
-	ret = parseInfixRHS(0, LHS);
+	ret = parseInfixRHS(0, 0, LHS);
 
     if (errorIn_Progress) return 0;
     if ( (0 == ret) )
@@ -717,7 +773,7 @@ parseArrayVarDecl(IdExpr_AST* Name)
 // Shadowing: allowed
 // invariant: - exiting, we confirm ';' (decl), or move back to Id (dec+init)
 //            - entering, points at Id
-// Note: if we initialize, prepare to call parseAssign() after
+// Note: if we initialize, prepare to call parseAssignStmt() after
 // **TO DO: monitor if we use this function also for heap
 VarDecl_AST* 
 parseVarDecl(token Type)
@@ -747,7 +803,7 @@ parseVarDecl(token Type)
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	break;
-    case tok_eq: // prepare to call parseAssign() next
+    case tok_eq: // prepare to call parseAssignStmt() next
 	ret = new VarDecl_AST(new_Id);
 	putBack('=');
 	next_Token = t_Id;
@@ -777,7 +833,7 @@ parseVarDecl(token Type)
 // invariant: - upon exit, guarantees that ';' terminates
 //            - upon entry, points at id
 Assign_AST* 
-parseAssign(void)
+parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
 
@@ -789,12 +845,13 @@ parseAssign(void)
     }
 
     Expr_AST* RHS;
-    switch(next_Token.Tok()){
+    tokenType t = next_Token.Tok();
+    switch(t){
     case ';': 
 	parseWarning("", "unused statement");
 	RHS = 0;
 	break;
-    case '=':
+    case '=': 
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
@@ -809,8 +866,47 @@ parseAssign(void)
 	    return 0;
 	}
 	break;
+
+    case tok_assign_plus:
+    case tok_assign_minus:
+    case tok_assign_mult:
+    case tok_assign_div:
+	getNextToken();
+	if (errorIn_Progress) return 0;
+	RHS = dispatchExpr();
+	if ( (0 == RHS) ){
+	    parseError(LHS->Addr(), "invalid assignment");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	if ( (-1 == match(0, tok_semi, 0)) ){
+	    punctError(';', 0);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	switch(t){
+	case tok_assign_plus:
+	    RHS = new ArithmExpr_AST(token(tok_plus), LHS, RHS);
+	    break;
+	case tok_assign_minus:
+	    RHS = new ArithmExpr_AST(token(tok_minus), LHS, RHS);
+	    break;
+	case tok_assign_mult:
+	    RHS = new ArithmExpr_AST(token(tok_mult), LHS, RHS);
+	    break;
+	case tok_assign_div:
+	    RHS = new ArithmExpr_AST(token(tok_div), LHS, RHS);
+	    break;
+	default:
+	    break;
+	}
+	break;
+
     default:
-	parseError(next_Token.Lex(), "\'=\' or \';\' expected");
+	std::ostringstream tmp_Stream;
+	tmp_Stream << "\';\', \'=\', \'+=\', \'-=\', \'*=\', or \'/=\'";
+	tmp_Stream << " expected"; 
+	parseError(next_Token.Lex(), tmp_Stream.str());
 	errorIn_Progress = 1;
 	return 0;
 	break;
@@ -822,7 +918,7 @@ parseAssign(void)
     }
 
     if ( !(dynamic_cast<IdExpr_AST*>(LHS)) ) // in case we coerced
-	errExit(0, "logical flaw in use of function parseAssign");
+	errExit(0, "logical flaw in use of function parseAssignStmt");
     checkInitialized(0, RHS);
     Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
     getNextToken();
@@ -1062,7 +1158,7 @@ parseStmt(void)
 	ret = parseVarDecl(token(tok_double));
 	break;
     case tok_ID: 
-	ret = parseAssign();
+	ret = parseAssignStmt();
 	break;
     case tok_while:
 	ret = parseWhileStmt();
