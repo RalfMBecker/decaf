@@ -1,0 +1,26 @@
+-----------------------------------------------
+code generated for ./files/decafn_17.dec
+-----------------------------------------------
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 4
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+    1                        dec:         a,       int             (Env1)
+    2                          +:        t1,         a,         1  (Env1)
+    3                          =:         a,        t1             (Env1)
+    4                          *:        t2,         a,         4  (Env1)
+    5                          =:         a,        t2             (Env1)
+    6                          =:         a,         5             (Env1)
+    7                          =:         a,         a             (Env1)
+    8                          =:         a,         a             (Env1)
+    9                          /:        t3,         a,         5  (Env1)
+   10                          =:         a,        t3             (Env1)
+   11                          -:        t4,         a,         a  (Env1)
+   12                          =:         a,        t4             (Env1)

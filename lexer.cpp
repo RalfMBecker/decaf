@@ -61,9 +61,6 @@ putBack(char c)
 
 token
 getNextToken(void) { return (next_Token = getTok()); }
-//next_Token = getTok();
-//std::cout << "next token = " << next_Token.Lex() << "\n";
-//return next_Token; }
 
 token
 checkReserved(std::string Str)

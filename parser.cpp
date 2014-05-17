@@ -362,16 +362,16 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    RHS = LHS;
 	    switch(next_Token.Tok()){
 	    case tok_assign_plus:
-		next_Token = token(tok_assign_plus);
+		next_Token = token(tok_plus);
 		break;
 	    case tok_assign_minus:
-		next_Token = token(tok_assign_minus);
+		next_Token = token(tok_minus);
 		break;
 	    case tok_assign_mult:
-		next_Token = token(tok_assign_mult);
+		next_Token = token(tok_mult);
 		break;
 	    case tok_assign_div:
-		next_Token = token(tok_assign_div);
+		next_Token = token(tok_div);
 		break;
 	    default:
 		errExit(0, "illegal use of function parseInfixRHS()");
