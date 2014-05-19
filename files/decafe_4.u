@@ -1,7 +1,7 @@
 -----------------------------------------------
 code generated for ./files/decafe_4.dec
 -----------------------------------------------
-Error near 3:13: Syntax error ()) - Expected primary expression
+Error near 3:13: Syntax error ()) - expected primary expression
 Error near 5:8: Syntax error (else) - else without leading if
 Error near 6:7: Syntax error (;) - expected infix operator or primary expression
 Error near 6:7: Syntax error (a) - invalid assignment

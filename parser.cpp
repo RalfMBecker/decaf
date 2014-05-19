@@ -323,7 +323,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 { 
     if (option_Debug) std::cout << "entering parseInfixRHS...\n";
 
-    std::string const err_Msg = "Expected primary expression";
+    std::string const err_Msg = "expected primary expression";
     std::string const err_Msg2 = "illegal chaining of logical operators";
     std::string const err_Msg3 = "illegal assignment: lvalue expected";
     for (;;){
