@@ -67,6 +67,15 @@ main(int argc, char* argv[])
     if ( (0 == argv[optind]) )
 	errExit(0, "%s: Error - no file to compile specified", argv[0]);
     std::string name_Str = argv[optind];
+    if ( 5 > name_Str.size() )
+	errExit(0, "%s: Error - invalid filename", argv[0]);
+    size_t pos = name_Str.size() - 4;
+    std::string ext_Str = name_Str.substr(pos, 4);
+    if ( 0 != strcmp(".dec", ext_Str.c_str()) ){
+	std::string err_FmtStr = "%s: Error - invalid file extension (%s)"; 
+	errExit(0, err_FmtStr.c_str(), argv[0], ext_Str.c_str());
+    }
+
     input = new std::ifstream(name_Str.c_str());
     if ( !(input->good()) )
 	errExit(1, "%s: can't open file <%s>", argv[0], argv[optind]);

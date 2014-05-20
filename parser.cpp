@@ -210,7 +210,7 @@ parseIdExpr(std::string Name)
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
     Expr_AST* pId;
-    VarDecl_AST* pVD;
+    Decl_AST* pVD;
 
     if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
 	varAccessError(next_Token.Lex(), 0);
@@ -518,7 +518,7 @@ dispatchExpr(void)
 	break;
     }
 
-    if (errorIn_Progress) ret = 0; // ** TO DO
+    if (errorIn_Progress) ret = 0;
     else ret = parseInfixList(ret);
     return ret;
 }
@@ -723,10 +723,10 @@ parseDims(void)
 // Children:
 // - the IdExpr_AST* embodies all non-size related information
 // - dimensions handled in vector form (dims)
-ArrayVarDecl_AST*
+Decl_AST*
 parseArrayVarDecl(IdExpr_AST* Name)
 {
-    ArrayVarDecl_AST* ret;
+    Decl_AST* ret;
     std::vector<Expr_AST*>* dim_V = parseDims();
     if (errorIn_Progress)
 	return 0;
@@ -741,7 +741,7 @@ parseArrayVarDecl(IdExpr_AST* Name)
 
     // Allocate and "> 0" check at compile-time, when possible.
     // Note As we check for bound violations only after building the entire
-    // dimension vector, error recover will step over the next instruction
+    // dimension vector, error recovery will step over the next instruction
     int width = Name->TypeW();
     if (all_IntVals){
 	std::string this_DimStr;
@@ -775,7 +775,7 @@ parseArrayVarDecl(IdExpr_AST* Name)
 //            - entering, points at Id
 // Note: if we initialize, prepare to call parseAssignStmt() after
 // **TO DO: monitor if we use this function also for heap
-VarDecl_AST* 
+Decl_AST* 
 parseVarDecl(token Type)
 {
     if (option_Debug) std::cout << "parsing a var declaration...\n";
@@ -796,7 +796,7 @@ parseVarDecl(token Type)
     getNextToken(); 
     if (errorIn_Progress) return 0;
 
-    VarDecl_AST* ret;
+    Decl_AST* ret;
     switch(next_Token.Tok()){
     case tok_semi: // we are done - declaration only
 	ret = new VarDecl_AST(new_Id);
@@ -823,7 +823,7 @@ parseVarDecl(token Type)
     // record in compile-time ST (rt-allocated arrays with 0 width)
     int err_Code;
     const char e_M[50] = "cannot insert \"%s\" into symbol table (code %d)";
-    if ( (0!= (err_Code = addVarDeclToEnv(top_Env, ret, "stack"))) )
+    if ( (0!= (err_Code = addDeclToEnv(top_Env, ret, "stack"))) )
 	errExit(0, e_M , new_Id->Addr().c_str(), err_Code);
 
     return ret;

@@ -19,10 +19,6 @@
 
 void errExit(int, const char* format, ...);
 
-// forward declarations
-class Expr_AST;
-class IdExpr_AST;
-
 // compile time globals
 extern std::map<tokenType, int> binOp_Table;
 extern std::map<std::string, int> typePrec_Table;
@@ -46,9 +42,9 @@ Env* addEnv(Env*);
 void printEnvAncestorInfo(Env*);
 
 // ct basic type & arrays of basic type management
-int addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Object, std::string MemType);
-VarDecl_AST* findVarByIdId(Env* p, IdExpr_AST* Id);
-VarDecl_AST* findVarByName(Env* p, std::string Name);
+int addDeclToEnv(Env* pEnv, Decl_AST* new_Object, std::string MemType);
+Decl_AST* findVarByIdId(Env* p, IdExpr_AST* Id);
+Decl_AST* findVarByName(Env* p, std::string Name);
 Env* findVarFrame(Env* p, std::string Name);
 
 // runtime globals
@@ -73,7 +69,7 @@ public:
 
     Env* getPrior(void) const { return prior_; }
     std::string getTableName(void) const { return name_; }
-    std::map<std::string, VarDecl_AST*> getType(void) const { return type_; } 
+    std::map<std::string, Decl_AST*> getType(void) const { return type_; } 
 
     void addAdj(std::string New_Adj) { runtime_StackAdj_.push_back(New_Adj); }
     std::vector<std::string> getAdj(void) const { return runtime_StackAdj_; }
@@ -89,14 +85,14 @@ public:
 	    return 0;
     }
 
-    Env& insertName(std::string new_Name, VarDecl_AST* t)
+    Env& insertName(std::string new_Name, Decl_AST* t)
     {
 	if ( (-1 == findName(new_Name)) )
 	    type_[new_Name] = t;
 	return *this;
     }
 
-    VarDecl_AST* readName(std::string search_Name)
+    Decl_AST* readName(std::string search_Name)
     {
 	if ( (-1 == findName(search_Name)) )
 	    return 0;
@@ -108,7 +104,7 @@ private:
     static int count_;
     std::string name_;
     Env* prior_;
-    std::map<std::string, VarDecl_AST*> type_;
+    std::map<std::string, Decl_AST*> type_;
     std::vector<std::string> runtime_StackAdj_; // for variable length arrays
     std::vector<Env*> children_; // only use: to be able to de-allocate
     // the multi-ary tree starting at root_Env

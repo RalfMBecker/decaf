@@ -35,8 +35,7 @@ int Env::count_ = -1; // associate 0 with never-used root_Env pointer
 
 // the following tokens have a precedence priority, but are not tracked
 // using this table:
-// tok_eq (=), tok_log_not (!), tok_minus (- unary), tok_sqopen ([),
-// tok_dot (.)
+// tok_log_not (!), tok_minus (- unary), tok_sqopen ([), tok_dot (.)
 void
 makeBinOpTable(void)
 {
@@ -138,7 +137,7 @@ addEnv(Env* Prior)
 // Use: only for objects for which space can be allocated at compile-time
 //      ( basic types; arrays with integer indices )
 int
-addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Id, std::string MemType)
+addDeclToEnv(Env* pEnv, Decl_AST* new_Id, std::string MemType)
 {
     if ( (0 == pEnv) || (root_Env == pEnv) ) return -1;
     std::string Name = new_Id->Name();
@@ -161,7 +160,7 @@ addVarDeclToEnv(Env* pEnv, VarDecl_AST* new_Id, std::string MemType)
     return 0;
 }
 
-VarDecl_AST*
+Decl_AST*
 findVarByName(Env* p, std::string Name)
 {
     while ( (root_Env != p) ){
@@ -173,7 +172,7 @@ findVarByName(Env* p, std::string Name)
     return 0;
 }
 
-VarDecl_AST*
+Decl_AST*
 findVarById(Env* p, IdExpr_AST* Id)
 {
     std::string name_Str(Id->Addr());
@@ -199,8 +198,8 @@ printEnvAncestorInfo(Env* p)
     while ( (root_Env != p) ){
 	std::cout << "Info for table " << p->getTableName() << "\n";
 	std::cout << "-----------------------------------\n";
-	std::map<std::string, VarDecl_AST*>::const_iterator iter; 
-	std::map<std::string, VarDecl_AST*> tmp_Type = p->getType();
+	std::map<std::string, Decl_AST*>::const_iterator iter; 
+	std::map<std::string, Decl_AST*> tmp_Type = p->getType();
 	for (iter = tmp_Type.begin(); iter != tmp_Type.end(); iter++)
 	    std::cout << iter->first << "\t= " << (iter->second)->Type().Lex() 
 		      << "\n";

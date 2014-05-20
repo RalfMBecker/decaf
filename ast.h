@@ -652,18 +652,22 @@ Cont_AST(void)
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
-class VarDecl_AST: public Stmt_AST{
+// parent class for declarations:
+// - basic type variables & arrays
+// - functions
+// - classes
+class Decl_AST: public Stmt_AST{
 public:
-VarDecl_AST(IdExpr_AST* Id)
+Decl_AST(IdExpr_AST* Id)
     : Stmt_AST(Id, 0), name_( (Id->Op()).Lex() ), type_(Id->Type()), 
 	width_(Id->TypeW()), expr_(Id)
     {
 	setAddr(Id->Op().Lex());
 	if (option_Debug)
-	    std::cout<< "\tcreated VarDecl_AST with name = " << addr_ << "\n";
+	    std::cout<< "\tcreated Decl_AST with name = " << addr_ << "\n";
     }
 
-    ~VarDecl_AST() {}
+    ~Decl_AST() {}
 
     virtual std::string Name(void) const { return name_; }
     virtual token Type(void) const { return type_; }
@@ -671,6 +675,7 @@ VarDecl_AST(IdExpr_AST* Id)
     virtual int Width(void) const { return width_; }
     virtual IdExpr_AST* Expr(void) const { return expr_; }
     virtual void forceWidth(int W) { width_ = W; }
+
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
@@ -678,6 +683,20 @@ private:
     token type_;
     int width_;
     IdExpr_AST* expr_; // to avoid some casts
+};
+
+
+class VarDecl_AST: public Decl_AST{
+public:
+VarDecl_AST(IdExpr_AST* Id)
+    : Decl_AST(Id)
+    {
+	if (option_Debug) std::cout<< "\tcreated VarDecl_AST....\n";
+    }
+
+    ~VarDecl_AST() {}
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // Access: bound-checked 
