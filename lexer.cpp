@@ -124,6 +124,27 @@ checkReserved(std::string Str)
     if ( ("NewArray" == Str) )
 	return token(tok_NewArray);
 
+    // preprocessing tokens:
+    // - currently only from removing comments and concatenating strings 
+    //   expected syntax: linup__ <unsigned integer>"\n"
+    if ( ("lineup__" == Str) ){
+	int c;
+	while (std::isspace(c = input->get()))
+	    ;
+	if ( !(std::isdigit(c) ) )
+	    errExit(0, "preprocessor logic error");
+
+	std::string tmp_String;
+	do{
+	    tmp_String += c;
+	} while (std::isdigit(c = input->get()));
+
+	line_No += atoi(tmp_String.c_str());
+	col_No = 0;
+	input->get(); // to not add a false line to count
+	return getNextToken();
+    }
+
     return token(tok_ID, Str);
 }
 
@@ -493,7 +514,7 @@ getTok()
 	    while ( ('\n' != getNext()) && (EOF != last_Char) )
 		;
 	}
-	else if ( ('*' == last_Char) ){ // potential comment type 2
+	else if ( ('*' == last_Char) ){ // comment type 2
 	    id_Str = "/*";
 	    for (;;){ // need infinite loop to allow for /* * */ type 
 		id_Str += getNext();

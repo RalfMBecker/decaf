@@ -129,40 +129,46 @@ preProcess(std::string In_Name)
 
     char c;
     while ( (EOF != (c = input->get())) ){
-/*
 	if ( ('/' == c) ){
-	if ('/' == ){
-	    while ( ('\n' != getNext()) && (EOF != last_Char) )
-		;
-	}
-	else if ( ('*' == last_Char) ){ // potential comment type 2
-	    id_Str = "/*";
-	    for (;;){ // need infinite loop to allow for /* * */ /*type 
-
-		id_Str += getNext();
-		if ( (EOF == last_Char) ){
-		    lexerError(0, id_Str, "comment missing closing */ /*");
-		    errorIn_Progress = 1;
-		    return token(tok_err);
-		}
-		else if ( ('*' == last_Char) ){
-		    if ( ('/' == getNext()) ){
-			id_Str.clear();
-			break; // found a type 2 comment
-		    }
-		    else
-			putBack(static_cast<char>(last_Char));
-		}
+	    if ( ('/' == (c = input->get())) ){
+		while ( ('\n' != getNext()) && (EOF != last_Char) )
+		    ;
+		file_Preproc->write("lineup__ 1\n", 11);
 	    }
-	} // end loop for type 2 comments
-	else{ // found a '/' char
-*/
+	    else if ( ('*' == c) ){ // comment type 2
+		std::string tmp_Str = "/*";
+		int count = 0;
+		for (;;){ // need infinite loop to allow for /* * */ type 
+		    if ( (EOF == (c = input->get())) ){ // ** TO DO: lexer
+			lexerError(0, tmp_Str, "comment missing closing */ ");
+//			errorIn_Progress = 1;
+//			return token(tok_err);
+			break;
+		    }
+		    else if ( '\n' == c)
+			count++;
+		    tmp_Str += c;
 
-
-	file_Preproc->put(c);
+		    if ( ('*' == c) ){
+			if ( ('/' == (c = input->get())) ){
+			    tmp_Str = "lineup__ ";
+			    tmp_Str += count;
+			    tmp_Str += "\n"; // ** TO DO: \0 needed?
+			    int size = tmp_Str.size();
+			    file_Preproc->write(tmp_Str.c_str(), size);
+			    break; // found a type 2 comment
+			}
+			else
+			    putBack(static_cast<char>(c));
+		    }
+		}
+	    } // end loop for type 2 comments
+	}
+	else // regular character
+	    file_Preproc->put(c); // ** TO DO: emit '\n' at end
     }
 
-    file_Preproc->put('\n');
+//    file_Preproc->put('\n');
     file_Preproc->flush(); // as we don't delete the pointer in this function
 
     file_Preproc->seekg(0, file_Preproc->beg); // won't put to it, so not reset

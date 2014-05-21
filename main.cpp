@@ -90,9 +90,8 @@ main(int argc, char* argv[])
 
     // relegate execution to a driver module
     preProcess(name_Str);
-    std::streambuf* cout_Buf;
     if ( !(option_Preproc) ){
-
+	std::streambuf* cout_Buf;
 	input = file_Preproc;
 
 	if (option_IR){
