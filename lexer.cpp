@@ -27,7 +27,7 @@
 #include "error.h"
 
 extern int option_Debug;
-extern std::istream* input;
+extern std::fstream* input;
 
 int line_No = 1;
 int col_No = 0;

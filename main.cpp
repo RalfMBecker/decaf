@@ -29,9 +29,15 @@
 void errExit(int pError, const char* msg, ...);
 void usageErr(std::string);
 
-extern std::istream* input;
 extern int option_Debug;
-extern int option_optLevel;
+extern int option_OptLevel;
+extern int option_Preproc;
+extern int option_IR;
+
+extern std::string base_Name;
+extern std::fstream* input;
+extern std::fstream* file_Preproc;
+extern std::fstream* file_IR;
 
 int
 main(int argc, char* argv[])
@@ -39,7 +45,7 @@ main(int argc, char* argv[])
     int opt;
     char* pArg;
     std::string err = "unexpected error while processing command line options";
-    std::string opt_Str = ":dO:"; 
+    std::string opt_Str = ":dpiO:"; 
 
     while ( (-1 != (opt = getopt(argc, argv, opt_Str.c_str()))) ){
 	if ( ('?' == opt) || (':' == opt) ){
@@ -51,10 +57,12 @@ main(int argc, char* argv[])
 
 	switch(opt){
 	case 'd': option_Debug = 1; break;
+	case 'p': option_Preproc = 1; break; // ** TO DO: better
+	case 'i': option_IR = 1; option_Preproc = 0; break;
 	case 'O': 
 	    pArg = optarg;
 	    if ( (0 == strcmp(pArg, "0")) )
-		option_optLevel = 1;
+		option_OptLevel = 1;
 	    else
 		errExit(0, "invalid optimization level %s", pArg);
 	    break;
@@ -76,16 +84,26 @@ main(int argc, char* argv[])
 	errExit(0, err_FmtStr.c_str(), argv[0], ext_Str.c_str());
     }
 
-    input = new std::ifstream(name_Str.c_str());
+    input = new std::fstream(name_Str.c_str());
     if ( !(input->good()) )
 	errExit(1, "%s: can't open file <%s>", argv[0], argv[optind]);
 
     // relegate execution to a driver module
-    initFrontEnd(name_Str);
-    collectParts();
-    startParse();
+    preProcess(name_Str);
+    if ( !(option_Preproc) ){
 
-    cleanUp();
-    delete input;
+	input = file_Preproc;
+
+	initFrontEnd(name_Str);
+	collectParts();
+	startParse();
+
+	cleanUp();
+    }
+    else{
+	delete input;
+	delete file_Preproc;
+    }
+
     exit(EXIT_SUCCESS);
 }

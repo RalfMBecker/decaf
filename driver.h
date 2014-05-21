@@ -9,6 +9,7 @@
 extern int no_lex_Errors;
 extern int no_par_Errors;
 
+std::ofstream* preProcess(std::string);
 void initFrontEnd(std::string);
 void collectParts(void);
 void startParse(void);

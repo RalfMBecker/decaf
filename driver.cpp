@@ -3,8 +3,10 @@
 *
 ********************************************************************/
 
-#include <sstream> // include max. # of #include files to monitor dependencies
+// include max. # of #include files to monitor dependencies
+#include <fstream>
 #include <cstdio>
+#include <string.h> // for basename()
 #include "lexer.h"
 #include "ast.h"
 #include "error.h"
@@ -19,9 +21,42 @@ extern int no_lex_Errors;
 extern int no_par_Errors;
 extern int emitRtError_Section;
 
-std::istream* input;
 int option_Debug = 0;
-int option_optLevel = 0; // 0 - remove NOPs
+int option_OptLevel = 0; // 0 - remove NOPs
+int option_Preproc = 0;
+int option_IR = 0;
+
+std::string base_Name;
+std::fstream* input;
+std::fstream* files_Source;
+std::fstream* file_Preproc;
+std::fstream* file_IR;
+
+void
+preProcess(std::string In_Name)
+{
+    files_Source = input;
+
+    std::string tmp_Name = basename(In_Name.c_str());
+    size_t pos = tmp_Name.size() - 4; // error checking in main.cpp
+    base_Name = tmp_Name.substr(0, pos);
+    std::string out_Name = base_Name + ".pre"; // write to cwd
+
+    std::fstream::openmode o_M = std::fstream::in | std::fstream::out;
+    o_M |= std::fstream::trunc;
+    file_Preproc = new std::fstream(out_Name.c_str(), o_M);
+    if ( !(file_Preproc->good()) )
+	errExit(1, "can't open file <%s>", out_Name.c_str());
+
+    char c;
+    while ( (EOF != (c = files_Source->get())) )
+	file_Preproc->put(c);
+
+    file_Preproc->put('\n');
+    file_Preproc->flush(); // as we don't delete the pointer in this function
+
+    file_Preproc->seekg(0, file_Preproc->beg); // won't put to it, so not reset
+}
 
 void
 deallocateAST(Node_AST* P)
@@ -85,6 +120,29 @@ void
 cleanUp(void)
 {
     deallocate(pFirst_Node);
+
+    delete files_Source;
+    delete file_Preproc;
+
+    if ( !(option_Preproc) ){
+	std::string tmp_Str = base_Name + ".pre";
+	unlink(tmp_Str.c_str());
+    }
+    if (option_IR)
+	delete file_IR;
+}
+
+// Redirect std::cout to To (assumes To already declared)
+std::streambuf*
+redirectOut(std::fstream* To, std::string Name, std::fstream::openmode o_M)
+{
+    To = new std::fstream(Name.c_str(), o_M);
+    if ( !(To->good()) )
+	errExit(1, "can't open file <%s>", Name.c_str());
+    std::streambuf* cout_Buf = std::cout.rdbuf(); // save old buffer
+    std::cout.rdbuf(To->rdbuf());
+
+    return cout_Buf;
 }
 
 void
@@ -96,10 +154,26 @@ initFrontEnd(std::string Str)
     makeEnvRootTop();
     makeRtErrorTable();
 
+
+    std::streambuf* cout_Buf;
+	    std::string name_Str = base_Name + ".ir";
+	    std::fstream::openmode o_M = std::fstream::in | std::fstream::out;
+	    o_M |= std::fstream::trunc;
+
+//	    cout_Buf = redirectOut(file_IR, name_Str, o_M);
+    file_IR = new std::fstream(name_Str.c_str(), o_M);
+	       if ( !(file_IR->good()) )
+	errExit(1, "can't open file <%s>", name_Str.c_str());
+    cout_Buf = std::cout.rdbuf(); // save old buffer
+    std::cout.rdbuf(file_IR->rdbuf());
+
     std::string tmp_Str = ("" == Str)?"std::cin":Str; 
     std::cout << "-----------------------------------------------\n";
     std::cout << "code generated for " << tmp_Str << "\n";
     std::cout << "-----------------------------------------------\n";
+
+    file_IR->flush();
+    
 }
 
 void // change to a list type ***TO DO***
@@ -135,17 +209,28 @@ startParse(void)
     }
     std::cout << "\n";
 
+    std::streambuf* cout_Buf;
     if ( (0 != pFirst_Node) ){
+
+	if (option_IR){
+//	    std::string tmp_Str = base_Name + ".ir";
+//	    std::fstream::openmode o_M = std::fstream::in | std::fstream::out;
+//	    o_M |= std::fstream::trunc;
+
+//	    cout_Buf = redirectOut(file_IR, tmp_Str, o_M);
+	    //input = file_IR;
+	}
+
 	printSTInfo();
 	pFirst_Node->accept(new MakeIR_Visitor);
 
 	if (emitRtError_Section)
 	    printDataSection();
 
-	if ( !(option_optLevel) )	
+	if ( !(option_OptLevel) )	
 	    printIR_List(iR_List);
 
-	if ( (1 == option_optLevel) ){
+	if ( (1 == option_OptLevel) ){
 	    iR_List_2 = removeNOPs(iR_List);
 	    printIR_List(iR_List_2);
 	}
@@ -156,6 +241,13 @@ startParse(void)
     if (emitRtError_Section){
 	makeRtErrorTargetTable(iR_RtError_Targets);
 	printIR_List(iR_RtError_Targets);
+    }
+
+    if (option_IR){
+	file_IR->flush();
+	delete file_IR;
+
+	std::cout.rdbuf(cout_Buf); // reset to old buffer
     }
 }
 
