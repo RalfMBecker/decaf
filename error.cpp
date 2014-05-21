@@ -7,12 +7,16 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib> // exit(); EXIT_FAILURE/EXIT_SUCCESS
+#include <sys/stat.h> // stat()
 #include "ename.h"
 #include "lexer.h"
 #include "parser.h"
 #include "error.h"
 
-token getNextToken(void);
+
+//token getNextToken(void);
+extern std::string base_Name;
+extern int option_Preproc;
 
 int no_lex_Errors = 0;
 int no_par_Errors = 0;
@@ -61,7 +65,7 @@ void
 usageErr(std::string Name)
 {
     std::cerr << "Usage: " << Name << ": ";
-    std::cerr << "[-d] [-O 0] <file_Name.dec>\n";
+    std::cerr << "[-d] [-O 0] [-p] [-i] <file_Name.dec>\n";
     exit(EXIT_FAILURE);
 }
 
@@ -111,6 +115,12 @@ errExit(int pError, const char* format, ...)
     fflush(stdout);
     fputs(str, stderr);
     fflush(stderr);
+
+    // if we created the preproc tmp file, make sure to delete it
+    struct stat buffer;
+    std::string tmp_Str = base_Name + ".pre";
+    if ( (0 == stat(tmp_Str.c_str(), &buffer)) )
+	unlink(tmp_Str.c_str());
 
     exit(EXIT_FAILURE);
 }

@@ -13,6 +13,7 @@ std::ofstream* preProcess(std::string);
 void initFrontEnd(std::string);
 void collectParts(void);
 void startParse(void);
+void astToIR(void);
 void cleanUp(void);
 
 #endif

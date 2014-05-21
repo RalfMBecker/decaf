@@ -30,9 +30,9 @@ void errExit(int pError, const char* msg, ...);
 void usageErr(std::string);
 
 extern int option_Debug;
-extern int option_OptLevel;
 extern int option_Preproc;
 extern int option_IR;
+extern int option_OptLevel;
 
 extern std::string base_Name;
 extern std::fstream* input;
@@ -90,13 +90,34 @@ main(int argc, char* argv[])
 
     // relegate execution to a driver module
     preProcess(name_Str);
+    std::streambuf* cout_Buf;
     if ( !(option_Preproc) ){
 
 	input = file_Preproc;
 
+	if (option_IR){
+	    std::string name_Str = base_Name + ".ir";
+	    std::fstream::openmode o_M = std::fstream::in | std::fstream::out;
+	    o_M |= std::fstream::trunc;
+
+	    file_IR = new std::fstream(name_Str.c_str(), o_M);
+	    if ( !(file_IR->good()) )
+		errExit(1, "can't open file <%s>", name_Str.c_str());
+	    cout_Buf = std::cout.rdbuf(); // save old buffer
+	    std::cout.rdbuf(file_IR->rdbuf());
+
+	}
+
 	initFrontEnd(name_Str);
 	collectParts();
 	startParse();
+	astToIR();
+
+	if (option_IR){
+	    file_IR->flush();
+
+	    std::cout.rdbuf(cout_Buf); // reset to old buffer
+	}
 
 	cleanUp();
     }
