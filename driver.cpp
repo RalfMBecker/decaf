@@ -15,6 +15,8 @@
 #include "ir.h" 
 #include "visitor.h"
 
+void preProcess(std::string);
+
 extern Node_AST* pFirst_Node; // double declaration (from ast.h) - for clarity
 
 extern int no_lex_Errors;
@@ -28,7 +30,7 @@ int option_OptLevel = 0; // 0 - remove NOPs
 
 std::string base_Name;
 std::fstream* input; // first source file, then preproc'ed file
-std::fstream* files_Source; // as we change input*, to be able to delete
+std::fstream* file_Source; // as we change input*, to be able to delete
                             // pointer to source file at end
 std::fstream* file_Preproc;
 std::fstream* file_IR;
@@ -91,12 +93,14 @@ deallocate(Node_AST* P)
     deallocateIR();
 }
 
+// input* is just a global pointer that will be destroyed automatically at
+// program end; all memory areas on the heap are released
 void
 cleanUp(void)
 {
     deallocate(pFirst_Node);
 
-    delete files_Source;
+    delete file_Source;
     delete file_Preproc;
 
     if ( !(option_Preproc) ){
@@ -105,75 +109,6 @@ cleanUp(void)
     }
     if (option_IR)
 	delete file_IR;
-}
-
-// currently does:
-// - strip comments
-// - concatenate adjacent strings
-// - add a "\n" at EOF
-void
-preProcess(std::string In_Name)
-{
-    files_Source = input;
-
-    std::string tmp_Name = basename(In_Name.c_str());
-    size_t pos = tmp_Name.size() - 4; // error checking in main.cpp
-    base_Name = tmp_Name.substr(0, pos);
-    std::string out_Name = base_Name + ".pre"; // write to cwd
-
-    std::fstream::openmode o_M = std::fstream::in | std::fstream::out;
-    o_M |= std::fstream::trunc;
-    file_Preproc = new std::fstream(out_Name.c_str(), o_M);
-    if ( !(file_Preproc->good()) )
-	errExit(1, "can't open file <%s>", out_Name.c_str());
-
-    char c;
-    while ( (EOF != (c = input->get())) ){
-	if ( ('/' == c) ){
-	    if ( ('/' == (c = input->get())) ){
-		while ( ('\n' != getNext()) && (EOF != last_Char) )
-		    ;
-		file_Preproc->write("lineup__ 1\n", 11);
-	    }
-	    else if ( ('*' == c) ){ // comment type 2
-		std::string tmp_Str = "/*";
-		int count = 0;
-		for (;;){ // need infinite loop to allow for /* * */ type 
-		    if ( (EOF == (c = input->get())) ){ // ** TO DO: lexer
-			lexerError(0, tmp_Str, "comment missing closing */ ");
-//			errorIn_Progress = 1;
-//			return token(tok_err);
-			break;
-		    }
-		    else if ( '\n' == c)
-			count++;
-		    tmp_Str += c;
-
-		    if ( ('*' == c) ){
-			if ( ('/' == (c = input->get())) ){
-			    tmp_Str = "lineup__ ";
-			    tmp_Str += count;
-			    tmp_Str += "\n"; // ** TO DO: \0 needed?
-			    int size = tmp_Str.size();
-			    file_Preproc->write(tmp_Str.c_str(), size);
-			    break; // found a type 2 comment
-			}
-			else
-			    putBack(static_cast<char>(c));
-		    }
-		}
-	    } // end loop for type 2 comments
-	}
-	else // regular character
-	    file_Preproc->put(c); // ** TO DO: emit '\n' at end
-    }
-
-//    file_Preproc->put('\n');
-    file_Preproc->flush(); // as we don't delete the pointer in this function
-
-    file_Preproc->seekg(0, file_Preproc->beg); // won't put to it, so not reset
-
-    input = file_Preproc;
 }
 
 void

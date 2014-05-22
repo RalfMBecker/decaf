@@ -124,6 +124,7 @@ checkReserved(std::string Str)
     if ( ("NewArray" == Str) )
 	return token(tok_NewArray);
 
+    // ** TO DO: probably can be removed
     // preprocessing tokens:
     // - currently only from removing comments and concatenating strings 
     //   expected syntax: linup__ <unsigned integer>"\n"
@@ -140,6 +141,9 @@ checkReserved(std::string Str)
 	} while (std::isdigit(c = input->get()));
 
 	line_No += atoi(tmp_String.c_str());
+	int TTT = atoi(tmp_String.c_str());
+	std::cout << "\t\t\t\tadded lines: " << TTT << "\n"; 
+
 	col_No = 0;
 	input->get(); // to not add a false line to count
 	return getNextToken();
@@ -508,6 +512,7 @@ getTok()
 	return token(tok_stringV, id_Str);
     }
 
+/* done in preprocessor (keep for re-use later)
     // eat comments
     if ( ('/' == last_Char) ){
 	if ('/' == getNext()){
@@ -515,11 +520,11 @@ getTok()
 		;
 	}
 	else if ( ('*' == last_Char) ){ // comment type 2
-	    id_Str = "/*";
-	    for (;;){ // need infinite loop to allow for /* * */ type 
+	    id_Str = ""; // used to "beginning of comment type 2
+	    for (;;){ // need infinite loop to allow (begin c) * (end c) type 
 		id_Str += getNext();
 		if ( (EOF == last_Char) ){
-		    lexerError(0, id_Str, "comment missing closing */");
+		    lexerError(0, id_Str, "comment missing closing (end c)");
 		    errorIn_Progress = 1;
 		    return token(tok_err);
 		}
@@ -547,20 +552,29 @@ getTok()
 
 	// If we come here, we are at in one of two situations:
 	// Comment type 1: pointing to '\n' or EOF at proper comment line
-	//         type 2: pointing at the closing tag (last 2 chars '*/).
+	//         type 2: pointing at the closing tag (last 2 chars ).
 	if ( last_Char != EOF){
 	    getNext();
 	    return getTok(); // re-throw when done with comment line
 	}
 	else 
 	    return token(tok_eof);
-}
+    }
+*/
 
     // did we hit EOF?
     if ( (EOF == last_Char) )
 	return token(tok_eof);
 
     // 2 character operator tokens
+    if ( ('/' == last_Char) ){ // re-located from old comment parsing
+	if ( ('=' == getNext()) ){ 
+	    getNext();
+	    return token(tok_assign_div);
+	}
+	else
+	    return token(tok_div);
+    }
     if ( ('<' == last_Char) ){
 	if ( ('=' == getNext()) ){
 	    getNext();

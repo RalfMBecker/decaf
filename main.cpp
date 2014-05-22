@@ -36,6 +36,7 @@ extern int option_OptLevel;
 
 extern std::string base_Name;
 extern std::fstream* input;
+extern std::fstream* file_Source;
 extern std::fstream* file_Preproc;
 extern std::fstream* file_IR;
 
@@ -121,7 +122,7 @@ main(int argc, char* argv[])
 	cleanUp();
     }
     else{
-	delete input;
+	delete file_Source;
 	delete file_Preproc;
     }
 
