@@ -30,6 +30,44 @@ extern std::fstream* input;
 extern std::fstream* file_Source;
 extern std::fstream* file_Preproc;
 
+// Entry:       should point to " (caller to ensure it's not escape sequence \")
+// Exit:        points to char after " (or any character if EOF found)
+// Rv:          -1 - eof; 0 - found " " delimited string
+// Arg ret_Str: write characters found to end of ret_Str
+// Errors:      done by lexer (e.g., accept \n and other escape sequences)
+// Note:        reads in illegal \n character - lexer to handle
+int
+getString(std::string& ret_Str)
+{
+    char c;
+
+    while ( (EOF != (c = input->get())) && ('\"' != c) ){
+	ret_Str += c;
+	if ( ('\\' == c) ){ // print 2 characters at a time
+	    if ( (EOF == (c = input->get())) ){
+		break;
+	    }
+	    ret_Str += c;
+	}
+    }
+
+    return (EOF == c)?-1:0;
+}
+
+// get next non-ws character, and count up 'count' for each '\n' found
+char
+getNoWs(std::fstream* stream_O, int& count)
+{
+    char c;
+
+    while ( std::isspace(c = stream_O->get()) ){
+	if ( (EOF == c) ) break; // for safety; unnecessary
+	else if ( ('\n' == c) ) count++;
+    }
+
+    return c;
+}
+
 void
 preProcess(std::string In_Name)
 {
@@ -88,12 +126,43 @@ preProcess(std::string In_Name)
 		    }
 		} // end infinite loop
 	    } // end type 2 comments
+
 	    else{ // found a '/'
 		file_Preproc->put('/');
 		input->putback(static_cast<char>(c));
 	    }
 	}
-	else // regular character
+
+	// to know that when we see a ", it's really a string, if we see an \,
+	else if ( ('\\' == c) ){ // print 2 characters at a time
+	    file_Preproc->put(c);
+	    if ( (EOF == (c = input->get())) )
+		break;
+	    file_Preproc->put(c);
+	}
+
+	// concatenate adjacent strings
+	else if ( ('\"' == c) ){
+
+	    std::string tmp_Str; // cumulative new string content
+	    int count = 0;
+	    while ( ('\"' == c) ){
+		if ( (-1 == getString(tmp_Str)) )
+		    break; 
+		c = getNoWs(input, count); // read in an adjacent opening "
+	    }
+	    if ( (EOF != c) )
+		input->putback(c);
+
+	    std::string out_Str = "\"";
+	    out_Str += tmp_Str;
+	    out_Str += "\"";
+	    for (int i = 0; i < count; i++)
+		out_Str += "\n";
+	    file_Preproc->write(out_Str.c_str(), out_Str.size());
+	}
+
+	else // character not currently especially handled
 	    file_Preproc->put(c); // no whitespace removal
     }
 
@@ -102,9 +171,6 @@ deep_Jump:
     file_Preproc->flush(); // as we don't delete the pointer in this function
 
     file_Preproc->seekg(0, file_Preproc->beg); // won't put to it, so not reset
-
-    // ** TO DO: string concatenation. set input to file_Preproc first,
-    //           and do the flushing seeking etc twice
 
     input = file_Preproc;
 }
