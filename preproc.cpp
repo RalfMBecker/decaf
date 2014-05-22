@@ -31,11 +31,11 @@ extern std::fstream* file_Source;
 extern std::fstream* file_Preproc;
 
 // Entry:       should point to " (caller to ensure it's not escape sequence \")
-// Exit:        points to char after " (or any character if EOF found)
+// Exit:        points to terminating " (or to eof, if none found)
 // Rv:          -1 - eof; 0 - found " " delimited string
 // Arg ret_Str: write characters found to end of ret_Str
 // Errors:      done by lexer (e.g., accept \n and other escape sequences)
-// Note:        reads in illegal \n character - lexer to handle
+// Note:        reads in illegal-in-string '\n' char - lexer to handle
 int
 getString(std::string& ret_Str)
 {
@@ -133,8 +133,9 @@ preProcess(std::string In_Name)
 	    }
 	}
 
-	// to know that when we see a ", it's really a string, if we see an \,
-	else if ( ('\\' == c) ){ // print 2 characters at a time
+	// If we see an '\', print 2 chars at a time (to ensure that when
+	// we see a '\"' below, it's not an escape sequence, but a real string)
+	else if ( ('\\' == c) ){
 	    file_Preproc->put(c);
 	    if ( (EOF == (c = input->get())) )
 		break;
