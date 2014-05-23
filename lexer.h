@@ -33,6 +33,7 @@ enum tokenType{
     tok_log_and = -74, tok_log_or = -75, tok_sqopenclosed = -76,
     tok_assign_plus = -77, tok_assign_minus = -78,
     tok_assign_mult = -79, tok_assign_div = -80,
+    tok_dplus = -81, tok_dminus = -82,
     // 1 character semantic infix operators
     tok_plus = '+', tok_minus = '-', tok_mult = '*', tok_div = '/',
     tok_mod = '%', tok_lt = '<', tok_gt = '>', tok_eq = '=',
@@ -102,6 +103,8 @@ public:
 	case tok_assign_minus: lexeme_ = "-="; break;
 	case tok_assign_mult: lexeme_ = "*="; break;
 	case tok_assign_div: lexeme_ = "/="; break;
+	case tok_dplus: lexeme_ = "+"; break;
+	case tok_dminus: lexeme_ = "-"; break;
 
 	case tok_tmp: 
 	    lexeme_ = ("" == Lex)?"t":Lex;

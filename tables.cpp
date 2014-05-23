@@ -21,6 +21,8 @@
 #include "tables.h"
 
 // compile-time globals
+std::map<IdExpr_AST*, int> prefix_Table;  // accumulate here; copy to Expr_AST
+std::map<IdExpr_AST*, int> postfix_Table; // as private variables later
 std::map<tokenType, int> binOP_Table;
 std::map<std::string, int> typePrec_Table;
 std::map<std::string, int> typeWidth_Table;
@@ -32,6 +34,17 @@ std::map<std::string, Symbol_Table> ST;
 
 // static int used in Symbol Table maintenance in file tables.h
 int Env::count_ = -1; // associate 0 with never-used root_Env pointer
+
+// manage pre- and post-increment global (tmp) table
+// assumes reasonable value V is handed on by caller
+void
+idModInsert(std::map<IdExpr_AST*, int>& Type, IdExpr_AST* Name, int V)
+{
+    if ( (Type.end() != Type.find(Name)) )
+	Type[Name] = V;
+    else
+	Type[Name] += V;
+}
 
 // the following tokens have a precedence priority, but are not tracked
 // using this table:

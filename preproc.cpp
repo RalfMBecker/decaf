@@ -157,7 +157,7 @@ preProcess(std::string In_Name)
 
 	    std::string out_Str = "\"";
 	    out_Str += tmp_Str;
-	    out_Str += "\"";
+	    out_Str += "\\0\""; // 2.13.4 (5)
 	    for (int i = 0; i < count; i++)
 		out_Str += "\n";
 	    file_Preproc->write(out_Str.c_str(), out_Str.size());

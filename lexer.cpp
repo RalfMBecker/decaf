@@ -9,8 +9,9 @@
 *
 * Note: space is optional. By and large, lexer reads through it, and 
 *       it is the task of the parser to refuse such sequences.
+*       Space in escape sequences not allowed though. 
 *       However, we forbid the following character sequence types:
-*       - 0x1af
+*       - 0x1af (3 hex digits > 255)
 *       - 1.1.e
 *       (this is as specified in the Brown grammar)
 *
@@ -124,10 +125,9 @@ checkReserved(std::string Str)
     if ( ("NewArray" == Str) )
 	return token(tok_NewArray);
 
-    // ** TO DO: probably can be removed
     // preprocessing tokens:
-    // - currently only from removing comments and concatenating strings 
     //   expected syntax: linup__ <unsigned integer>"\n"
+    // (for future use if we extend preprocessor, e.g., including headers)
     if ( ("lineup__" == Str) ){
 	int c;
 	while (std::isspace(c = input->get()))
@@ -152,26 +152,18 @@ checkReserved(std::string Str)
     return token(tok_ID, Str);
 }
 
-// Some operators are also the first character of a two-char operator - 
-// e.g., "<" and "<=". They are checked elsewhere.
+// Some operators are also the first character of a two-char operator; 
+// thery are handled in parseTwoChar():
+//      *, /, <, >, =, !, [
+// + and - are handled separately as their 2nd character is ambigous.
 token
 retOpPunct(int Test)
 {
     switch(Test){
 	//1 char operators
-    case '+': return token(tok_plus); 
-    case '-': return token(tok_minus);
-    case '*': return token(tok_mult);
     case '%': return token(tok_mod);
     case '.': return token(tok_dot); 
-	/*
-    case '/': return token(tok_div); // handled as part of comments
-    case '<': return token(tok_lt); // handled as part of 2-char operators
-    case '>': return token(tok_gt); // handled as part of 2-char operators
-    case '=': return token(tok_eq); // handled as part of 2-char operators
-    case '!': return token(tok_log_not); // handled as part of 2-char...
-    case '[': return token(tok_sqopen); // handled as part of 2-char...
-	*/
+
 	// other punctuation
     case ';': return token(tok_semi);
     case ',': return token(tok_comma);
@@ -185,6 +177,17 @@ retOpPunct(int Test)
 	errorIn_Progress = 1;
 	return token(tok_err);
     }
+}
+
+token
+parseTwoChar(char C, token T1, token T2)
+{ 
+    if ( (C == getNext()) ){
+	getNext();
+	return token(T2);
+    }
+    else
+	return token(T1);
 }
 
 // Cannot use readIntValue as we also keep recording into id_Str here
@@ -232,6 +235,7 @@ int
 validEscape(int* Last, std::string& tmp_Str)
 {
     int len = 1;
+    int t;
 
     *Last = getNext();
     switch(*Last){
@@ -243,13 +247,10 @@ validEscape(int* Last, std::string& tmp_Str)
 
     case '0':
 	tmp_Str += *Last;
-	len += readOctHex(Last, tmp_Str, 8);
+	t = input->peek(); 
+	if ( (('0' <= t) && ('8' > t)) )  // not a \0
+	    len += readOctHex(Last, tmp_Str, 8);
 	if (errorIn_Progress) return -2;
-	if ( (1 == len) ){ // \0[non-octal]
-	    lexerError(0, tmp_Str, "illegal escape sequence");
-	    errorIn_Progress = 1;
-	    return -2;
-	}
 	break;
 
     case 'x': case 'X':
@@ -512,7 +513,89 @@ getTok()
 	return token(tok_stringV, id_Str);
     }
 
-/* done in preprocessor (keep for re-use later)
+    // did we hit EOF?
+    if ( (EOF == last_Char) )
+	return token(tok_eof);
+
+    // tokens that come in a 1- and 2-char form
+    switch(last_Char){
+    case '<':
+	return parseTwoChar('=', tok_lt, tok_le);
+    case '>':
+	return parseTwoChar('=', tok_gt, tok_ge);
+    case '=':
+	return parseTwoChar('=', tok_eq, tok_log_eq);
+    case '!':
+	return parseTwoChar('=', tok_log_not, tok_log_ne);
+    case '[':
+	return parseTwoChar(']', tok_sqopen, tok_sqopenclosed);
+    case '*':
+	return parseTwoChar('=', tok_mult, tok_assign_mult);
+    case '/':
+	return parseTwoChar('=', tok_div, tok_assign_div);
+    default:
+	break;
+    }
+
+    // 2 char tokens where the second character is ambiguous
+    if ( ('+' == last_Char) ){
+	if ( ('=' == getNext()) ){
+	    getNext();
+	    return token(tok_assign_plus);
+	}
+	else if ( ('+' == last_Char) ){
+	    getNext();
+	    return token(tok_dplus);
+	}
+	else
+	    return token(tok_plus);
+    }
+    if ( ('-' == last_Char) ){
+	if ( ('=' == getNext()) ){
+	    getNext();
+	    return token(tok_assign_minus);
+	}
+	else if ( ('+' == last_Char) ){
+	    getNext();
+	    return token(tok_dminus);
+	}
+	else
+	    return token(tok_minus);
+    }
+
+    // 2 char tokens where the 1 char case is not currently implemented
+    if ( ('&' == last_Char) ){
+	if ( ('&' == getNext()) ){
+	    getNext();
+	    return token(tok_log_and);
+	}
+	else{
+	    lexerError(0, "&", "");
+	    errorIn_Progress = 1;
+	    return token(tok_err);
+	}
+    }
+    if ( ('|' == last_Char) ){
+	if ( ('|' == getNext()) ){
+	    getNext();
+	    return token(tok_log_or);
+	}
+	else{
+	    lexerError(0, "|", "");
+	    errorIn_Progress = 1;
+	    return token(tok_err);
+	}
+    }
+
+    // If we come here, we are down to single character operators and 
+    // punctuation symbols, and illegal characters (sent as token(tok_err)).
+    // Note that we also need to ready the next last_Char
+    token tmpT = retOpPunct(last_Char);
+    getNext();
+    return tmpT;
+}
+
+/* done in preprocessor (keep for re-use later; insert after string handling)
     // eat comments
     if ( ('/' == last_Char) ){
 	if ('/' == getNext()){
@@ -551,7 +634,7 @@ getTok()
 	}
 
 	// If we come here, we are at in one of two situations:
-	// Comment type 1: pointing to '\n' or EOF at proper comment line
+q	// Comment type 1: pointing to '\n' or EOF at proper comment line
 	//         type 2: pointing at the closing tag (last 2 chars ).
 	if ( last_Char != EOF){
 	    getNext();
@@ -561,112 +644,3 @@ getTok()
 	    return token(tok_eof);
     }
 */
-
-    // did we hit EOF?
-    if ( (EOF == last_Char) )
-	return token(tok_eof);
-
-    // 2 character operator tokens
-    if ( ('/' == last_Char) ){ // re-located from old comment parsing
-	if ( ('=' == getNext()) ){ 
-	    getNext();
-	    return token(tok_assign_div);
-	}
-	else
-	    return token(tok_div);
-    }
-    if ( ('<' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_le);
-	}
-	else
-	    return token(tok_lt);
-    }
-    if ( ('>' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_ge);
-	}
-	else
-	    return token(tok_gt);
-    }
-    if ( ('=' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_log_eq);
-	}
-	else
-	    return token(tok_eq);
-    }
-    if ( ('!' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_log_ne);
-	}
-	else
-	    return token(tok_log_not);
-    }
-    if ( ('&' == last_Char) ){
-	if ( ('&' == getNext()) ){
-	    getNext();
-	    return token(tok_log_and);
-	}
-	else{
-	    lexerError(0, "&", "");
-	    errorIn_Progress = 1;
-	    return token(tok_err);
-	}
-    }
-    if ( ('|' == last_Char) ){
-	if ( ('|' == getNext()) ){
-	    getNext();
-	    return token(tok_log_or);
-	}
-	else{
-	    lexerError(0, "|", "");
-	    errorIn_Progress = 1;
-	    return token(tok_err);
-	}
-    }
-    if ( ('[' == last_Char) ){
-	if ( (']' == getNext()) ){
-	    getNext();
-	    return token(tok_sqopenclosed);
-	}
-	else
-	    return token(tok_sqopen);
-    }
-    if ( ('+' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_assign_plus);
-	}
-	else
-	    return token(tok_plus);
-    }
-    if ( ('-' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_assign_minus);
-	}
-	else
-	    return token(tok_minus);
-    }
-    if ( ('*' == last_Char) ){
-	if ( ('=' == getNext()) ){
-	    getNext();
-	    return token(tok_assign_mult);
-	}
-	else
-	    return token(tok_mult);
-    }
-    // "/=" handled during handling of comments
-
-    // If we come here, we are down to single character operators and 
-    // punctuation symbols, and illegal characters (sent as token(tok_err)).
-    // Note that we also need to ready the next last_Char
-    token tmpT = retOpPunct(last_Char);
-    getNext();
-    return tmpT;
-}

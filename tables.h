@@ -20,10 +20,14 @@
 void errExit(int, const char* format, ...);
 
 // compile time globals
+typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
+extern inc_Table prefix_Table;
+extern inc_Table postfix_Table;
 extern std::map<tokenType, int> binOp_Table;
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
 
+void idModInsert(inc_Table& Type, IdExpr_AST* Name, int V);
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);

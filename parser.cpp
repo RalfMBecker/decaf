@@ -203,12 +203,13 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
 Expr_AST*
-parseIdExpr(std::string Name)
+parseIdExpr(std::string Name, int hasPrefix)
 {
     if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
 
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
+    std::string e_Msg3 = "attempt to post-fix adjust an identifier with prefix";
     Expr_AST* pId;
     Decl_AST* pVD;
 
@@ -217,10 +218,38 @@ parseIdExpr(std::string Name)
 	errorIn_Progress = 1;
 	return 0;
     }
+
     if ( (0 == match(1, tok_rdopen, 0)) ){
 	if (errorIn_Progress) return 0;
 	; // ** TO DO: this can catch functions
     }
+
+    // postfix ++
+    else if ( (0 == match(0, tok_dplus, 0)) ){
+	if (hasPrefix){
+	    parseError(pVD->Addr(), e_Msg3);
+	    errorIn_Progress = 1;
+	    pId = 0;
+	}
+	// ** TO DO: monitor - need special check for array/function?
+	pId = pVD->Expr();
+	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), 1);
+	getNextToken(); // ** TO DO: confirm
+    }
+
+    // postfix --
+    else if ( (0 == match(0, tok_dminus, 0)) ){
+	if (hasPrefix){
+	    parseError(pVD->Addr(), e_Msg3);
+	    errorIn_Progress = 1;
+	    pId = 0;
+	}
+	// ** TO DO: monitor - need special check for array/function?
+	pId = pVD->Expr();
+	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), -1);
+	getNextToken(); // ** TO DO: confirm
+    }
+
     // array
     else if ( (0 == match(0, tok_sqopen, 0)) ){
 	if ( !(dynamic_cast<ArrayVarDecl_AST*>(pVD)) ){
@@ -231,6 +260,7 @@ parseIdExpr(std::string Name)
 	else
 	    pId = parseArrayIdExpr(dynamic_cast<ArrayVarDecl_AST*>(pVD));
     }
+
     // basic type
     else{ // ** TO DO: monitor for changes after functions added
 	if (dynamic_cast<ArrayVarDecl_AST*>(pVD)){
@@ -473,6 +503,16 @@ parseInfixList(Expr_AST* LHS)
     if ( (0 == ret) )
 	ret = new NOP_AST();
 
+    // adjust **only top level** expression by prefix and postfix found
+    if ( !(prefix_Table.empty()) ){
+	ret->setPrefix(prefix_Table);
+	prefix_Table.clear();
+    }
+    if ( !(postfix_Table.empty()) ){ // both tables can have entries
+	ret->setPostfix(postfix_Table);
+	postfix_Table.clear();
+    }
+
     return ret;
 }
 
@@ -562,7 +602,7 @@ dispatchPrefixExpr(token t)
 
     // process legal expression types prefix(es) operate on
     switch(next_Token.Tok()){
-    case tok_ID: ret = parseIdExpr(next_Token.Lex()); break;
+    case tok_ID: ret = parseIdExpr(next_Token.Lex(), 0); break;
     case tok_intV: ret = parseIntExpr(); break;
     case tok_doubleV: ret = parseFltExpr(); break;
     case tok_rdopen: ret = parseParensExpr(); break;
@@ -609,16 +649,42 @@ parseParensExpr(void)
     return E;
 }
 
-// Primary -> id | intVal | fltVal | (expr) | -expr | !expr
+// Primary -> [inc]?id | id[inc]? | intVal | fltVal | (expr) | -expr | !expr
+// inc -> [++ | --]
 Expr_AST*
 parsePrimaryExpr(void)
 {
     if (option_Debug)
 	std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
 
+    Expr_AST* tmp; // to suppress gcc handling of declaring vars in switch
     switch(next_Token.Tok()){
+    case tok_dplus: // prefix modifier (++a)
+	getNextToken();
+	if ( (tok_ID != next_Token.Tok()) ){
+	    parseError(next_Token.Lex(), "expected identifier after ++");
+	    errorIn_Progress = 1;
+	    break;
+	}
+	tmp = parseIdExpr(next_Token.Lex(), 1);
+	if (errorIn_Progress)
+	    break;
+	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
+	return tmp;
+    case tok_dminus: // (--a)
+	getNextToken();
+	if ( (tok_ID != next_Token.Tok()) ){
+	    parseError(next_Token.Lex(), "expected identifier after ++");
+	    errorIn_Progress = 1;
+	    break;
+	}
+	tmp = parseIdExpr(next_Token.Lex(), 1);
+	if (errorIn_Progress)
+	    break;
+	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
+	return tmp;
     case tok_ID: // coming here, ID should be in symbol table
-	return parseIdExpr(next_Token.Lex());
+	return parseIdExpr(next_Token.Lex(), 0);
     case tok_intV: return parseIntExpr();
     case tok_doubleV: return parseFltExpr();
     case '(': return parseParensExpr(); 
@@ -837,7 +903,7 @@ parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
 
-    Expr_AST* LHS = parseIdExpr(next_Token.Lex());
+    Expr_AST* LHS = parseIdExpr(next_Token.Lex(), 0);
     if ( (0 == LHS) ){
 	// varAccessError(next_Token.Lex(), 0); report at IdExpr level
 	errorIn_Progress = 1;
