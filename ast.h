@@ -239,7 +239,6 @@ EOB_AST(void)
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 }; 
 
-
 /****************************************************
 * Expression parent class, and lists of expressions
 *****************************************************/

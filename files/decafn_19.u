@@ -1,46 +1,9 @@
 -----------------------------------------------
 code generated for ./files/decafn_19.dec
 -----------------------------------------------
-entering dispatchExpr()...
-entering dispatchExpr()...
-found postfix ++ for var = a
-postfix_Table not empty
-Warning near 5:8: unused statement
-entering dispatchExpr()...
-non-empty postfix_Table recognized in dispatchExpr()
-[empty] expr->Addr() = b
-entering dispatchExpr()...
-found postfix ++ for var = a
-postfix_Table not empty
-entering dispatchExpr()...
-non-empty postfix_Table recognized in dispatchExpr()
-found postfix ++ for var = a
-postfix_Table not empty
-found postfix ++ for var = b
-postfix_Table not empty
-non-empty postfix_Table recognized in dispatchExpr()
-entering dispatchExpr()...
-entering dispatchExpr()...
-found postfix ++ for var = a
-postfix_Table not empty
-Warning near 11:5: unused statement
-entering dispatchExpr()...
-entering dispatchExpr()...
-non-empty postfix_Table recognized in dispatchExpr()
-entering dispatchExpr()...
-[empty] expr->Addr() = a
-...with empty postfix_Table()
-entering dispatchExpr()...
-entering dispatchExpr()...
-entering dispatchExpr()...
-found postfix ++ for var = b
-postfix_Table not empty
-non-empty postfix_Table recognized in dispatchExpr()
-found postfix ++ for var = a
-postfix_Table not empty
-non-empty postfix_Table recognized in dispatchExpr()
+Warning near 6:6: unused statement
 
-found 2 warnings
+found 1 warning
 
 Info for table Env1
 ---------------------------------------------------
@@ -77,25 +40,27 @@ Memory allocation - stack: 0
     3                        dec:         b,       int             (Env1)
     4                          =:         b,         0             (Env1)
     5                        nop:                                      ()
-    6                          +:        t1,         a,         b  (Env1)
-    7                          -:        t2,        t1,         a  (Env1)
-    8                          -:        t3,        t2,         b  (Env1)
-    9                          +:        t4,        t3,         a  (Env1)
-   10                          +:        t5,        t4,         b  (Env1)
-   11                          +:        t6,        t5,         b  (Env1)
-   12                          =:         a,        t6             (Env1)
-   13                         ==:        t7,         0,         a  (Env1)
-   14                    iffalse:        t7,      goto,        L1  (Env1)
-   15                       goto:        L2                        (Env1)
-   16             L1:        nop:                                  (Env1)
-   17                         ==:        t8,         7,         a  (Env1)
-   18                    iffalse:        t8,      goto,        L3  (Env1)
-   19                        nop:                                      ()
-   20                       goto:        L2                        (Env1)
-   21             L3:        nop:                                  (Env1)
-   22                          +:        t9,         b,         a  (Env4)
-   23                          +:       t10,        t9,         b  (Env4)
-   24                          +:       t11,       t10,         a  (Env4)
-   25                          +:       t12,         a,       t11  (Env4)
-   26                          =:         a,       t12             (Env4)
-   27             L2:        nop:                                  (Env1)
+    6                        nop:                                      ()
+    7                          +:        t1,         a,         b  (Env1)
+    8                          -:        t2,        t1,         a  (Env1)
+    9                          -:        t3,        t2,         b  (Env1)
+   10                          +:        t4,        t3,         a  (Env1)
+   11                          +:        t5,        t4,         b  (Env1)
+   12                          +:        t6,        t5,         b  (Env1)
+   13                          =:         a,        t6             (Env1)
+   14                         ==:        t7,         0,         a  (Env1)
+   15                    iffalse:        t7,      goto,        L1  (Env1)
+   16                        nop:                                      ()
+   17                       goto:        L2                        (Env1)
+   18             L1:        nop:                                  (Env1)
+   19                         ==:        t8,         7,         a  (Env1)
+   20                    iffalse:        t8,      goto,        L3  (Env1)
+   21                        nop:                                      ()
+   22                       goto:        L2                        (Env1)
+   23             L3:        nop:                                  (Env1)
+   24                          +:        t9,         b,         a  (Env4)
+   25                          +:       t10,        t9,         b  (Env4)
+   26                          +:       t11,       t10,         a  (Env4)
+   27                          +:       t12,         a,       t11  (Env4)
+   28                          =:         a,       t12             (Env4)
+   29             L2:        nop:                                  (Env1)

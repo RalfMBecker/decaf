@@ -30,6 +30,8 @@
 #include "ir.h"
 
 typedef std::vector<std::string> label_Vec;
+typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
+
 extern int option_Debug;
 
 class MakeIR_Visitor: public AST_Visitor{
@@ -1156,6 +1158,14 @@ public:
 	line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
 	insertLine(line, iR_List);
     }	
+
+    void printIncTables(Expr_AST* V)
+    {
+	inc_Table::const_iterator iter;
+	for (iter = (V->Prefix()).begin(); iter != (V->Prefix()).end(); iter++){
+	    ;
+	}
+    }
 
     // debugging function
     void printLabels(label_Vec labels)

@@ -35,8 +35,8 @@ std::map<std::string, Symbol_Table> ST;
 // static int used in Symbol Table maintenance in file tables.h
 int Env::count_ = -1; // associate 0 with never-used root_Env pointer
 
-// manage pre- and post-increment global (tmp) table
-// assumes reasonable value V is handed on by caller
+// manage pre- and post-increment global (tmp) table (a++, ++a, a--, --a)
+// assumes reasonable value V is handed on by caller (+1, -1)
 void
 idModInsert(std::map<IdExpr_AST*, int>& Type, IdExpr_AST* Name, int V)
 {

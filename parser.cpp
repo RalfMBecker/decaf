@@ -210,8 +210,6 @@ parseIdExpr(std::string Name, int hasPrefix)
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
     std::string e_Msg3 = "attempt to post-fix adjust an identifier with prefix";
-    std::string e_Msg4 = "applying postfix ++ to non-integer type identifier";
-    std::string e_Msg5 = "applying postfix -- to non-integer type identifier";
     Expr_AST* pId;
     Decl_AST* pVD;
 
@@ -235,20 +233,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	pId = pVD->Expr();
-
-	std::cout << "found postfix ++ for var = " << pId->Addr() << "\n";
-
-	if ( (tok_int != pId->Type().Tok()) ){
-	    parseError(pId->Addr(), e_Msg4);
-	    errorIn_Progress = 1;
-	    return 0;
-	}
 	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), 1);
 	getNextToken(); // ** TO DO: confirm we forward properly
-
-	if ( !(postfix_Table.empty()) )
-	    std::cout << "postfix_Table not empty\n";
-
     }
 
     // postfix --
@@ -260,20 +246,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	pId = pVD->Expr();
-
-	std::cout << "found postfix ++ for var = " << pId->Addr() << "\n";
-
-	if ( (tok_int != pId->Type().Tok()) ){
-	    parseError(pId->Addr(), e_Msg5);
-	    errorIn_Progress = 1;
-	    return 0;
-	}
 	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), -1);
 	getNextToken(); // ** TO DO: confirm we forward properly
-
-	if ( !(postfix_Table.empty()) )
-	    std::cout << "postfix_Table not empty\n";
-
     }
 
     // array
@@ -559,8 +533,6 @@ dispatchExpr(void)
 {
     if (option_Debug) std::cout << "dispatching an expression...\n";
 
-    std::cout << "entering dispatchExpr()...\n";
-
     logOp_Tot = 0;
     Expr_AST* ret;
     switch(next_Token.Tok()){
@@ -585,9 +557,6 @@ dispatchExpr(void)
 	prefix_Table.clear();
     }
     if ( !(postfix_Table.empty()) ){ // both tables can have entries
-
-	std::cout << "non-empty postfix_Table recognized in dispatchExpr()\n";
-
 	ret->setPostfix(postfix_Table);
 	postfix_Table.clear();
     }
@@ -690,8 +659,6 @@ parsePrimaryExpr(void)
     if (option_Debug)
 	std::cout << "parsing a Primary...: " << next_Token.Lex() << "\n";
 
-    std::string e_Msg1 = "applying prefix ++ to non-integer type identifier";
-    std::string e_Msg2 = "applying prefix -- to non-integer type identifier";
     Expr_AST* tmp; // to suppress gcc handling of declaring vars in switch
     switch(next_Token.Tok()){
     case tok_dplus: // prefix modifier (++a)
@@ -704,12 +671,6 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1);
 	if (errorIn_Progress)
 	    break;
-	if ( (tok_int != tmp->Type().Tok()) ){
-	    parseError(tmp->Addr(), e_Msg1);
-	    errorIn_Progress = 1;
-	    break;
-	}
-
 	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
 	return tmp;
     case tok_dminus: // (--a)
@@ -722,12 +683,6 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1);
 	if (errorIn_Progress)
 	    break;
-	if ( (tok_int != tmp->Type().Tok()) ){
-	    parseError(tmp->Addr(), e_Msg2);
-	    errorIn_Progress = 1;
-	    break;
-	}
-
 	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
 	return tmp;
     case tok_ID: // coming here, ID should be in symbol table
@@ -945,7 +900,8 @@ parseVarDecl(token Type)
 // assign -> idExpr [= Expr; | ; ] 
 // invariant: - upon exit, guarantees that ';' terminates
 //            - upon entry, points at id
-Assign_AST* 
+// Note on style: *all* Stmt_AST children should return a Stmt_AST*
+Stmt_AST* 
 parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
@@ -961,7 +917,13 @@ parseAssignStmt(void)
     tokenType t = next_Token.Tok();
     switch(t){
     case ';': 
-	parseWarning("", "unused statement");
+	if ( (postfix_Table.empty()) )
+	    parseWarning("", "unused statement");
+	else{ // case of type a++; as the entire statement
+	    LHS = new NOP_AST(); // can't delete IdExpr - needed for tables
+	    LHS->setPostfix(postfix_Table);
+	    postfix_Table.clear();
+	}
 	RHS = 0;
 	break;
     case '=': 
@@ -979,31 +941,6 @@ parseAssignStmt(void)
 	    return 0;
 	}
 	break;
-
-    std::string e_Msg4 = "applying postfix ++ to non-integer type identifier";
-    std::string e_Msg5 = "applying postfix -- to non-integer type identifier";
-    // postfix ++ // ** TO DO: adjust - relocate error messages too
-    case tok_dplus:
-	// Note: checking for (hasPrefix) not necessary here:
-	//       we only come here if we a line like 'a++';
-	// ** TO DO: monitor - need special check for array/function?
-	pId = pVD->Expr();
-
-	std::cout << "found postfix ++ for var = " << pId->Addr() << "\n";
-
-	if ( (tok_int != pId->Type().Tok()) ){
-	    parseError(pId->Addr(), e_Msg4);
-	    errorIn_Progress = 1;
-	    return 0;
-	}
-	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), 1);
-	getNextToken(); // ** TO DO: confirm we forward properly
-
-	if ( !(postfix_Table.empty()) )
-	    std::cout << "postfix_Table not empty\n";
-
-    }
-
 
     case tok_assign_plus:
     case tok_assign_minus:
@@ -1055,10 +992,13 @@ parseAssignStmt(void)
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
     }
 
-    if ( !(dynamic_cast<IdExpr_AST*>(LHS)) ) // in case we coerced
-	errExit(0, "logical flaw in use of function parseAssignStmt");
-    checkInitialized(0, RHS);
-    Assign_AST* ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
+    Stmt_AST* ret;
+    if (dynamic_cast<NOP_AST*>(LHS)) // case of type a++;
+	ret = LHS;
+    else{
+	checkInitialized(0, RHS);
+	ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
+    }
     getNextToken();
     if (errorIn_Progress) return 0;
 
@@ -1101,6 +1041,7 @@ StmtList_AST* parseBlock(void);
 Stmt_AST* parseStmt(void);
 IfType_AST* parseIfType(void);
 
+// used when parsing if, for, and while stmts
 Block_AST*
 dispatchStmt(void)
 {
@@ -1340,20 +1281,14 @@ parseStmt(void)
 	tmp1 = dispatchExpr(); // parse and discard (except pre-/postfix)
 	if (errorIn_Progress) break;
 
-	std::cout << "[empty] expr->Addr() = " << tmp1->Addr() << "\n";
-	if ((tmp1->Prefix()).empty())
-	    std::cout << "...with empty prefix_Table()\n";
-	if ((tmp1->Postfix()).empty())
-	    std::cout << "...with empty postfix_Table()\n";
-
-	t = (tmp1) && (tmp1->Prefix().empty()) && (tmp1->Postfix().empty());
+	t = (tmp1) && ((tmp1->Prefix()).empty()) && ((tmp1->Postfix()).empty());
 	if (t)
 	    parseWarning("", "unused expression");
 	tmp2 = new NOP_AST();
 	if ( !(t) ){ // an 'empty' expression could have been 'a++', say
-	    if ( !(tmp1->Prefix().empty()) )
+	    if ( !((tmp1->Prefix()).empty()) )
 		tmp2->setPrefix(tmp1->Prefix());
-	    if ( !(tmp1->Postfix().empty()) )
+	    if ( !((tmp1->Postfix()).empty()) )
 		tmp2->setPostfix(tmp1->Postfix());
 	}
 	ret = tmp2;
