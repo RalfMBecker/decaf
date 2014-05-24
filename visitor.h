@@ -202,10 +202,11 @@ public:
 
 	needs_Label_ = 0; 
 	label_Vec labels = active_Labels_;
-	active_Labels_.clear();
 
-	if ( (table.empty()) && ((V->Postfix()).empty()) )
+	if ( (table.empty()) && ((V->Postfix()).empty()) ){
 	    insertNOP(labels, frame_Str);
+	    active_Labels_.clear();
+	}
 
 	table = V->Postfix();
 	if ( !(table.empty()) )

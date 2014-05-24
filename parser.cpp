@@ -901,7 +901,7 @@ parseVarDecl(token Type)
 // invariant: - upon exit, guarantees that ';' terminates
 //            - upon entry, points at id
 // Note on style: *all* Stmt_AST children should return a Stmt_AST*
-Stmt_AST* 
+Stmt_AST*
 parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
@@ -927,6 +927,12 @@ parseAssignStmt(void)
 	RHS = 0;
 	break;
     case '=': 
+	// no a++/++a on LHS of an assignment =
+	if ( !( (LHS->Prefix()).empty() && (LHS->Postfix()).empty()) ){
+	    parseError(LHS->Addr(), "lvalue required in assignment");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
@@ -946,6 +952,11 @@ parseAssignStmt(void)
     case tok_assign_minus:
     case tok_assign_mult:
     case tok_assign_div:
+	if ( !( (LHS->Prefix()).empty() && (LHS->Postfix()).empty()) ){
+	    parseError(LHS->Addr(), "lvalue required in assignment");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
@@ -959,6 +970,10 @@ parseAssignStmt(void)
 	    errorIn_Progress = 1;
 	    return 0;
 	}
+
+	// logically, should check for coercion. However, if we coerce
+	// '1' (int) to '1' (double), the ultimate SSA entry
+	// + a a 1 looks the same. So we don't do it. 
 	switch(t){
 	case tok_assign_plus:
 	    RHS = new ArithmExpr_AST(token(tok_plus), LHS, RHS);
@@ -999,6 +1014,7 @@ parseAssignStmt(void)
 	checkInitialized(0, RHS);
 	ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
     }
+
     getNextToken();
     if (errorIn_Progress) return 0;
 

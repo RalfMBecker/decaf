@@ -21,8 +21,9 @@
 #include "tables.h"
 
 // compile-time globals
-std::map<IdExpr_AST*, int> prefix_Table;  // accumulate here; copy to Expr_AST
-std::map<IdExpr_AST*, int> postfix_Table; // as private variables later
+typedef std::map<IdExpr_AST*, int> inc_Table;
+inc_Table prefix_Table;  // accumulate here; copy to Expr_AST
+inc_Table postfix_Table; // as private variables later
 std::map<tokenType, int> binOP_Table;
 std::map<std::string, int> typePrec_Table;
 std::map<std::string, int> typeWidth_Table;
@@ -38,7 +39,7 @@ int Env::count_ = -1; // associate 0 with never-used root_Env pointer
 // manage pre- and post-increment global (tmp) table (a++, ++a, a--, --a)
 // assumes reasonable value V is handed on by caller (+1, -1)
 void
-idModInsert(std::map<IdExpr_AST*, int>& Type, IdExpr_AST* Name, int V)
+idModInsert(inc_Table& Type, IdExpr_AST* Name, int V)
 {
     if ( (Type.end() != Type.find(Name)) )
 	Type[Name] = V;

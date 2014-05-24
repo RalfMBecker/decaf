@@ -248,7 +248,8 @@ public:
 Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0, 
 	 Node_AST* rc=0, inc_Table Pre = inc_Table(), 
 	 inc_Table Post = inc_Table())
-    : Stmt_AST(lc, rc), type_(Type), op_(OpTok), prefix_(Pre), postfix_(Post)
+    : Stmt_AST(lc, rc), type_(Type), op_(OpTok), prefix_(inc_Table()), 
+	postfix_(inc_Table())
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -287,6 +288,7 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
     virtual token Op(void) const { return op_; }
     virtual int TypeW(void) const { return typeW_; }
     virtual int TypeP(void) const { return typeP_; }
+
     virtual inc_Table Prefix(void) const { return prefix_; }
     virtual void setPrefix(const inc_Table& T) { prefix_ = T; }
     virtual inc_Table Postfix(void) const { return postfix_; }
@@ -306,8 +308,8 @@ protected:
     token op_;   // (tok_plus, "+")
     int typeW_;
     int typeP_;
-    inc_Table prefix_;
-    inc_Table postfix_;
+    inc_Table prefix_;  // used in handling pre- and post increment expression
+    inc_Table postfix_; // (a++, ++a, a--, --a)
 };
 
 class IterExprList_AST: public Node_AST{
