@@ -1,18 +1,26 @@
 Compiler for the Brown Decaf language. Note that the language appears to be modified frequently. This project is based on the specifications of a Stanford 2012 class. Some changes were made (eventually, a full CFG grammar will be added):
 
 (0) options provided:
+
     -d: print debugging output
+
     -p: only pre-process, and save in <basename>.pre
+
     -i: only generate IR bytecode, and save in <basename>.ir
+
     -O: optimize; currently -
-        0: remove NOPs from IR 
+        0: remove NOPs from IR,
 
 (1) pre-processing: implemented some steps of C++03 preprocessing directives -
+
      - remove comments
+
      - concatenate adjacent strings (2.13.4 (4))
+
      - add a terminating '\0' to strings (after concatenation, if applicable)
        (2.13.4 (5))
-    Lexer operates on pre-processed tmp-file.
+
+    Lexer operates on pre-processed tmp-file,
 
 (2) visibility of declarations and definitions is C/C++-like - from the point 
     of declaration; use before declaration is error-checked,

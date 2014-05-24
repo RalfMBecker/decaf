@@ -555,7 +555,7 @@ getTok()
 	    getNext();
 	    return token(tok_assign_minus);
 	}
-	else if ( ('+' == last_Char) ){
+	else if ( ('-' == last_Char) ){
 	    getNext();
 	    return token(tok_dminus);
 	}

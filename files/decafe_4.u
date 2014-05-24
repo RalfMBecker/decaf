@@ -6,7 +6,7 @@ Error near 5:8: Syntax error (else) - else without leading if
 Error near 6:7: Syntax error (;) - expected infix operator or primary expression
 Error near 6:7: Syntax error (a) - invalid assignment
 Warning near 8:2: '=' in if-conditional - did you mean '=='?
-Warning near 10:2: unused expression
+Warning near 10:5: unused expression
 
 found 4 syntactic/semantic errors
 found 2 warnings

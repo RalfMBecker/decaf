@@ -1,8 +1,8 @@
 -----------------------------------------------
 code generated for ./files/decafn_1.dec
 -----------------------------------------------
-Warning near 4:5: unused expression
 Warning near 4:21: In (a) - variable used un-initialized
+Warning near 4:22: unused expression
 
 found 2 warnings
 

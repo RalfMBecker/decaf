@@ -1,0 +1,16 @@
+{ // error version: chain; apply to float vars; check infix; ...
+    int a = 1;
+    int b = 0;
+
+    a++;
+    --b;
+
+    a = a++ + (++b) - a++ - b++ + --a + --b + --b;
+
+    if ( (0 == a) )
+	a++;
+    else if ( (7 == a) )
+	--a;
+    else
+	a += ++b + (++a) + (b++) + a++;
+}
