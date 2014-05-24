@@ -49,7 +49,7 @@ d	Type: int
     1                        dec:         a,       int             (Env1)
     2                        dec:         b,       int             (Env1)
     3                          =:         b,         2             (Env1)
-    4                        nop:                                      ()
+    4                        nop:                                  (Env1)
     5                          *:        t1,         5,         b  (Env2)
     6                          +:        t2,         1,        t1  (Env2)
     7                          =:         a,        t2             (Env2)

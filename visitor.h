@@ -191,17 +191,25 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting NOP_AST...\n";
 
-	needs_Label_ = 0; 
-	label_Vec labels = active_Labels_;
-	active_Labels_.clear();
-
+	inc_Table table = V->Prefix();
 	std::string frame_Str;
 	if ( (0 == V) ) // only when dispatched from visitor if
 	    frame_Str = "";
 	else
-	    frame_Str = V->Addr();
+	    frame_Str = V->getEnv()->getTableName();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame_Str);
 
-	insertNOP(labels, frame_Str);
+	needs_Label_ = 0; 
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+
+	if ( (table.empty()) && ((V->Postfix()).empty()) )
+	    insertNOP(labels, frame_Str);
+
+	table = V->Postfix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame_Str);
     }
 
     // objects needing addr update
@@ -296,6 +304,10 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting AssignExpr_AST...\n";
 
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, V->getEnv()->getTableName());
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -316,6 +328,10 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) )
+	    printIncTable(table, Frame);
     }
 
     void visit(LogicalExpr_AST* V) { return; }
@@ -1159,12 +1175,42 @@ public:
 	insertLine(line, iR_List);
     }	
 
-    void printIncTables(Expr_AST* V)
+    void printIncTable(inc_Table Table, std::string Frame)
     {
+	label_Vec labels = active_Labels_;
+	std::string target, LHS, RHS;
+	token op;
+	SSA_Entry* line;
+	std::ostringstream tmp_Stream;
+	int value;
+	int did_Print = 0; // we discard active_Labels only if anything printed
+
 	inc_Table::const_iterator iter;
-	for (iter = (V->Prefix()).begin(); iter != (V->Prefix()).end(); iter++){
-	    ;
+	for (iter = Table.begin(); iter != Table.end(); iter++){
+	    target = LHS = (iter->first)->Addr();
+	    if ( (0 < (value = iter->second)) ){
+		did_Print = 1;
+		op = token(tok_plus);
+		tmp_Stream << value;
+		RHS = tmp_Stream.str();
+	    }
+	    else if ( (0 > (value = iter->second)) ){
+		did_Print = 1;
+		op = token(tok_minus);
+		value = -value;
+		tmp_Stream << value;
+		RHS = tmp_Stream.str();
+	    }
+	    // value = 0 could happen - several adjustements cancelling
+
+	    if (value){
+		line = new SSA_Entry(labels, op, target, LHS, RHS, Frame);
+		insertLine(line, iR_List);
+		labels.clear();
+	    }
 	}
+	if (did_Print)
+	    active_Labels_.clear();
     }
 
     // debugging function

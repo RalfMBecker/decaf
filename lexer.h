@@ -103,8 +103,8 @@ public:
 	case tok_assign_minus: lexeme_ = "-="; break;
 	case tok_assign_mult: lexeme_ = "*="; break;
 	case tok_assign_div: lexeme_ = "/="; break;
-	case tok_dplus: lexeme_ = "+"; break;
-	case tok_dminus: lexeme_ = "-"; break;
+	case tok_dplus: lexeme_ = "++"; break;
+	case tok_dminus: lexeme_ = "--"; break;
 
 	case tok_tmp: 
 	    lexeme_ = ("" == Lex)?"t":Lex;

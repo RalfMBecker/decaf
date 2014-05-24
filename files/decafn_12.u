@@ -85,7 +85,7 @@ Memory allocation - stack: 0
    15                          =:         b,         0             (Env6)
    16                       goto:        L7                        (Env4)
    17             L8:        nop:                                  (Env4)
-   18                        nop:                                      ()
+   18                        nop:                                  (Env7)
    19             L7:        nop:                                  (Env4)
    20             L9:         !=:        t4,         b,         0  (Env3)
    21                    iffalse:        t4,      goto,       L10  (Env3)
