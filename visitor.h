@@ -69,6 +69,7 @@ public:
 	}
 	needs_Label_ = 0;
     }
+
     void visit(FltExpr_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting FltExpr_AST...\n";
@@ -89,6 +90,47 @@ public:
 	    active_Labels_.clear();
 	}
 	needs_Label_ = 0;
+    }
+
+    void visit(IncrIdExpr_AST* V) 
+    {
+	if (option_Debug) std::cout << "\tvisiting IncrIdExpr_AST...\n";
+
+	needs_Label_ = 1; // just to elegantly reset in if below
+
+	inc_Table table = V->Prefix();
+	std::string frame_Str;
+	if ( (0 == V) ) // only when dispatched from visitor if
+	    frame_Str = ""; // ** TO DO: confirm this
+	else
+	    frame_Str = V->getEnv()->getTableName();
+	if ( !(table.empty()) ){
+	    printIncTable(table, frame_Str);
+	    needs_Label_ = 0;
+	}
+
+//	label_Vec labels = active_Labels_;
+
+/*
+	if ( (table.empty()) && ((V->Postfix()).empty()) ){
+	    insertNOP(labels, frame_Str);
+	    active_Labels_.clear();
+	}
+*/
+	table = V->Postfix();
+	if ( !(table.empty()) ){
+	    printIncTable(table, frame_Str);
+	    needs_Label_ = 0;
+	}
+
+/*
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+
+	needs_Label_ = 0;
+*/
     }
 
     void visit(ArrayIdExpr_AST* V)
@@ -197,20 +239,23 @@ public:
 	    frame_Str = "";
 	else
 	    frame_Str = V->getEnv()->getTableName();
-	if ( !(table.empty()) )
-	    printIncTable(table, frame_Str);
 
-	needs_Label_ = 0; 
+
+//	if ( !(table.empty()) )
+//	    printIncTable(table, frame_Str);
+
+	needs_Label_ = 1; 
 	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
 
-	if ( (table.empty()) && ((V->Postfix()).empty()) ){
-	    insertNOP(labels, frame_Str);
-	    active_Labels_.clear();
-	}
-
-	table = V->Postfix();
-	if ( !(table.empty()) )
-	    printIncTable(table, frame_Str);
+//	if ( (table.empty()) && ((V->Postfix()).empty()) ){
+//	    insertNOP(labels, frame_Str);
+//	    active_Labels_.clear();
+//	}
+//
+//	table = V->Postfix();
+//	if ( !(table.empty()) )
+//	    printIncTable(table, frame_Str);
     }
 
     // objects needing addr update

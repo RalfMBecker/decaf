@@ -61,7 +61,13 @@ putBack(char c)
 }
 
 token
-getNextToken(void) { return (next_Token = getTok()); }
+getNextToken(void)
+{
+    next_Token = getTok();
+    if (option_Debug)   
+	std::cout << "\t\tnext Token = " << next_Token.Lex() << "\n";
+    return next_Token;
+}
 
 token
 checkReserved(std::string Str)

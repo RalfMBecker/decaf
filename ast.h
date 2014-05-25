@@ -37,6 +37,7 @@ class Node_AST;
 class Expr_AST;
 class Tmp_AST;
 class IdExpr_AST;
+class IncrIdExpr_AST;
 class ArrayIdExpr_AST;
 class IntExpr_AST;
 class FltExpr_AST;
@@ -49,8 +50,8 @@ class OrExpr_AST;
 class AndExpr_AST;
 class RelExpr_AST;
 class NotExpr_AST;
-
 class NOP_AST;
+
 class Block_AST;
 class StmtList_AST;
 class Stmt_AST;
@@ -71,6 +72,7 @@ public:
     virtual void visit(Expr_AST*) = 0;
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
+    virtual void visit(IncrIdExpr_AST*) = 0;
     virtual void visit(ArrayIdExpr_AST*) = 0;
     virtual void visit(IntExpr_AST*) = 0;
     virtual void visit(FltExpr_AST*) = 0;
@@ -83,8 +85,8 @@ public:
     virtual void visit(AndExpr_AST*) = 0;
     virtual void visit(RelExpr_AST*) = 0;
     virtual void visit(NotExpr_AST*) = 0;
-
     virtual void visit(NOP_AST*) = 0;
+
     virtual void visit(Block_AST*) = 0;
     virtual void visit(StmtList_AST*) = 0;
     virtual void visit(Stmt_AST*) = 0;
@@ -436,6 +438,38 @@ private:
     std::string offset_; // usually filled in at run-time; in case of both
                          // access and bounds all integers, at compile-time
     int num_Dims_;
+};
+
+// truly needed only for ease of semantic checking
+class IncrIdExpr_AST: public IdExpr_AST{
+public:
+    IncrIdExpr_AST(IdExpr_AST* P, std::string T, int V)
+	: IdExpr_AST(P->Type(), P->Op()), inc_Type_(T), inc_Value_(V)
+    {
+	setAddr( (P->Op()).Lex() );
+
+	if (option_Debug){
+	    std::string pre, post;
+	    std::ostringstream tmp_Stream;
+	    if ( ("pre" == T) )
+		pre = (1 == V)?"++":"--";
+	    else if ( ("post" == T) )
+		post = (1 == V)?"++":"--";
+	    tmp_Stream << pre << (P->Op()).Lex() << post;
+
+	    std::cout << "\tcreated IncrIdExpr_AST (";
+	    std::cout << tmp_Stream.str() << ")\n";;
+	}
+    }
+
+    std::string IncType(void) const { return inc_Type_; }
+    int IncValue(void) const { return inc_Value_; }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    std::string inc_Type_;
+    int inc_Value_;
 };
 
 class IntExpr_AST: public Expr_AST{

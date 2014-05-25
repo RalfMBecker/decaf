@@ -202,15 +202,15 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 // id -> alpha* [alphanum | _]*
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
-Expr_AST*
+IdExpr_AST*
 parseIdExpr(std::string Name, int hasPrefix)
 {
-    if (option_Debug) std::cout << "\tparsing (retrieving) an Id...\n";
+    if (option_Debug) std::cout << "parsing (retrieving) an Id...\n";
 
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
     std::string e_Msg3 = "attempt to post-fix adjust an identifier with prefix";
-    Expr_AST* pId;
+    IdExpr_AST* pId;
     Decl_AST* pVD;
 
     if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
@@ -232,9 +232,10 @@ parseIdExpr(std::string Name, int hasPrefix)
 	    return 0;
 	}
 	// ** TO DO: monitor - need special check for array/function?
-	pId = pVD->Expr();
-	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), 1);
-	getNextToken(); // ** TO DO: confirm we forward properly
+	IdExpr_AST* name = pVD->Expr(); // Decl::Expr() member is of right type
+	pId = new IncrIdExpr_AST(name, "post", 1);
+	idModInsert(postfix_Table, name, 1); // no link to the *new* object,
+	getNextToken();                      // oviously, in postfix_Table
     }
 
     // postfix --
@@ -245,9 +246,10 @@ parseIdExpr(std::string Name, int hasPrefix)
 	    return 0;
 	}
 	// ** TO DO: monitor - need special check for array/function?
-	pId = pVD->Expr();
-	idModInsert(postfix_Table, dynamic_cast<IdExpr_AST*>(pId), -1);
-	getNextToken(); // ** TO DO: confirm we forward properly
+	IdExpr_AST* name = pVD->Expr(); // Decl::Expr() member is of right type
+	pId = new IncrIdExpr_AST(name, "post", -1);
+	idModInsert(postfix_Table, name, -1); // no link to the *new* object,
+	getNextToken();                      // oviously, in postfix_Table
     }
 
     // array
@@ -303,10 +305,17 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 
 // For arrays, no initialization check. For clarity, make an extra 'if' case
 // which: 0 - both; 1 - LHS only; 2 - RHS only
+// ** TO DO: monitor changes after adding funcitons and classes
 void
 checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
 {
     IdExpr_AST* pId;
+    // initialization information for IncrIdExpr_AST is in its parent
+    if (dynamic_cast<IncrIdExpr_AST*>(LHS))
+	LHS = dynamic_cast<IdExpr_AST*>(LHS->Parent());
+    if (dynamic_cast<IncrIdExpr_AST*>(RHS))
+	RHS = dynamic_cast<IdExpr_AST*>(RHS->Parent());
+
     if ( !(dynamic_cast<ArrayIdExpr_AST*>(LHS)) ){
 	    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
 		 !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
@@ -428,9 +437,11 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 
 	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
 	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
-	if ( ( (is_Assign) && !(dynamic_cast<IdExpr_AST*>(LHS)) ) ||
-	     (0 == RHS) || !(dynamic_cast<Expr_AST*>(RHS)) ){
-	    if (dynamic_cast<IdExpr_AST*>(LHS))
+	if ( (is_Assign) && ( (dynamic_cast<IncrIdExpr_AST*>(LHS)) ||
+			      !(dynamic_cast<IdExpr_AST*>(LHS))  ||
+			      (0 == RHS) || !(dynamic_cast<Expr_AST*>(RHS)) ) ){
+	    if ( (dynamic_cast<IdExpr_AST*>(LHS) || 
+		  dynamic_cast<IncrIdExpr_AST*>(LHS)) )
 		parseError(LHS->Addr(), err_Msg3);
 	    else if ( !(0 == RHS) )
 		parseError(RHS->Addr(), err_Msg3);
@@ -668,12 +679,13 @@ parsePrimaryExpr(void)
 	    errorIn_Progress = 1;
 	    break;
 	}
-	tmp = parseIdExpr(next_Token.Lex(), 1);
-	if (errorIn_Progress)
+	tmp = parseIdExpr(next_Token.Lex(), 1); // checks for ++a++ (and such)
+	if (errorIn_Progress)                   // comes back as IdExpr_AST
 	    break;
 	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
-	return tmp;
-    case tok_dminus: // (--a)
+	return new IncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), "pre", 1);
+	break;
+    case tok_dminus: // prefix modifier (--a)
 	getNextToken();
 	if ( (tok_ID != next_Token.Tok()) ){
 	    parseError(next_Token.Lex(), "expected identifier after --");
@@ -684,17 +696,21 @@ parsePrimaryExpr(void)
 	if (errorIn_Progress)
 	    break;
 	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
-	return tmp;
+	return new IncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), "pre", -1);
+	break;
     case tok_ID: // coming here, ID should be in symbol table
 	return parseIdExpr(next_Token.Lex(), 0);
-    case tok_intV: return parseIntExpr();
-    case tok_doubleV: return parseFltExpr();
-    case '(': return parseParensExpr(); 
+	break;
+    case tok_intV: return parseIntExpr(); break;
+    case tok_doubleV: return parseFltExpr(); break;
+    case '(': return parseParensExpr(); break;
     case '-':
     case '!': 
 	return dispatchPrefixExpr(next_Token);
+	break;
     case ';': // might terminate an empty expression; don't forward
 	return 0; // caller must handle properly (warning emitted elsewhere)
+	break;
     default: // reporting handled by caller 
 	// parseError(next_Token.Lex(), "expected primary expression");
 	errorIn_Progress = 1; // fall through for return
@@ -900,8 +916,7 @@ parseVarDecl(token Type)
 // assign -> idExpr [= Expr; | ; ] 
 // invariant: - upon exit, guarantees that ';' terminates
 //            - upon entry, points at id
-// Note on style: *all* Stmt_AST children should return a Stmt_AST*
-Stmt_AST*
+Assign_AST*
 parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
@@ -915,24 +930,34 @@ parseAssignStmt(void)
 
     Expr_AST* RHS;
     tokenType t = next_Token.Tok();
+    // no assignment to a++, ++a (although, by construction, could only 
+    // have parsed an a++ type when we come here)
+    if ( (tok_semi != t) && (dynamic_cast<IncrIdExpr_AST*>(LHS)) ){
+	parseError(LHS->Addr(), "lvalue required on LHS in assignment");
+	errorIn_Progress = 1;
+	return 0;
+    }
+	
     switch(t){
-    case ';': 
+    case tok_semi: 
+	// As we call parseIdExpr() (and not dispatchExpr()), the private
+	// table variables of an IncrIdExpr_AST are not set.
+	// For the same reason, only postfix_Table can be set now.
+
+	std::cout << "\t\tprocessing " << LHS->Addr() << "\n";
+
 	if ( (postfix_Table.empty()) )
 	    parseWarning("", "unused statement");
-	else{ // case of type a++; as the entire statement
-	    LHS = new NOP_AST(); // can't delete IdExpr - needed for tables
+	else if (dynamic_cast<IncrIdExpr_AST*>(LHS)){ //this is the case of a++;
+
+	    std::cout << "\t\t...and setting its postfix_Table\n";
+
 	    LHS->setPostfix(postfix_Table);
 	    postfix_Table.clear();
 	}
 	RHS = 0;
 	break;
-    case '=': 
-	// no a++/++a on LHS of an assignment =
-	if ( !( (LHS->Prefix()).empty() && (LHS->Postfix()).empty()) ){
-	    parseError(LHS->Addr(), "lvalue required in assignment");
-	    errorIn_Progress = 1;
-	    return 0;
-	}
+    case tok_eq: 
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
@@ -952,11 +977,6 @@ parseAssignStmt(void)
     case tok_assign_minus:
     case tok_assign_mult:
     case tok_assign_div:
-	if ( !( (LHS->Prefix()).empty() && (LHS->Postfix()).empty()) ){
-	    parseError(LHS->Addr(), "lvalue required in assignment");
-	    errorIn_Progress = 1;
-	    return 0;
-	}
 	getNextToken();
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
@@ -1007,13 +1027,9 @@ parseAssignStmt(void)
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
     }
 
-    Stmt_AST* ret;
-    if (dynamic_cast<NOP_AST*>(LHS)) // case of type a++;
-	ret = LHS;
-    else{
-	checkInitialized(0, RHS);
-	ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
-    }
+    Assign_AST* ret;
+    checkInitialized(0, RHS);
+    ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
 
     getNextToken();
     if (errorIn_Progress) return 0;
@@ -1241,8 +1257,6 @@ parseStmt(void)
     if (option_Debug) std::cout << "parsing a statement...\n";
 
     Stmt_AST* ret;
-    Expr_AST *tmp1, *tmp2;
-    int t;
     switch(next_Token.Tok()){
     case tok_int:
 	getNextToken();
@@ -1256,6 +1270,15 @@ parseStmt(void)
 	break;
     case tok_ID: // note: an 'empty' expr like a++; dispatches here
 	ret = parseAssignStmt();
+	break;
+    case tok_dplus:
+    case tok_dminus:
+	ret = parsePrimaryExpr();
+	if (errorIn_Progress){
+	    ret = 0;
+	    break;
+	}
+	match(0, tok_semi, 1); // error caught after breaking
 	break;
     case tok_while:
 	ret = parseWhileStmt();
@@ -1286,34 +1309,22 @@ parseStmt(void)
     case tok_if:
 	ret = parseIfType();
 	break;
-	// illegals reserved words that should not be found here
     case tok_else:
 	parseError(next_Token.Lex(), "else without leading if");
 	getNextToken();
 //	errorIn_Progress = 1; // see comment above 
 	ret = 0;
 	break;
-    default: // (likely) empty expression
-	tmp1 = dispatchExpr(); // parse and discard (except pre-/postfix)
+    default: // empty expression
+	dispatchExpr(); // parse and discard
 	if (errorIn_Progress) break;
+	parseWarning("", "unused expression");
 
-	t = (tmp1) && ((tmp1->Prefix()).empty()) && ((tmp1->Postfix()).empty());
-	if (t)
-	    parseWarning("", "unused expression");
-	tmp2 = new NOP_AST();
-	if ( !(t) ){ // an 'empty' expression could have been 'a++', say
-	    if ( !((tmp1->Prefix()).empty()) )
-		tmp2->setPrefix(tmp1->Prefix());
-	    if ( !((tmp1->Postfix()).empty()) )
-		tmp2->setPostfix(tmp1->Postfix());
-	}
-	ret = tmp2;
-
-	if ( (0 != match(0, tok_semi, 1)) ){ // ** TO DO: RELOCATE
+	if ( (0 != match(0, tok_semi, 1)) ){
 	    punctError(';', 0);
 	    errorIn_Progress = 1;
 	}
-
+	ret = new NOP_AST();
 	break;
     }
 
