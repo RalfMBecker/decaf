@@ -40,6 +40,10 @@
 *          print E SSAs
 *          print(postfix_Table) SSAs ("+ a a j")
 *          This means we actually have *no undefined behavior*.
+*          Exception: in an assignment stmt like "a = ++a + b++;",
+*                     postfix_Table is printed at end of statement.
+*                     (*not* in modifiying assignments ("+=", etc):
+*                     in this case, both ways give the same result).
 *
 ********************************************************************/
 
@@ -575,6 +579,10 @@ dispatchExpr(void)
 {
     if (option_Debug) std::cout << "dispatching an expression...\n";
 
+    static int nested = 0;
+    nested++; // helper to attach cumulative a++/--b adjustments only to top
+              // level expression (needed when expr1 contains (expr2))
+
     logOp_Tot = 0;
     Expr_AST* ret;
     switch(next_Token.Tok()){
@@ -596,6 +604,7 @@ dispatchExpr(void)
     if (option_Debug)
 	printIncTables();
     // adjust **only top level** expression by prefix and postfix found
+    if ( (1 == nested--) ){
     if ( !(prefix_Table.empty()) ){
 	ret->setPrefix(prefix_Table);
 	prefix_Table.clear();
@@ -603,6 +612,7 @@ dispatchExpr(void)
     if ( !(postfix_Table.empty()) ){ // both tables can have entries
 	ret->setPostfix(postfix_Table);
 	postfix_Table.clear();
+    }
     }
 
     return ret;

@@ -69,7 +69,24 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 
 (10) short-circuiting of ||/&&: in the usual C/C++/Java way,   
 
-(11) for: all 3 expressions in expression list are optional (middle one too)
+(11) for: all 3 expressions in expression list are optional (middle one too),
+
+(12) added modifying assignments (+=, -=, *=, /=),
+
+(13) added pre- and post-increment operators (++a, a++):
+
+          Operators are only allowed in expressions (not as lvalues).
+          If E is an expression having sub-expressions containing one
+          or more of such op's, generate SSA as follows, where i, j are
+          the sum of adjustements resulting from pre-/post-increments:
+          print(prefix adjustments) SSAs ("+ a a i")
+          print E SSAs
+          print(postfix adjustments) SSAs ("+ a a j")
+          This means we actually have *no undefined behavior*.
+          Exception: in an assignment stmt like "a = ++a + b++;",
+                     postfix adjustments are printed at end of statement.
+                     (*not* in modifiying assignments ("+=", etc):
+                     in this case, both ways give the same result),
 
 Eventually, the compiler will have multiple parse rounds, on either the AST, or the generated SSA-style IR. Currently, the implemented optimization rounds are:
 -O 0: remove NOPs from IR.

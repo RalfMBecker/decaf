@@ -108,6 +108,7 @@ public:
 	    needs_Label_ = 0;
 	}
 
+	// *******************************************************
 	table = V->Postfix();
 	if ( !(table.empty()) ){
 	    printIncTable(table, frame_Str);
@@ -257,6 +258,11 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     void visit(CoercedExpr_AST* V)
@@ -295,6 +301,11 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target,LHS, to_Str, frame);;
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     void visit(UnaryArithmExpr_AST* V)
@@ -323,6 +334,11 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     // no address update needed, but kept among expression visitor types
@@ -356,7 +372,8 @@ public:
 	insertLine(line, iR_List);
 
 	table = V->Postfix();
-	if ( !(table.empty()) )
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
     }
 
@@ -410,6 +427,11 @@ public:
 	    std::cout << "\tleaving visitor or, and pushing ";
 	    std::cout << cond_End << "\n";
 	}
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
@@ -498,6 +520,11 @@ public:
 	    std::cout << "\tleaving visitor and, and pushing ";
 	    std::cout << cond_End << "\n";
 	}
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
@@ -577,6 +604,11 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     void visit(NotExpr_AST* V)
@@ -603,6 +635,11 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
+
+	table = V->Postfix();
+	if ( !(table.empty()) && ( !(V->Parent()) || 
+				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
+	    printIncTable(table, frame);
     }
 
     // Statements begin
@@ -745,10 +782,20 @@ public:
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_eq);
 	std::string LHS = V->RChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
+	std::string frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
+
+	// Assign_AST is an exception with respect to when postfix_Table is 
+	// handled. Consider the case "a = b++ + c++;" (IdExpr = Expr):
+	// while usually it is handled after handling an Expr, it is
+	// more natural (and useful) to print not after Expr, but after
+	// the entire assignment statement. 
+	inc_Table postfix = (dynamic_cast<Expr_AST*>(V->RChild()))->Postfix();
+	if ( !(postfix.empty()) ) // not necessary, but saves function call
+	    printIncTable(postfix, frame);
+
     }
 
     // walk down the tree (see visitor If_AST)
