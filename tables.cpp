@@ -47,6 +47,21 @@ idModInsert(inc_Table& Type, IdExpr_AST* Name, int V)
 	Type[Name] += V;
 }
 
+// debugging
+void
+printIncTables(void)
+{
+    inc_Table::const_iterator iter;
+
+    std::cout << "Printing prefix_Table...\n";
+    for (iter = prefix_Table.begin(); iter != prefix_Table.end(); iter++)
+	std::cout << (iter->first)->Addr() << " = " << iter->second << "\n";
+
+    std::cout << "Printing postfix_Table...\n";
+    for (iter = postfix_Table.begin(); iter != postfix_Table.end(); iter++)
+	std::cout << (iter->first)->Addr() << " = " << iter->second << "\n";
+}
+
 // the following tokens have a precedence priority, but are not tracked
 // using this table:
 // tok_log_not (!), tok_minus (- unary), tok_sqopen ([), tok_dot (.)

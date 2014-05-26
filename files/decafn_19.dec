@@ -1,4 +1,4 @@
-{ // error version: chain; apply to float vars; check infix; ...
+{ // add: array case; ||; in expr part of if expr stmt (and similar) 
     int a = 1;
     int b = 0;
 
@@ -13,5 +13,6 @@
     else if ( (7 == a) )
 	--a;
     else
-	a += ++b + (++a) + (b++) + a++;
+    a += ++b + (++a) + (b++) + a++;
+
 }

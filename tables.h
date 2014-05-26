@@ -28,6 +28,7 @@ extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
 
 void idModInsert(inc_Table& Type, IdExpr_AST* Name, int V);
+void printIncTables(void);
 void makeBinOpTable(void);
 void makeTypePrecTable(void);
 void makeWidthTable(void);

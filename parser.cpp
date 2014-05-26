@@ -12,6 +12,35 @@
 *                 (using Panic Mode recovery) 
 * Note (errors): Warning in '='/'==' case for 'if' is off by a line
 *
+* Notes on semantic structure handling:
+* a++/++a: Global variables:
+*          Global tables prefix_Table/postfix_Table keep track, for each
+*          variable, how many pre- and post-increment operations during 
+*          the parsing of one (compound) expression have been seen.
+* 
+*          ast.h:
+*          Expr_AST has been enhanced with private versions of these 
+*          globals, which are generally empty.
+*
+*          parser.cpp 
+*          In case the expression actually is a statement of form
+*          "a++"; or "--a;", copy the globals into the privates
+*          of an IncrIdExpr_AST type (in parseAssignStmt() and
+*          parseStmt()). Clear the globals after.
+*          In case of a compound expression E, copy the globals which
+*          track pre- and post-increments in all sub-expressions to
+*          the private version of the top level E only (in dispatchExrp()). 
+*
+*          visitor.h/philosophy:
+*          Operators are only allowed in expressions (not as lvalues).
+*          If E is an expression having sub-expressions with the above
+*          tables not empty, generate SSA as follows, where i, j are
+*          the sum of adjustements resulting from pre-/post-increments:
+*          print(prefix_Table) SSAs ("+ a a i")
+*          print E SSAs
+*          print(postfix_Table) SSAs ("+ a a j")
+*          This means we actually have *no undefined behavior*.
+*
 ********************************************************************/
 
 #include <vector>
@@ -534,9 +563,11 @@ parseExpr(void)
 Expr_AST* dispatchPrefixExpr(token t);
 
 // entry point (head) of expression parsing
-// expr -> prim op expr | -expr | !expr | prim | epsilon
+// expr -> prim op expr | -expr | !expr | prim | inc | dec | epsilon
 // op -> +, -, *, /, %, ||, &&, op1
 // op1 -> ==, !=, <, <=, >, >= 
+// inc -> [++ | --] IdExpr
+// dec -> IdExpr [++ | --]
 // logOp_Tot: helps tracking that only 1 op1 type is valid in each expr 
 // Function proper handles only non-prefix expressions
 Expr_AST* 
@@ -562,6 +593,8 @@ dispatchExpr(void)
     if (errorIn_Progress) ret = 0;
     else ret = parseInfixList(ret);
 
+    if (option_Debug)
+	printIncTables();
     // adjust **only top level** expression by prefix and postfix found
     if ( !(prefix_Table.empty()) ){
 	ret->setPrefix(prefix_Table);
@@ -921,7 +954,7 @@ parseAssignStmt(void)
 {
     if (option_Debug) std::cout << "parsing an assignment...\n";
 
-    Expr_AST* LHS = parseIdExpr(next_Token.Lex(), 0);
+    IdExpr_AST* LHS = parseIdExpr(next_Token.Lex(), 0);
     if ( (0 == LHS) ){
 	// varAccessError(next_Token.Lex(), 0); report at IdExpr level
 	errorIn_Progress = 1;
@@ -943,19 +976,13 @@ parseAssignStmt(void)
 	// As we call parseIdExpr() (and not dispatchExpr()), the private
 	// table variables of an IncrIdExpr_AST are not set.
 	// For the same reason, only postfix_Table can be set now.
-
-	std::cout << "\t\tprocessing " << LHS->Addr() << "\n";
-
 	if ( (postfix_Table.empty()) )
 	    parseWarning("", "unused statement");
 	else if (dynamic_cast<IncrIdExpr_AST*>(LHS)){ //this is the case of a++;
-
-	    std::cout << "\t\t...and setting its postfix_Table\n";
-
 	    LHS->setPostfix(postfix_Table);
 	    postfix_Table.clear();
 	}
-	RHS = 0;
+	RHS = 0; // ** TO DO: needs thinking (with processing in visitor.h)
 	break;
     case tok_eq: 
 	getNextToken();
@@ -1029,7 +1056,7 @@ parseAssignStmt(void)
 
     Assign_AST* ret;
     checkInitialized(0, RHS);
-    ret = new Assign_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
+    ret = new Assign_AST(LHS, RHS);
 
     getNextToken();
     if (errorIn_Progress) return 0;
@@ -1271,13 +1298,17 @@ parseStmt(void)
     case tok_ID: // note: an 'empty' expr like a++; dispatches here
 	ret = parseAssignStmt();
 	break;
-    case tok_dplus:
-    case tok_dminus:
+    case tok_dplus:  // case ++a;
+    case tok_dminus: //      --a;
 	ret = parsePrimaryExpr();
 	if (errorIn_Progress){
 	    ret = 0;
 	    break;
 	}
+	// as we don't parse through dispatchExpr (c. parseAssign())
+	dynamic_cast<IncrIdExpr_AST*>(ret)->setPrefix(prefix_Table); 
+	prefix_Table.clear();
+
 	match(0, tok_semi, 1); // error caught after breaking
 	break;
     case tok_while:
@@ -1315,7 +1346,7 @@ parseStmt(void)
 //	errorIn_Progress = 1; // see comment above 
 	ret = 0;
 	break;
-    default: // empty expression
+    default: // empty stmt-expr
 	dispatchExpr(); // parse and discard
 	if (errorIn_Progress) break;
 	parseWarning("", "unused expression");

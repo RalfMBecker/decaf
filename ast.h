@@ -203,7 +203,12 @@ StmtList_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
+//	Visitor->visit(this); // as we visit all children and children of
+	// children first, then would visit the StrmtList proper AFTER where
+	// we do nothing, it only confuses in -d p/o (si does nothing below).
+        //      sl                 
+	//   lc1  s2                 -> visit lc1-lc2-rc1-s2-s1
+	//      lc2 rc1
     }
 };
 

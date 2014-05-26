@@ -96,43 +96,26 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting IncrIdExpr_AST...\n";
 
-	needs_Label_ = 1; // just to elegantly reset in if below
-
-	inc_Table table = V->Prefix();
 	std::string frame_Str;
 	if ( (0 == V) ) // only when dispatched from visitor if
 	    frame_Str = ""; // ** TO DO: confirm this
 	else
 	    frame_Str = V->getEnv()->getTableName();
+
+	inc_Table table = V->Prefix();
 	if ( !(table.empty()) ){
 	    printIncTable(table, frame_Str);
 	    needs_Label_ = 0;
 	}
 
-//	label_Vec labels = active_Labels_;
-
-/*
-	if ( (table.empty()) && ((V->Postfix()).empty()) ){
-	    insertNOP(labels, frame_Str);
-	    active_Labels_.clear();
-	}
-*/
 	table = V->Postfix();
 	if ( !(table.empty()) ){
 	    printIncTable(table, frame_Str);
 	    needs_Label_ = 0;
 	}
-
-/*
-	if (needs_Label_){
-	    insertNOP(active_Labels_, V->getEnv()->getTableName());
-	    active_Labels_.clear();
-	}
-
-	needs_Label_ = 0;
-*/
     }
 
+    // ** TO DO: account for pre-/post-increment case
     void visit(ArrayIdExpr_AST* V)
     {
 	if (option_Debug) std::cout << "visiting ArrayIdExpr_AST...\n";
@@ -233,35 +216,25 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting NOP_AST...\n";
 
-	inc_Table table = V->Prefix();
 	std::string frame_Str;
 	if ( (0 == V) ) // only when dispatched from visitor if
 	    frame_Str = "";
 	else
 	    frame_Str = V->getEnv()->getTableName();
 
-
-//	if ( !(table.empty()) )
-//	    printIncTable(table, frame_Str);
-
-	needs_Label_ = 1; 
-	label_Vec labels = active_Labels_;
+	insertNOP(active_Labels_, V->getEnv()->getTableName());
 	active_Labels_.clear();
-
-//	if ( (table.empty()) && ((V->Postfix()).empty()) ){
-//	    insertNOP(labels, frame_Str);
-//	    active_Labels_.clear();
-//	}
-//
-//	table = V->Postfix();
-//	if ( !(table.empty()) )
-//	    printIncTable(table, frame_Str);
     }
 
     // objects needing addr update
     void visit(ArithmExpr_AST* V)
     {  
 	if (option_Debug) std::cout << "\tvisiting ArithmExpr_AST...\n";
+
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -281,15 +254,19 @@ public:
 	token Op = V->Op();
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = V->RChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
     }
 
     void visit(CoercedExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting CoercedExpr_AST...\n";
+
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -315,15 +292,19 @@ public:
 	default:
 	    errExit(0, "invalid use of visit(CoercedExpr_AST*)");
 	}
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target,LHS, to_Str, Frame);;
+	SSA_Entry* line = new SSA_Entry(labels, Op, target,LHS, to_Str, frame);;
 	insertLine(line, iR_List);
     }
 
     void visit(UnaryArithmExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting UnaryArithmExpr_AST...\n";
+
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
 
 	needs_Label_ = 0;
 	std::string e = "parsing error detected when visiting UnaryArExpr_AST";
@@ -339,9 +320,8 @@ public:
 	V->setAddr(target);
 	token Op = V->Op();
 	std::string LHS = V->LChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
     }
 
@@ -350,9 +330,10 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting AssignExpr_AST...\n";
 
+	std::string frame = V->getEnv()->getTableName();
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
-	    printIncTable(table, V->getEnv()->getTableName());
+	    printIncTable(table, frame);
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -370,14 +351,13 @@ public:
 	std::string target = V->LChild()->Addr();
 	token Op = token(tok_eq);
 	std::string LHS = V->RChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
 
 	table = V->Postfix();
 	if ( !(table.empty()) )
-	    printIncTable(table, Frame);
+	    printIncTable(table, frame);
     }
 
     void visit(LogicalExpr_AST* V) { return; }
@@ -395,6 +375,12 @@ public:
     void visit(OrExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting OrExpr_AST...\n";
+
+	needs_Label_ = 1;
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
  
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
@@ -404,7 +390,7 @@ public:
 	    V = dynamic_cast<OrExpr_AST*>(V->LChild());
 
 	// handle expr1...
-	needs_Label_ = 1;
+//	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -413,14 +399,12 @@ public:
 	std::string target = cond_Res;
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = "";
-	Env* pFrame = V->getEnv();
-	std::string frame_Str = pFrame->getTableName();
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame_Str);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame);
 	insertLine(line, iR_List);
 
 	doOr(V, cond_Res, cond_End);
 	labels.push_back(cond_End);
-	insertNOP(labels, frame_Str);
+	insertNOP(labels, frame);
 
 	if (option_Debug){
 	    std::cout << "\tleaving visitor or, and pushing ";
@@ -480,6 +464,12 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting AndExpr_AST...\n";
 
+	needs_Label_ = 1;
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
+
 	std::string cond_Res = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -488,7 +478,7 @@ public:
 	    V = dynamic_cast<AndExpr_AST*>(V->LChild());
 
 	// handle expr1...
-	needs_Label_ = 1;
+//	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
 	// ...and assign its result to the status variable (cond_Res)
@@ -497,14 +487,12 @@ public:
 	std::string target = cond_Res;
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = "";
-	Env* pFrame = V->getEnv();
-	std::string frame_Str = pFrame->getTableName();
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS,frame_Str);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
 	doAnd(V, cond_Res, cond_End);
 	labels.push_back(cond_End);
-	insertNOP(labels, frame_Str);
+	insertNOP(labels, frame);
 
 	if (option_Debug){
 	    std::cout << "\tleaving visitor and, and pushing ";
@@ -563,6 +551,11 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting RelExpr_AST...\n";
 
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
+
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -581,15 +574,19 @@ public:
 	token Op = V->Op();
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = V->RChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
     }
 
     void visit(NotExpr_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting NotExpr_AST...\n";
+
+	std::string frame = V->getEnv()->getTableName();
+	inc_Table table = V->Prefix();
+	if ( !(table.empty()) )
+	    printIncTable(table, frame);
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -603,9 +600,8 @@ public:
 	V->setAddr(target);
 	token Op = V->Op();
 	std::string LHS = V->LChild()->Addr();
-	std::string Frame = V->getEnv()->getTableName();
 
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", Frame);
+	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
     }
 
