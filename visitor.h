@@ -96,22 +96,21 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting IncrIdExpr_AST...\n";
 
-	std::string frame_Str;
+	std::string frame;
 	if ( (0 == V) ) // only when dispatched from visitor if
-	    frame_Str = ""; // ** TO DO: confirm this
+	    frame = ""; // ** TO DO: confirm this
 	else
-	    frame_Str = V->getEnv()->getTableName();
+	    frame = V->getEnv()->getTableName();
 
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) ){
-	    printIncTable(table, frame_Str);
+	    printIncTable(table, frame);
 	    needs_Label_ = 0;
 	}
 
-	// *******************************************************
 	table = V->Postfix();
-	if ( !(table.empty()) ){
-	    printIncTable(table, frame_Str);
+	if ( !(table.empty()) ){ // test different here - can be Assign_AST
+	    printIncTable(table, frame);
 	    needs_Label_ = 0;
 	}
     }

@@ -35,7 +35,7 @@
 *          Operators are only allowed in expressions (not as lvalues).
 *          If E is an expression having sub-expressions with the above
 *          tables not empty, generate SSA as follows, where i, j are
-*          the sum of adjustements resulting from pre-/post-increments:
+*          the sum of adjustments resulting from pre-/post-increments:
 *          print(prefix_Table) SSAs ("+ a a i")
 *          print E SSAs
 *          print(postfix_Table) SSAs ("+ a a j")
