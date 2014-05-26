@@ -1235,6 +1235,7 @@ public:
 		op = token(tok_plus);
 		tmp_Stream << value;
 		RHS = tmp_Stream.str();
+		tmp_Stream.str("");
 	    }
 	    else if ( (0 > (value = iter->second)) ){
 		did_Print = 1;
@@ -1242,6 +1243,7 @@ public:
 		value = -value;
 		tmp_Stream << value;
 		RHS = tmp_Stream.str();
+		tmp_Stream.str("");
 	    }
 	    // value = 0 could happen - several adjustements cancelling
 

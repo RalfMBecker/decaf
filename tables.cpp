@@ -41,7 +41,7 @@ int Env::count_ = -1; // associate 0 with never-used root_Env pointer
 void
 idModInsert(inc_Table& Type, IdExpr_AST* Name, int V)
 {
-    if ( (Type.end() != Type.find(Name)) )
+    if ( (Type.end() == Type.find(Name)) )
 	Type[Name] = V;
     else
 	Type[Name] += V;
