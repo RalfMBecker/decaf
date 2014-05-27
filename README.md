@@ -22,8 +22,9 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 
     Lexer operates on pre-processed tmp-file,
 
-(2) visibility of declarations and definitions is C/C++-like - from the point 
-    of declaration; use before declaration is error-checked,
+(2) we use (greedy) LR parsing, and how tokens are recognized reflects this:
+    a+++++b -> a ++ ++ + b -> syntax error
+    --b+--a -> -- b + -- a -> --b + --a
 
 (3) use of uninitialized variables: emits warning (but use is not disallowed) - 
     if used unitialized several times, warning emitted only at first use;
@@ -71,10 +72,12 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
 
 (11) for: all 3 expressions in expression list are optional (middle one too),
 
-(12) added modifying assignments (+=, -=, *=, /=),
+(12) visibility of declarations and definitions is C/C++-like - from the point 
+    of declaration; use before declaration is error-checked,
 
 (13) added pre- and post-increment operators (++a, a++):
 
+          The operators are at high precedence level (like (), []).
           Operators are only allowed in expressions (not as lvalues).
           If E is an expression having sub-expressions containing one
           or more of such op's, generate SSA as follows, where i, j are
@@ -85,8 +88,14 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
           This means we actually have *no undefined behavior*.
           Exception: in an assignment stmt like "a = ++a + b++;",
                      postfix adjustments are printed at end of statement.
-                     (*not* in modifiying assignments ("+=", etc):
-                     in this case, both ways give the same result),
+                     (*not* in modifiying assignments ("+=", etc);
+                     treat them as the general case).
+          Example: int a = 2;
+                   a *= (a++ + a++) * ++a;
+		   -> a = 3
+          	   (this matches what gcc 4.6.3. produces),
+
+(14) added modifying assignments (+=, -=, *=, /=).
 
 Eventually, the compiler will have multiple parse rounds, on either the AST, or the generated SSA-style IR. Currently, the implemented optimization rounds are:
 -O 0: remove NOPs from IR.

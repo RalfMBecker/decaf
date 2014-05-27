@@ -108,6 +108,12 @@ public:
 	    needs_Label_ = 0;
 	}
 
+	if (needs_Label_){
+	    insertNOP(active_Labels_, V->getEnv()->getTableName());
+	    active_Labels_.clear();
+	}
+	needs_Label_ = 0;
+
 	table = V->Postfix();
 	if ( !(table.empty()) ){ // test different here - can be Assign_AST
 	    printIncTable(table, frame);
@@ -392,13 +398,13 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting OrExpr_AST...\n";
 
-	needs_Label_ = 1;
+	needs_Label_ = 1; // if we print prefixes, will be set to 0
 	std::string frame = V->getEnv()->getTableName();
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
  
-	std::string cond_Res = makeTmp();
+	std::string res_Var = makeTmp();
 	std::string cond_End = makeLabel();
 
 	// get to bottom left
@@ -409,16 +415,16 @@ public:
 //	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
-	// ...and assign its result to the status variable (cond_Res)
+	// ...and assign its result to the status variable (res_Var)
 	label_Vec labels;
 	token Op = token(tok_eq);
-	std::string target = cond_Res;
+	std::string target = res_Var;
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = "";
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS,RHS, frame);
 	insertLine(line, iR_List);
 
-	doOr(V, cond_Res, cond_End);
+	doOr(V, res_Var, cond_End);
 	labels.push_back(cond_End);
 	insertNOP(labels, frame);
 
@@ -435,14 +441,14 @@ public:
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
     // RHS is in position V->RChild()->LChild()
-    void doOr(OrExpr_AST* V, std::string cond_Res, std::string cond_End)
+    void doOr(OrExpr_AST* V, std::string res_Var, std::string cond_End)
     {
 	std::string cond_First = makeLabel();
 
 	// make iffalse SSA entry
 	label_Vec labels;
 	token Op = token(tok_iffalse);
-	std::string target = cond_Res;
+	std::string target = res_Var;
 	std::string LHS = "goto";
 	std::string RHS = cond_First;
 	Env* pFrame = V->getEnv();
@@ -463,19 +469,19 @@ public:
 	V->RChild()->accept(this);
 	active_Labels_.clear();
 
-	// ...and assign its result to the status variable (cond_Res)
+	// ...and assign its result to the status variable (res_Var)
 	Op = token(tok_eq);
-	target = cond_Res;
+	target = res_Var;
 	LHS = V->RChild()->Addr();
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line, iR_List);
 
 	if ( (dynamic_cast<OrExpr_AST*>(V->Parent())) )
-	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), cond_Res, cond_End);
+	    doOr(dynamic_cast<OrExpr_AST*>(V->Parent()), res_Var, cond_End);
 	else{
 	    if ( ("" == V->Addr()) )
-		V->setAddr(cond_Res);
+		V->setAddr(res_Var);
 	    return;
 	}
     }
@@ -491,7 +497,7 @@ public:
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
 
-	std::string cond_Res = makeTmp();
+	std::string res_Var = makeTmp();
 	std::string cond_End = makeLabel();
 
 	// get to bottom left
@@ -502,16 +508,16 @@ public:
 //	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
-	// ...and assign its result to the status variable (cond_Res)
+	// ...and assign its result to the status variable (res_Var)
 	label_Vec labels;
 	token Op = token(tok_eq);
-	std::string target = cond_Res;
+	std::string target = res_Var;
 	std::string LHS = V->LChild()->Addr();
 	std::string RHS = "";
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
-	doAnd(V, cond_Res, cond_End);
+	doAnd(V, res_Var, cond_End);
 	labels.push_back(cond_End);
 	insertNOP(labels, frame);
 
@@ -528,14 +534,14 @@ public:
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
     // RHS is in position V->RChild()->LChild()
-    void doAnd(AndExpr_AST* V, std::string cond_Res, std::string cond_End)
+    void doAnd(AndExpr_AST* V, std::string res_Var, std::string cond_End)
     {
 	std::string cond_First = makeLabel();
 
 	// make iftrue SSA entry
 	label_Vec labels;
 	token Op = token(tok_iftrue);
-	std::string target = cond_Res;
+	std::string target = res_Var;
 	std::string LHS = "goto";
 	std::string RHS = cond_First;
 	Env* pFrame = V->getEnv();
@@ -556,19 +562,19 @@ public:
 	V->RChild()->accept(this);
 	active_Labels_.clear();
 
-	// ...and assign its result to the status variable (cond_Res)
+	// ...and assign its result to the status variable (res_Var)
 	Op = token(tok_eq);
-	target = cond_Res;
+	target = res_Var;
 	LHS = V->RChild()->Addr();
 	RHS = "";
 	line = new SSA_Entry(labels, Op, target, LHS, RHS, frame_Str);
 	insertLine(line, iR_List);
 
 	if ( (dynamic_cast<AndExpr_AST*>(V->Parent())) )
-	    doAnd(dynamic_cast<AndExpr_AST*>(V->Parent()), cond_Res, cond_End);
+	    doAnd(dynamic_cast<AndExpr_AST*>(V->Parent()), res_Var, cond_End);
 	else{
 	    if ( ("" == V->Addr()) )
-		V->setAddr(cond_Res);
+		V->setAddr(res_Var);
 	    return;
 	}
     }
