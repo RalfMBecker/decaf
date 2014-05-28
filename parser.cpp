@@ -428,13 +428,18 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	getNextToken();
 	if (errorIn_Progress) 
 	    return 0;
+	std::string tmp_Str;
 	// distinguishing the 2 cases matters to properly emit prefix- and
-	if ( !(is_Assign) )         // postfix-Tables
+	if ( !(is_Assign) ){         // postfix-Tables
 	    RHS = parsePrimaryExpr();
-	else // handle everything to the right first
+	    tmp_Str = err_Msg;
+	}
+	else{ // handle everything to the right first
 	    RHS = dispatchExpr();
+	    tmp_Str = "invalid expression";
+	}
 	if ( (!RHS) ){
-	    parseError(next_Token.Lex(), err_Msg);
+	    parseError(next_Token.Lex(), tmp_Str);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -461,7 +466,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	//       '!'), this handles a prefix expr following fine.
 	if ( (prec_2 < prec_3) || go_Right){ // flip from l-r, to r-l, until
 	    RHS = parseInfixRHS(prec_2 + 1, prec_2, RHS); // reverted
-	    if ( (!RHS) ){           
+	    if ( (!RHS) ){ 
 		parseError(next_Token.Lex(), err_Msg);
 		errorIn_Progress = 1;
 		return 0;
@@ -1003,7 +1008,7 @@ parseAssignStmt(void)
 	if (errorIn_Progress) return 0;
 	RHS = dispatchExpr();
 	if ( (0 == RHS) ){
-	    parseError(LHS->Addr(), "invalid assignment");
+	    parseError(LHS->Addr(),"in assignment - invalid expression as RHS");
 	    errorIn_Progress = 1;
 	    return 0;
 	}

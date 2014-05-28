@@ -106,11 +106,11 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
          languages I know, it seems philosophically more satisfying to 
          apply *all* prefixes encountered in a compound expr before evaluating
          the entire expression, as we do above. This will give different
-	 results from, e.g., C and C++ (where this behavior is of course
-	 declared 'undefined' in the respective standards). Per the above,
-	 gcc doesn't apply the increment to the first 2 a's encountered
-	 before the prefix-incremented ++a - but does to the a from -=, which
-	 is encountered before too; this seems fishy.
+         results from, e.g., C and C++ (where this behavior is of course
+         declared 'undefined' in the respective standards). Per the above,
+         gcc doesn't apply the increment to the first 2 a's encountered
+         before the prefix-incremented ++a - but does to the a from -=, which
+         is encountered before too; this seems fishy.
 
 (14) added modifying assignments (+=, -=, *=, /=) (c. (13)), 
 

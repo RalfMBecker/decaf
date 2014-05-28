@@ -71,15 +71,19 @@ usageErr(std::string Name)
 
 // is_Error: 0 - warning, 1 - error
 void
-errorBase(int is_Error)
+errorBase(int is_Error, int L = -1, int C = -1)
 {
+    int line, column;
+    line = (-1 == L)?line_No:L;
+    column = (-1 == C)?col_No:L;
+
     if ( (1 == is_Error) )
 	std::cerr << "Error ";
     else if ( (0 == is_Error) )
 	std::cerr << "Warning ";
     else
 	errExit(0, "illegal use of function \'errorBase\'");
-    std::cerr << "near " << line_No << ":" << col_No << ": ";
+    std::cerr << "near " << line << ":" << column << ": ";
 }
 
 // Error class for compiler-usage errors (never prompted by user of
@@ -199,10 +203,11 @@ varAccessError(std::string Name, int Type)
     std::cerr << tmp_Stream.str();
 }
 
+// has default arguments set for L and C (in error.h)
 void
-parseError(std::string tok_Str, std::string com_Str) 
+parseError(std::string tok_Str, std::string com_Str, int L, int C)
 {
-    errorBase(1);
+    errorBase(1, L, C);
     no_par_Errors++;
 
     std::ostringstream tmp_Str;

@@ -4,12 +4,12 @@ code generated for ./files/decafe_7.dec
 Error near 5:7: Syntax error (a) - array index not specified - illegal access
 Error near 6:6: Syntax error (b) - attempt to access non-array as an array
 Error near 7:13: Syntax error (a) - access dimensions (1) don't match the declaration of a
-Error near 7:13: Syntax error (b) - invalid assignment
+Error near 7:13: Syntax error (b) - in assignment - invalid expression as RHS
 Error near 8:16: Syntax error (a) - access dimensions (3) don't match the declaration of a
 Error near 9:16: Syntax error (3) - index out of array bounds
-Error near 9:16: Syntax error (b) - invalid assignment
+Error near 9:16: Syntax error (b) - in assignment - invalid expression as RHS
 Error near 10:15: Syntax error - missing token (])
-Error near 10:15: Syntax error (b) - invalid assignment
+Error near 10:15: Syntax error (b) - in assignment - invalid expression as RHS
 Warning near 13:15: In (b) - variable used un-initialized
 
 found 9 syntactic/semantic errors

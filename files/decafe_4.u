@@ -4,7 +4,7 @@ code generated for ./files/decafe_4.dec
 Error near 3:13: Syntax error ()) - expected primary expression
 Error near 5:8: Syntax error (else) - else without leading if
 Error near 6:7: Syntax error (;) - expected infix operator or primary expression
-Error near 6:7: Syntax error (a) - invalid assignment
+Error near 6:7: Syntax error (a) - in assignment - invalid expression as RHS
 Warning near 8:2: '=' in if-conditional - did you mean '=='?
 Warning near 10:5: unused expression
 
