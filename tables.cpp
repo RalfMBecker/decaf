@@ -69,6 +69,10 @@ void
 makeBinOpTable(void)
 {
     binOP_Table[tok_eq] = 100;
+    binOP_Table[tok_assign_minus] = 100;
+    binOP_Table[tok_assign_plus] = 100;
+    binOP_Table[tok_assign_mult] = 100;
+    binOP_Table[tok_assign_div] = 100;
     binOP_Table[tok_log_or] = 200;
     binOP_Table[tok_log_and] = 300;
     binOP_Table[tok_log_eq] = 400;

@@ -45,6 +45,7 @@ class ArithmExpr_AST;
 class CoercedExpr_AST;
 class UnaryArithmExpr_AST;
 class AssignExpr_AST;
+class ModAssignExpr_AST;
 class LogicalExpr_AST;
 class OrExpr_AST;
 class AndExpr_AST;
@@ -59,6 +60,7 @@ class EOB_AST;
 class VarDecl_AST;
 class ArrayVarDecl_AST;
 class Assign_AST;
+class ModAssign_AST;
 class IfType_AST;
 class If_AST;
 class For_AST;
@@ -580,7 +582,6 @@ UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
 
 };
 
-// ***To DO: treat array in expr as sub class of this?***
 class AssignExpr_AST: public Expr_AST{
 public:
 AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
@@ -594,6 +595,25 @@ AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
+};
+
+class ModAssignExpr_AST: public AssignExpr_AST{
+public:
+ModAssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr, token Type)
+    : AssignExpr_AST(Id, Expr), type_(Type)
+    {
+	setAddr(Id->Op().Lex());
+	Id->Initialize();
+	if (option_Debug)
+	    std::cout << "\tcreated AssignExpr_AST with LHS = "<< addr_<< "\n";
+    }
+
+    token ModType(void) const { return type_; }
+
+    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    token type_;
 };
 
 /***************************************
@@ -817,7 +837,6 @@ private:
     // either an integer or a tmp variable), for reference later in visitor
 };
 
-
 class Assign_AST: public Stmt_AST{
 public:
 Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
@@ -839,6 +858,32 @@ Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)
     }
 };
 
+class ModAssign_AST: public Assign_AST{
+public:
+ModAssign_AST(IdExpr_AST* Id, Expr_AST* Expr, token Type)
+    : Assign_AST(Id, Expr), type_(Type)
+    {
+	setAddr(Id->Op().Lex());
+	Id->Initialize();
+	if (option_Debug)
+	    std::cout << "\tcreated ModAssign_AST with LHS = " << addr_ << "\n";
+    }
+
+    token ModType(void) const { return type_; }
+
+    virtual void accept(AST_Visitor* Visitor)
+    {
+	if ( (0!= this->lChild_) )
+	    this->lChild_->accept(Visitor);
+	if ( (0!= this->rChild_) )
+	    this->rChild_->accept(Visitor);
+	Visitor->visit(this);
+    }
+
+private:
+    token type_;
+};
+
 /***************************************
 * Logical and procedural statements
 ***************************************/
@@ -857,7 +902,7 @@ public:
 IfType_AST(Node_AST* LHS, Node_AST* RHS=0)
 	: Stmt_AST(LHS, RHS) 
     {
-	if (option_Debug) std::cout << "created an IfType...\n";
+	if (option_Debug) std::cout << "\tcreated an IfType...\n";
     }
 
     ~IfType_AST() {}

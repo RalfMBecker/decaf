@@ -356,11 +356,8 @@ public:
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
 
+	// get expr to be assigned ready
 	needs_Label_ = 0;
-	if ( (0 != V->LChild()) )
-	    V->LChild()->accept(this);
-	else
-	    errExit(0, "parsing error detected when visiting AssignExpr_AST");
 	if ( (0 != V->RChild()) )
 	    V->RChild()->accept(this);
 	else
@@ -368,12 +365,23 @@ public:
 
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
-
-	std::string target = V->LChild()->Addr();
-	token Op = token(tok_eq);
-	std::string LHS = V->RChild()->Addr();
-
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	std::string target, LHS, RHS;
+	token op;
+	// handle '+' in case we actually have '+=' (and similar)
+	// Note: this means that in a += expr <=> a = a + expr, 
+	//       pre-increments to a in expr affect the second a too. 
+	ModAssignExpr_AST* tmp_AST;
+	if ( (tmp_AST = dynamic_cast<ModAssignExpr_AST*>(V)) ){
+	    target = LHS = V->LChild()->Addr();
+	    op = tmp_AST->ModType();
+	    RHS = V->RChild()->Addr();
+	}
+	else{ // regular '=' assignment
+	    target = V->LChild()->Addr();
+	    op = token(tok_eq);
+	    LHS = V->RChild()->Addr();
+	}
+	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
 	table = V->Postfix();
@@ -781,15 +789,24 @@ public:
 	if ( (0 == V->RChild()) )
 	    return;
 
+	std::string frame = V->getEnv()->getTableName();
 	label_Vec labels = active_Labels_;
 	active_Labels_.clear();
-
-	std::string target = V->LChild()->Addr();
-	token Op = token(tok_eq);
-	std::string LHS = V->RChild()->Addr();
-	std::string frame = V->getEnv()->getTableName();
-
-	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
+	std::string target, LHS, RHS;
+	token op;
+	// handle '+' in case we actually have '+=' (and similar)
+	ModAssign_AST* tmp_AST;
+	if ( (tmp_AST = dynamic_cast<ModAssign_AST*>(V)) ){
+	    target = LHS = V->LChild()->Addr();
+	    op = tmp_AST->ModType();
+	    RHS = V->RChild()->Addr();
+	}
+	else{ // regular '=' assignment
+	    target = V->LChild()->Addr();
+	    op = token(tok_eq);
+	    LHS = V->RChild()->Addr();
+	}
+	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
 	// Assign_AST is an exception with respect to when postfix_Table is 
@@ -800,7 +817,6 @@ public:
 	inc_Table postfix = (dynamic_cast<Expr_AST*>(V->RChild()))->Postfix();
 	if ( !(postfix.empty()) ) // not necessary, but saves function call
 	    printIncTable(postfix, frame);
-
     }
 
     // walk down the tree (see visitor If_AST)

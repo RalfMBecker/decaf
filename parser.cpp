@@ -42,8 +42,6 @@
 *          This means we actually have *no undefined behavior*.
 *          Exception: in an assignment stmt like "a = ++a + b++;",
 *                     postfix_Table is printed at end of statement.
-*                     (*not* in modifiying assignments ("+=", etc):
-*                     in this case, both ways give the same result).
 *
 ********************************************************************/
 
@@ -366,17 +364,19 @@ checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
 }
 
 int
-isModAssign(token T)
+isAssign(token T)
 {
     tokenType tt = T.Tok();
     if ( (tok_assign_plus == tt) || (tok_assign_minus == tt) || 
-	 (tok_assign_mult == tt) || (tok_assign_div == tt) )
+	 (tok_assign_mult == tt) || (tok_assign_div == tt) ||
+	 (tok_eq == tt) )
 	return 1;
     else
 	return 0;
 }
 
 Expr_AST* parsePrimaryExpr(void);
+Expr_AST* dispatchExpr(void);
 int logOp_Tot = 0;
 
 // Dijkstra shunting algorithm
@@ -388,9 +388,12 @@ int logOp_Tot = 0;
 // The way we track recursion, could go bad for deeply recursive infix (> 99).
 // Restriction should be added to a full description of the compiler/language.
 // Allowing for chained assignments:
-// 2nd operator's precedence (prec_0) is handed on to a recursive call of
-// parseInfixRHS(), then compared to the precedence of the newly read operator.
-Expr_AST* 
+// 1st operator's precedence (prec_2 -> prec_0) is handed on to a recursive 
+// call of parseInfixRHS(), then compared to the prec of the newly read op:
+//   2 3(0)/2
+// a = a = a = 4 + a = 5 (illegal, last =)
+// -> go right if 2 and 3(0)/2 are both '=' (or '+=') 
+Expr_AST*
 parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 { 
     if (option_Debug) std::cout << "entering parseInfixRHS...\n";
@@ -399,66 +402,63 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
     std::string const err_Msg2 = "illegal chaining of logical operators";
     std::string const err_Msg3 = "illegal assignment: lvalue expected";
     for (;;){
-	int prec_2;
-	int mod_Ass = isModAssign(next_Token);
-	int go_Right = 0;
-	if ( !mod_Ass ){
-	    prec_2 = opPriority(next_Token.Tok());
-	    go_Right = (prec_2 == prec_0) && (tok_eq == next_Token.Tok());
-	}
-	else{
-	    prec_2 = opPriority(tok_eq); 
-	    go_Right = (prec_2 == prec_0);
-	}
- 
+	int prec_2 = opPriority(next_Token.Tok());
 	if (option_Debug)
 	    std::cout << "current token (1) = " << next_Token.Lex() << "\n";
 
+	// clarify which way to go, and if if is legal
+	int is_Assign = isAssign(next_Token);
+	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(LHS)) || 
+			      dynamic_cast<IncrIdExpr_AST*>(LHS) ) ){
+	    parseError(next_Token.Lex(), err_Msg3);
+	    errorIn_Progress = 1;
+	    return 0;     
+	}                
+	int go_Right = 0;    
+	if (is_Assign) // 2 AssignExpr_AST chained: 1 in last recursion, 1 now
+	    go_Right = (prec_2 == prec_0); 
+ 
 	if ( (prec_2 < prec_1) && !go_Right )
 	    return LHS;
 	// store it for later op creation
-	token binOp1 = (isModAssign(next_Token))?token(tok_eq):next_Token; 
+	token binOp1 = next_Token;
 
+	// handle RHS
 	Expr_AST* RHS;
-	if ( !mod_Ass ){
-	    getNextToken();
-	    if (errorIn_Progress) return 0;
+	getNextToken();
+	if (errorIn_Progress) 
+	    return 0;
+	// distinguishing the 2 cases matters to properly emit prefix- and
+	if ( !(is_Assign) )         // postfix-Tables
 	    RHS = parsePrimaryExpr();
-	    if ( (!RHS) ){
-		parseError(next_Token.Lex(), err_Msg);
-		errorIn_Progress = 1;
-		return 0;
-	    }
-	}
-	else{
-	    RHS = LHS;
-	    switch(next_Token.Tok()){
-	    case tok_assign_plus:
-		next_Token = token(tok_plus);
-		break;
-	    case tok_assign_minus:
-		next_Token = token(tok_minus);
-		break;
-	    case tok_assign_mult:
-		next_Token = token(tok_mult);
-		break;
-	    case tok_assign_div:
-		next_Token = token(tok_div);
-		break;
-	    default:
-		errExit(0, "illegal use of function parseInfixRHS()");
-	    }
+	else // handle everything to the right first
+	    RHS = dispatchExpr();
+	if ( (!RHS) ){
+	    parseError(next_Token.Lex(), err_Msg);
+	    errorIn_Progress = 1;
+	    return 0;
 	}
 
-	int prec_3 = opPriority(next_Token.Tok());
+       	int prec_3 = opPriority(next_Token.Tok());
 	if (option_Debug)
 	    std::cout << "current token (2) = " << next_Token.Lex() << "\n";
 
+	// clarify which way to go, and if it is legal
+	is_Assign = isAssign(next_Token);
+	// this is essentially redundant: we also check, in next recursion,
+	// at the top of this function. Allows early error detection.
+	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(RHS)) || 
+			      dynamic_cast<IncrIdExpr_AST*>(RHS) ) ){
+	    parseError(next_Token.Lex(), err_Msg3);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	go_Right = 0;
+	if (is_Assign) // 2 AssignExpr_AST chained: binOp1, and next_Token
+	    go_Right = (prec_3 == prec_2); 
+
 	// Note: as we next read a Primary_Expr (which dispatches '-', 
 	//       '!'), this handles a prefix expr following fine.
-	token t = next_Token;
-	mod_Ass = (tok_eq == t.Tok()) || isModAssign(t); // mod or '='
-	go_Right = (prec_2 == prec_3) && mod_Ass;
 	if ( (prec_2 < prec_3) || go_Right){ // flip from l-r, to r-l, until
 	    RHS = parseInfixRHS(prec_2 + 1, prec_2, RHS); // reverted
 	    if ( (!RHS) ){           
@@ -468,22 +468,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    }
 	}
 
-	if (option_Debug) std::cout << "binOp1.Lex() = "<<binOp1.Lex() << "\n";
-	int is_Assign = (tok_eq == binOp1.Tok())?1:0;
-	if ( (is_Assign) && ( (dynamic_cast<IncrIdExpr_AST*>(LHS)) ||
-			      !(dynamic_cast<IdExpr_AST*>(LHS))  ||
-			      (0 == RHS) || !(dynamic_cast<Expr_AST*>(RHS)) ) ){
-	    if ( (dynamic_cast<IdExpr_AST*>(LHS) || 
-		  dynamic_cast<IncrIdExpr_AST*>(LHS)) )
-		parseError(LHS->Addr(), err_Msg3);
-	    else if ( !(0 == RHS) )
-		parseError(RHS->Addr(), err_Msg3);
-	    else
-		parseError(next_Token.Lex(), err_Msg3);
-	    errorIn_Progress = 1;
-	    return 0;
-	}
-
+	// time to create this recursion's resulting compound expression
 	int tmp = checkForCoercion(LHS, RHS);
 	if ( (1 == tmp) && !(is_Assign) ){
 	    if (option_Debug) std::cout << "coercing LHS...\n";
@@ -503,6 +488,14 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	case tok_eq: // validity check above
 	    checkInitialized(0, RHS);
 	    LHS = new AssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
+	    break;
+	case tok_assign_plus:
+	case tok_assign_minus:
+	case tok_assign_mult:
+	case tok_assign_div:
+	    checkInitialized(0, RHS);
+	    LHS = new ModAssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS, 
+					binOp1);
 	    break;
 	case tok_log_or: 
 	    checkInitialized(LHS, RHS);
@@ -981,6 +974,7 @@ parseAssignStmt(void)
 	return 0;
     }
 	
+    int handleMod_Assign = 0;
     switch(t){
     case tok_semi: 
 	// As we call parseIdExpr() (and not dispatchExpr()), the private
@@ -994,6 +988,16 @@ parseAssignStmt(void)
 	}
 	RHS = 0; // ** TO DO: needs thinking (with processing in visitor.h)
 	break;
+
+    case tok_assign_plus:
+    case tok_assign_minus:
+    case tok_assign_mult:
+    case tok_assign_div:
+	// logically, should check for coercion. However, if we coerce
+	// '1' (int) to '1' (double), the ultimate SSA entry
+	// + a a 1 looks the same. So we don't do it.
+	handleMod_Assign = 1; 
+
     case tok_eq: 
 	getNextToken();
 	if (errorIn_Progress) return 0;
@@ -1010,45 +1014,6 @@ parseAssignStmt(void)
 	}
 	break;
 
-    case tok_assign_plus:
-    case tok_assign_minus:
-    case tok_assign_mult:
-    case tok_assign_div:
-	getNextToken();
-	if (errorIn_Progress) return 0;
-	RHS = dispatchExpr();
-	if ( (0 == RHS) ){
-	    parseError(LHS->Addr(), "invalid assignment");
-	    errorIn_Progress = 1;
-	    return 0;
-	}
-	if ( (-1 == match(0, tok_semi, 0)) ){
-	    punctError(';', 0);
-	    errorIn_Progress = 1;
-	    return 0;
-	}
-
-	// logically, should check for coercion. However, if we coerce
-	// '1' (int) to '1' (double), the ultimate SSA entry
-	// + a a 1 looks the same. So we don't do it. 
-	switch(t){
-	case tok_assign_plus:
-	    RHS = new ArithmExpr_AST(token(tok_plus), LHS, RHS);
-	    break;
-	case tok_assign_minus:
-	    RHS = new ArithmExpr_AST(token(tok_minus), LHS, RHS);
-	    break;
-	case tok_assign_mult:
-	    RHS = new ArithmExpr_AST(token(tok_mult), LHS, RHS);
-	    break;
-	case tok_assign_div:
-	    RHS = new ArithmExpr_AST(token(tok_div), LHS, RHS);
-	    break;
-	default:
-	    break;
-	}
-	break;
-
     default:
 	std::ostringstream tmp_Stream;
 	tmp_Stream << "\';\', \'=\', \'+=\', \'-=\', \'*=\', or \'/=\'";
@@ -1059,6 +1024,7 @@ parseAssignStmt(void)
 	break;
     }
 
+    // ** TO DO: is this good enough if we have an ArrayVarDecl/ArrayVarExpr?
     if ( (0 != RHS) ){
 	if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
@@ -1066,7 +1032,10 @@ parseAssignStmt(void)
 
     Assign_AST* ret;
     checkInitialized(0, RHS);
-    ret = new Assign_AST(LHS, RHS);
+    if ( !(handleMod_Assign) )
+	ret = new Assign_AST(LHS, RHS);
+    else
+	ret = new ModAssign_AST(LHS, RHS, t);
 
     getNextToken();
     if (errorIn_Progress) return 0;

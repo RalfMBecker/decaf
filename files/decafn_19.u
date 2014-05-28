@@ -3,8 +3,9 @@ code generated for ./files/decafn_19.dec
 -----------------------------------------------
 Warning near 6:6: unused statement
 Warning near 16:3: '=' in if-conditional - did you mean '=='?
+Warning near 18:3: '=' in if-conditional - did you mean '=='?
 
-found 2 warnings
+found 3 warnings
 
 Info for table Env1
 ---------------------------------------------------
@@ -37,6 +38,11 @@ Memory allocation - stack: 0
                      heap: 0
 
 Info for table Env5
+---------------------------------------------------
+Memory allocation - stack: 0
+                     heap: 0
+
+Info for table Env6
 ---------------------------------------------------
 Memory allocation - stack: 0
                      heap: 0
@@ -112,13 +118,29 @@ Memory allocation - stack: 0
    69                          -:         a,         a,         1  (Env4)
    70                       goto:        L6                        (Env1)
    71            L14:        nop:                                  (Env1)
-   72                          +:         a,         a,         1  (Env5)
-   73                          +:         b,         b,         1  (Env5)
-   74                          +:       t19,         b,         a  (Env5)
-   75                          +:       t20,       t19,         b  (Env5)
-   76                          +:       t21,       t20,         a  (Env5)
-   77                          +:         a,         a,         1  (Env5)
-   78                          +:         b,         b,         1  (Env5)
-   79                          +:       t22,         a,       t21  (Env5)
-   80                          =:         a,       t22             (Env5)
-   81             L6:        nop:                                  (Env1)
+   72                          -:         b,         b,         1  (Env1)
+   73                          -:       t20,         b             (Env1)
+   74                          +:       t21,       t20,         b  (Env1)
+   75                          +:       t22,       t21,         b  (Env1)
+   76                          =:       t19,       t22             (Env1)
+   77                     iftrue:       t19,      goto,       L16  (Env1)
+   78                       goto:       L15                        (Env1)
+   79            L16:        nop:                                  (Env1)
+   80                          =:       t19,         b             (Env1)
+   81            L15:        nop:                                  (Env1)
+   82                          +:         b,         b,       t19  (Env1)
+   83                          *:         a,         a,         b  (Env1)
+   84                          +:         b,         b,         1  (Env1)
+   85                    iffalse:         a,      goto,       L17  (Env1)
+   86                          -:         a,         a,         1  (Env5)
+   87                       goto:        L6                        (Env1)
+   88            L17:        nop:                                  (Env1)
+   89                          +:         a,         a,         1  (Env6)
+   90                          +:         b,         b,         1  (Env6)
+   91                          +:       t23,         b,         a  (Env6)
+   92                          +:       t24,       t23,         b  (Env6)
+   93                          +:       t25,       t24,         a  (Env6)
+   94                          +:         a,         a,       t25  (Env6)
+   95                          +:         a,         a,         1  (Env6)
+   96                          +:         b,         b,         1  (Env6)
+   97             L6:        nop:                                  (Env1)

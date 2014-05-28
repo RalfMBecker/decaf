@@ -99,10 +99,10 @@ public:
 	case tok_log_and: lexeme_ = "&&"; break;
 	case tok_log_or: lexeme_ = "||"; break;
 	case tok_sqopenclosed: lexeme_ = "[]"; break;
-	case tok_assign_plus: lexeme_ = "+="; break;
-	case tok_assign_minus: lexeme_ = "-="; break;
-	case tok_assign_mult: lexeme_ = "*="; break;
-	case tok_assign_div: lexeme_ = "/="; break;
+	case tok_assign_plus: lexeme_ = "+"; break;
+	case tok_assign_minus: lexeme_ = "-"; break;
+	case tok_assign_mult: lexeme_ = "*"; break;
+	case tok_assign_div: lexeme_ = "/"; break;
 	case tok_dplus: lexeme_ = "++"; break;
 	case tok_dminus: lexeme_ = "--"; break;
 

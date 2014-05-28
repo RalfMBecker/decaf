@@ -82,20 +82,37 @@ Compiler for the Brown Decaf language. Note that the language appears to be modi
           If E is an expression having sub-expressions containing one
           or more of such op's, generate SSA as follows, where i, j are
           the sum of adjustments resulting from pre-/post-increments:
-          print(prefix adjustments) SSAs ("+ a a i")
-          print E SSAs
-          print(postfix adjustments) SSAs ("+ a a j")
+
+          generate(prefix adjustments) SSAs ("+ a a i")
+          generate E SSAs
+          generate(postfix adjustments) SSAs ("+ a a j")
+
           This means we actually have *no undefined behavior*.
           Exception: in an assignment stmt like "a = ++a + b++;",
-                     postfix adjustments are printed at end of statement.
-                     (*not* in modifiying assignments ("+=", etc);
-                     treat them as the general case).
+                     postfix adjustments are generated at end of statement.
           Example: int a = 2;
                    a *= (a++ + a++) * ++a;
-		   -> a = 3
-          	   (this matches what gcc 4.6.3. produces),
+		   -> a = 56
+          Note: it is hard to understand what gcc does in the above case -  
+                in 4.6.3., we get
+                case 1: int a = 2;
+                        a *= ++a; -> a = 9 (so pre-increment applies to *=)
+                        Our approach -> 9
+                case 2: int a = 2;
+                        a -= (a++ + a++) * ++a; -> a = -7 (so again does)  
+			Our approach -> -13
 
-(14) added modifying assignments (+=, -=, *=, /=).
+         As all post-increments are applied as described above in all 
+         languages I know, it seems philosophically more satisfying to 
+         apply *all* prefixes encountered in a compound expr before evaluating
+         the entire expression, as we do above. This will give different
+	 results from, e.g., C and C++ (where this behavior is of course
+	 declared 'undefined' in the respective standards). Per the above,
+	 gcc doesn't apply the increment to the first 2 a's encountered
+	 before the prefix-incremented ++a - but does to the a from -=, which
+	 is encountered before too; this seems fishy.
+
+(14) added modifying assignments (+=, -=, *=, /=) (c. (13)), 
 
 Eventually, the compiler will have multiple parse rounds, on either the AST, or the generated SSA-style IR. Currently, the implemented optimization rounds are:
 -O 0: remove NOPs from IR.
