@@ -122,16 +122,16 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
 
     ~Node_AST() {}
 
-    virtual int Line(void) const { return line_; }
-    virtual int Col(void) const { return col_; }
-    virtual Node_AST* Parent(void) const { return parent_; }
-    virtual Node_AST* LChild(void) const { return lChild_; }
-    virtual Node_AST* RChild(void) const { return rChild_; }
-    virtual std::string Addr(void) const { return addr_; }
-    virtual Env* getEnv(void) const { return env_; }
+    int Line(void) const { return line_; }
+    int Col(void) const { return col_; }
+    Node_AST* Parent(void) const { return parent_; }
+    Node_AST* LChild(void) const { return lChild_; }
+    Node_AST* RChild(void) const { return rChild_; }
+    std::string Addr(void) const { return addr_; }
+    Env* getEnv(void) const { return env_; }
 
     void setParent(Node_AST* Par) { parent_ = Par; }
-    virtual void setAddr(std::string Addr) { addr_ = Addr; }
+    void setAddr(std::string Addr) { addr_ = Addr; }
 
     int RefCount(void) const { return ref_Count_; }
     void RefCountPlus(void) { ref_Count_++; }
@@ -264,7 +264,7 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
 
     ~Expr_AST() {}
 
-    virtual int setWidth(void)
+    int setWidth(void)
     {
 	if ( (typeWidth_Table.end() != typeWidth_Table.find(type_.Lex())) )
 	    return typeWidth_Table[type_.Lex()];
@@ -272,7 +272,7 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
 	    return -1;
     }
 
-    virtual int setPriority(void)
+    int setPriority(void)
     {
 	if ( (typePrec_Table.end() != typePrec_Table.find(type_.Lex())) )
 	    return typePrec_Table[type_.Lex()];
@@ -280,18 +280,18 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
 	    return -1;
     }
 
-    // for use in classes and arrays
+    // for use in classes and arrays (re-defined in a descendant)
     virtual void forceWidth(int w) { typeW_ = w; }
 	
-    virtual token Type(void) const { return type_; }
-    virtual token Op(void) const { return op_; }
-    virtual int TypeW(void) const { return typeW_; }
-    virtual int TypeP(void) const { return typeP_; }
+    token Type(void) const { return type_; }
+    token Op(void) const { return op_; }
+    int TypeW(void) const { return typeW_; }
+    int TypeP(void) const { return typeP_; }
 
-    virtual inc_Table Prefix(void) const { return prefix_; }
-    virtual void setPrefix(const inc_Table& T) { prefix_ = T; }
-    virtual inc_Table Postfix(void) const { return postfix_; }
-    virtual void setPostfix(const inc_Table& T) { postfix_ = T; }
+    inc_Table Prefix(void) const { return prefix_; }
+    void setPrefix(const inc_Table& T) { prefix_ = T; }
+    inc_Table Postfix(void) const { return postfix_; }
+    void setPostfix(const inc_Table& T) { postfix_ = T; }
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -413,13 +413,13 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
     }
 
     int allInts(void) const { return all_IntVals_; }
-    virtual int numDims(void) const { return num_Dims_; }
-    virtual ArrayVarDecl_AST* Base(void) const { return base_; } 
-    virtual std::vector<Expr_AST*>* Dims(void) { return dims_;}
+    int numDims(void) const { return num_Dims_; }
+    ArrayVarDecl_AST* Base(void) const { return base_; } 
+    std::vector<Expr_AST*>* Dims(void) { return dims_;}
 
-    virtual std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
-    virtual void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
-    virtual void addToDimsFinalFront(std::string V) 
+    std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
+    void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
+    void addToDimsFinalFront(std::string V) 
     {
 	dims_Final_->insert(dims_Final_->begin(), V);
     }
@@ -529,7 +529,7 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 };
 
@@ -549,7 +549,7 @@ CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
     tokenType From() const { return from_; }
     tokenType To() const {return to_; }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     tokenType from_; // for easier access by visitor
@@ -567,7 +567,7 @@ UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 };
 
@@ -599,7 +599,7 @@ ModAssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr, token Type)
 
     token ModType(void) const { return type_; }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     token type_;
@@ -620,7 +620,7 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // implement && (as, in ultimate code generation, we short-circuit, it 
@@ -636,7 +636,7 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // implement <, <=, >, >=, ==, !=
@@ -651,7 +651,7 @@ RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 };
 
@@ -667,8 +667,7 @@ NotExpr_AST(Expr_AST* LHS)
 	}
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 /***************************************
@@ -682,7 +681,7 @@ Break_AST(void)
 	if (option_Debug) std::cout<< "\tcreated a Break_AST\n";
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 class Cont_AST: public Stmt_AST{
@@ -693,7 +692,7 @@ Cont_AST(void)
 	if (option_Debug) std::cout<< "\tcreated a Cont_AST\n";
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 // parent class for declarations:
@@ -713,12 +712,12 @@ Decl_AST(IdExpr_AST* Id)
 
     ~Decl_AST() {}
 
-    virtual std::string Name(void) const { return name_; }
-    virtual token Type(void) const { return type_; }
+    std::string Name(void) const { return name_; }
+    token Type(void) const { return type_; }
 
-    virtual int Width(void) const { return width_; }
-    virtual IdExpr_AST* Expr(void) const { return expr_; }
-    virtual void forceWidth(int W) { width_ = W; }
+    int Width(void) const { return width_; }
+    IdExpr_AST* Expr(void) const { return expr_; }
+    void forceWidth(int W) { width_ = W; } // ** TO DO: seems redundant
 
 private:
     std::string name_; // all vars for easier access only
@@ -731,7 +730,7 @@ private:
 class VarDecl_AST: public Decl_AST{
 public:
 VarDecl_AST(IdExpr_AST* Id)
-    : Decl_AST(Id), empty_(0)
+    : Decl_AST(Id)
     {
 	if (option_Debug) std::cout<< "\tcreated VarDecl_AST....\n";
     }
@@ -739,9 +738,6 @@ VarDecl_AST(IdExpr_AST* Id)
     ~VarDecl_AST() {}
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-private:
-    int empty_; // w/o, VarDecl_AST == Decl_AST. For structure reasons,
-               // want that not to be the case - make a token private var
 };
 
 // Access: bound-checked 
@@ -800,7 +796,7 @@ ArrayVarDecl_AST(IdExpr_AST* Name, std::vector<Expr_AST*>* D, int I, int W )
 	dims_Final_->insert(dims_Final_->begin(), V);
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     std::vector<Expr_AST*>* dims_;
@@ -845,7 +841,7 @@ ModAssign_AST(IdExpr_AST* Id, Expr_AST* Expr, token Type)
 
     token ModType(void) const { return type_; }
 
-    virtual void accept(AST_Visitor* Visitor)
+    void accept(AST_Visitor* Visitor)
     {
 	if ( (0!= this->lChild_) )
 	    this->lChild_->accept(Visitor);
@@ -899,7 +895,7 @@ If_AST(Expr_AST* Expr, Block_AST* Block, int ElseIf, int HasElse)
     int isElseIf(void) const { return isElse_If_; }
     int hasElse(void) const { return has_Else_; }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int isElse_If_;
@@ -916,7 +912,7 @@ Else_AST(Block_AST* Block)
 	if (option_Debug) std::cout << "\tcreated Else_AST \n";
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 class For_AST: public Stmt_AST{
@@ -930,7 +926,7 @@ For_AST(IterExprList_AST* Expr, Block_AST* Block)
 
     ~For_AST() {}
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 class While_AST: public For_AST{
@@ -942,7 +938,7 @@ While_AST(IterExprList_AST* Expr, Block_AST* Block)
 	    std::cout << "\tcreated While_AST\n";
     }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
 #endif
