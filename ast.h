@@ -85,9 +85,6 @@ public:
     virtual void visit(NotExpr_AST*) = 0;
     virtual void visit(NOP_AST*) = 0;
 
-    virtual void visit(Block_AST*) = 0;
-    virtual void visit(StmtList_AST*) = 0;
-    virtual void visit(Stmt_AST*) = 0;
     virtual void visit(EOB_AST*) = 0;
     virtual void visit(VarDecl_AST*) = 0;
     virtual void visit(ArrayVarDecl_AST*) = 0;
@@ -180,7 +177,6 @@ Block_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
     }
 };
 
@@ -225,7 +221,6 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
     }
 };
 
@@ -725,8 +720,6 @@ Decl_AST(IdExpr_AST* Id)
     virtual IdExpr_AST* Expr(void) const { return expr_; }
     virtual void forceWidth(int W) { width_ = W; }
 
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
 private:
     std::string name_; // all vars for easier access only
     token type_;
@@ -738,7 +731,7 @@ private:
 class VarDecl_AST: public Decl_AST{
 public:
 VarDecl_AST(IdExpr_AST* Id)
-    : Decl_AST(Id)
+    : Decl_AST(Id), empty_(0)
     {
 	if (option_Debug) std::cout<< "\tcreated VarDecl_AST....\n";
     }
@@ -746,6 +739,9 @@ VarDecl_AST(IdExpr_AST* Id)
     ~VarDecl_AST() {}
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+private:
+    int empty_; // w/o, VarDecl_AST == Decl_AST. For structure reasons,
+               // want that not to be the case - make a token private var
 };
 
 // Access: bound-checked 

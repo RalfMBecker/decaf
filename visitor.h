@@ -657,21 +657,6 @@ public:
     }
 
     // Statements begin
-    void visit(Block_AST* V)
-    {
-	if (option_Debug) std::cout << "visiting Block_AST...\n";
-    }
-
-    void visit(StmtList_AST* V)
-    {
-	if (option_Debug) std::cout << "visiting StmtList_AST...\n";
-    }
-
-    void visit(Stmt_AST* V) 
-    {
-	if (option_Debug) std::cout << "visiting Stmt_AST...\n";
-    }
-
     void visit(EOB_AST* V)
     {
 	if (option_Debug) std::cout << "visiting EOB_AST...\n";
