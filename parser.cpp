@@ -671,8 +671,12 @@ dispatchPrefixExpr(token t)
     if ( !(tok_Vec.empty()) && (ret) )
 	checkInitialized(ret, 0);
     std::vector<token>::const_reverse_iterator iter;
-    for (iter = tok_Vec.rbegin(); iter != tok_Vec.rend(); iter++)
-	ret = new UnaryArithmExpr_AST(*iter, ret);
+    for (iter = tok_Vec.rbegin(); iter != tok_Vec.rend(); iter++){
+	if ( (tok_minus == (*iter).Tok()) )
+	    ret = new UnaryArithmExpr_AST(*iter, ret);
+	else
+	    ret = new NotExpr_AST(ret);
+    }
 
     if ( !ret ) // if we come here, result is already error-checked
 	return new NOP_AST(); // handled by caller

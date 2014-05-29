@@ -69,9 +69,6 @@ class Cont_AST;
 
 class AST_Visitor{
 public: 
-    virtual void visit(Node_AST*) = 0;
-
-    virtual void visit(Expr_AST*) = 0;
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
     virtual void visit(IncrIdExpr_AST*) = 0;
@@ -82,7 +79,6 @@ public:
     virtual void visit(CoercedExpr_AST*) = 0;
     virtual void visit(UnaryArithmExpr_AST*) = 0;
     virtual void visit(AssignExpr_AST* V) = 0;
-    virtual void visit(LogicalExpr_AST*) = 0;
     virtual void visit(OrExpr_AST*) = 0;
     virtual void visit(AndExpr_AST*) = 0;
     virtual void visit(RelExpr_AST*) = 0;
@@ -150,7 +146,6 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
     }
 
 protected:
@@ -309,7 +304,6 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
 	    this->lChild_->accept(Visitor);
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
-	Visitor->visit(this);
     }
 
 protected:
@@ -619,27 +613,11 @@ private:
 /***************************************
 * Expression Logical children
 ***************************************/
-class LogicalExpr_AST: public Expr_AST{
-public:
-LogicalExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
-    : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
-    {
-	if (option_Debug){
-	    std::cout << "\tcreated LogicalExpr with op = " << op_.Lex(); 
-	    std::cout << ", type = " << type_.Lex() << "\n";
-	}
-    }
-
-    ~LogicalExpr_AST() {}
-
-    virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-};
-
 // implement ||
-class OrExpr_AST: public LogicalExpr_AST{
+class OrExpr_AST: public Expr_AST{
 public:
 OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
-    : LogicalExpr_AST(token(tok_log_or), LHS, RHS) 
+    : Expr_AST(token(LHS->Type()), token(tok_log_or), LHS, RHS) 
     {
 	if (option_Debug){
 	    std::cout << "\tcreated OrExpr with op = " << op_.Lex();
@@ -651,11 +629,11 @@ OrExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 };
 
 // implement && (as, in ultimate code generation, we short-circuit, it 
-// makes sense to track this differently from ||)
-class AndExpr_AST: public LogicalExpr_AST{
+// makes sense to track this different from ||)
+class AndExpr_AST: public Expr_AST{
 public:
 AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
-    : LogicalExpr_AST(token(tok_log_and), LHS, RHS) 
+    : Expr_AST(token(LHS->Type()), token(tok_log_and), LHS, RHS) 
     {
 	if (option_Debug){
 	    std::cout << "\tcreated AndExpr with op = " << op_.Lex(); 
@@ -667,10 +645,10 @@ AndExpr_AST(Expr_AST* LHS, Expr_AST* RHS)
 };
 
 // implement <, <=, >, >=, ==, !=
-class RelExpr_AST: public LogicalExpr_AST{
+class RelExpr_AST: public Expr_AST{
 public:
 RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
-    : LogicalExpr_AST(Op, LHS, RHS) 
+    : Expr_AST(token(LHS->Type()), Op, LHS, RHS) 
     {
 	if (option_Debug){
 	    std::cout << "\tcreated RelExpr with op = " << op_.Lex(); 
@@ -683,10 +661,10 @@ RelExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 };
 
 // implement (logical) !
-class NotExpr_AST: public LogicalExpr_AST{
+class NotExpr_AST: public Expr_AST{
 public:
-NotExpr_AST(token(tok_log_not), Expr_AST* LHS)
-    : LogicalExpr_AST(token(tok_log_not), LHS, 0)
+NotExpr_AST(Expr_AST* LHS)
+    : Expr_AST(token(LHS->Type()), token(tok_log_not), LHS, 0)
     {
 	if (option_Debug){
 	    std::cout << "\tcreated NotExpr with op = " << op_.Lex(); 

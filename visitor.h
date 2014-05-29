@@ -37,17 +37,6 @@ extern int option_Debug;
 class MakeIR_Visitor: public AST_Visitor{
 public:
     // address-less objects
-    void visit(Node_AST* V) 
-    {
-	if (option_Debug) std::cout << "visiting Node_AST...\n";
-    }
-
-    void visit(Expr_AST* V)
-    {
-	if (option_Debug) std::cout << "visiting Expr_AST...\n";
-    }
-
-    // objects with address set by default ctor
     void visit(Tmp_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting TMP_AST...\n";
@@ -391,8 +380,6 @@ public:
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
     }
-
-    void visit(LogicalExpr_AST* V) { return; }
 
     // Evaluate a sequence e1 || e2 [|| e3]* left to right.
     // As soon as any e_i evaluates to true, set addr = e_i, and jump to exit 

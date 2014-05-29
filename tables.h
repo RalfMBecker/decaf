@@ -14,8 +14,10 @@
 #include "lexer.h"
 #include "ast.h"
 
-#define TYPE_WIDTH_INT 4
-#define TYPE_WIDTH_FLT 8
+// defines are backward; but in a production version it would be based
+// on the target machine, and pulled in by #define lists or such
+#define TYPE_WIDTH_INT sizeof(int)
+#define TYPE_WIDTH_FLT sizeof(double) 
 
 void errExit(int, const char* format, ...);
 
