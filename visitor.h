@@ -204,7 +204,9 @@ public:
 	    // account for type width (bytes), and finalize address
 	    op = token(tok_mult);
 	    target = offset;
-	    LHS = "4";
+	    tmp_Stream << V->TypeW();
+	    LHS = tmp_Stream.str();
+	    tmp_Stream.str("");
 	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	    insertLine(line, iR_List);
 	    tmp_Stream << "(-" <<  offset << ")" << defined->Addr();
@@ -411,9 +413,13 @@ public:
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
- 
-	std::string res_Var = makeTmp();
-	std::string cond_End = makeLabel();
+
+	std::string cond_End = makeLabel(); 
+	// variable holding the truth value of the overall expression. 
+	// If we have an || expression as the outer expression of a
+	// compound expression index of a dynamic array, this is the
+	// variable to hand on to a caller.  (*)
+	std::string res_Var = makeTmp(); 
 
 	// get to bottom left
 	while ( (dynamic_cast<OrExpr_AST*>(V->LChild())) )
@@ -445,6 +451,8 @@ public:
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+
+	last_Tmp_ = res_Var; // see (*) above
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
@@ -505,6 +513,10 @@ public:
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
 
+	// variable holding the truth value of the overall expression. 
+	// If we have an || expression as the outer expression of a
+	// compound expression index of a dynamic array, this is the
+	// variable to hand on to a caller.  (*)
 	std::string res_Var = makeTmp();
 	std::string cond_End = makeLabel();
 
@@ -538,6 +550,8 @@ public:
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+
+	last_Tmp_ = res_Var;
     }
 
     // if we find OrExprList = OrExpr(LHS, OrExprList), the current
