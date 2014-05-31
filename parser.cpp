@@ -209,8 +209,6 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
     //      1 * 20 * 10           3*sp*8 = 3*(1*20*10)*8    (3)
     // Result: ret = (1) + (2) + (3)
 
-    token type = (Base->Expr())->Type();
-    token op = (Base->Expr())->Op();
     std::string off;
     if ( (tok_null == offset_V) )
 	off = "";
@@ -220,7 +218,8 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 	off = tmp_Stream.str();
     }
     ArrayIdExpr_AST* ret;
-    ret = new ArrayIdExpr_AST(type, op, all_Ints, dims_V, dims_Final,Base, off);
+    ret = new ArrayIdExpr_AST(Base, Base->Expr(), all_Ints, dims_V, dims_Final,
+			      off);
     if (all_Ints){
 	std::ostringstream tmp_Stream;
 	tmp_Stream << "(-$" <<  offset_V << ")" << Base->Addr();
@@ -250,41 +249,49 @@ parseIdExpr(std::string Name, int hasPrefix)
 	return 0;
     }
 
-    if ( (0 == match(1, tok_rdopen, 0)) ){
-	if (errorIn_Progress) return 0;
-	; // ** TO DO: this can catch functions
-    }
+    getNextToken();
+    if (errorIn_Progress)
+	return 0;
 
-    // postfix ++
-    else if ( (0 == match(0, tok_dplus, 0)) ){
+    tokenType t = next_Token.Tok();
+    IdExpr_AST* name;
+    switch(t){
+
+	// case function
+    case tok_rdopen:
+	; // ** TO DO: this can catch functions
+	break;
+
+	// postfix ++
+    case tok_dplus:
 	if (hasPrefix){
 	    parseError(pVD->Addr(), e_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
 	// ** TO DO: monitor - need special check for array/function?
-	IdExpr_AST* name = pVD->Expr(); // Decl::Expr() member is of right type
+	name = pVD->Expr(); // Decl::Expr() member is of right type
 	pId = new IncrIdExpr_AST(name, "post", 1);
 	idModInsert(postfix_Table, name, 1); // no link to the *new* object,
 	getNextToken();                      // oviously, in postfix_Table
-    }
+	break;
 
-    // postfix --
-    else if ( (0 == match(0, tok_dminus, 0)) ){
+	// postfix --
+    case tok_dminus:
 	if (hasPrefix){
 	    parseError(pVD->Addr(), e_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
 	// ** TO DO: monitor - need special check for array/function?
-	IdExpr_AST* name = pVD->Expr(); // Decl::Expr() member is of right type
+	name = pVD->Expr(); // Decl::Expr() member is of right type
 	pId = new IncrIdExpr_AST(name, "post", -1);
 	idModInsert(postfix_Table, name, -1); // no link to the *new* object,
 	getNextToken();                      // oviously, in postfix_Table
-    }
+	break;
 
     // array
-    else if ( (0 == match(0, tok_sqopen, 0)) ){
+    case tok_sqopen:
 	if ( !(dynamic_cast<ArrayVarDecl_AST*>(pVD)) ){
 	    parseError(pVD->Addr(), e_Msg2);
 	    errorIn_Progress = 1;
@@ -292,10 +299,10 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	else
 	    pId = parseArrayIdExpr(dynamic_cast<ArrayVarDecl_AST*>(pVD));
-    }
+	break;
 
     // basic type
-    else{ // ** TO DO: monitor for changes after functions added
+    default: // ** TO DO: monitor for changes after functions added
 	if (dynamic_cast<ArrayVarDecl_AST*>(pVD)){
 	    parseError(pVD->Addr(), e_Msg1);
 	    errorIn_Progress = 1;
@@ -303,6 +310,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	else
 	    pId = pVD->Expr();
+	break;
     }
 
     if (errorIn_Progress) return 0;

@@ -245,8 +245,7 @@ EOB_AST(void)
 class Expr_AST: public Stmt_AST{
 public:
 Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0, 
-	 Node_AST* rc=0, inc_Table Pre = inc_Table(), 
-	 inc_Table Post = inc_Table())
+	 Node_AST* rc=0)
     : Stmt_AST(lc, rc), type_(Type), op_(OpTok), prefix_(inc_Table()), 
 	postfix_(inc_Table())
     {
@@ -358,37 +357,45 @@ private:
 
 class IdExpr_AST: public Expr_AST{
 public:
-IdExpr_AST(token Type, token Op, int I = 0, int W = 0, int Array = 0)
-    : Expr_AST(Type, Op, 0, 0), initialized_(I), warning_Emitted_(W)
+IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
+    : Expr_AST(Type, Op, 0, 0), initialized_(I), warning_Emitted_(W), 
+	tmp_Addr_("")
     { 
 	setAddr(Op.Lex());
 	if (option_Debug) std::cout << "\tcreated an Id = " << addr_ << "\n";
     }
 
-    virtual int isInitialized(void) const { return initialized_; }
-    virtual void Initialize(void) { initialized_ = 1; }
+    int isInitialized(void) const { return initialized_; }
+    void Initialize(void) { initialized_ = 1; }
 
-    virtual int WarningEmitted(void) const { return warning_Emitted_; }
-    virtual void Warned(void) { warning_Emitted_ = 1; }
+    int WarningEmitted(void) const { return warning_Emitted_; }
+    void Warned(void) { warning_Emitted_ = 1; }
+
+    std::string TmpAddr(void) const { return tmp_Addr_; }
+    void setTmpAddr(std::string A) { tmp_Addr_ = A; } 
 
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int initialized_;
     int warning_Emitted_;
+    std::string tmp_Addr_; // used for Incr type descendants
 };
 
 class ArrayVarDecl_AST;
 
 // As we don't check for initialization before access in the array case,
 // set up status variables to reflect this.
+// Handing on N (which could be read as B->Expr()) separately to avoid 
+// changing order of definitions (would need full definition of
+// ArrayVarDecl_AST, not only forward declaration).
 class ArrayIdExpr_AST: public IdExpr_AST{
 public:
-ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access, 
-		std::vector<std::string>* Final, ArrayVarDecl_AST* Base,
-		std::string OS = "", int D = 0)
-    : IdExpr_AST(Type, Op, 1, 1), all_IntVals_(AI), dims_(Access), 
-	dims_Final_(Final), base_(Base), offset_(OS) 
+ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI, 
+		std::vector<Expr_AST*>* Access, 
+		std::vector<std::string>* Final = 0, std::string OS = "")
+    : IdExpr_AST(N->Type(), N->Op()), base_(B), all_IntVals_(AI), 
+	dims_(Access), dims_Final_(Final), offset_(OS)
     {
 	num_Dims_ = dims_->size();
 
@@ -412,10 +419,10 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
 	// memory leak for base_ (which will be cleaned up after 'exit')
     }
 
-    int allInts(void) const { return all_IntVals_; }
-    int numDims(void) const { return num_Dims_; }
     ArrayVarDecl_AST* Base(void) const { return base_; } 
+    int allInts(void) const { return all_IntVals_; }
     std::vector<Expr_AST*>* Dims(void) { return dims_;}
+    int numDims(void) const { return num_Dims_; }
 
     std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
     void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
@@ -427,10 +434,11 @@ ArrayIdExpr_AST(token Type, token Op, int AI, std::vector<Expr_AST*>* Access,
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
+    ArrayVarDecl_AST* base_; // as declared
     int all_IntVals_;
-    std::vector<Expr_AST*>* dims_;
-    std::vector<std::string>* dims_Final_;
-    ArrayVarDecl_AST* base_;
+    std::vector<Expr_AST*>* dims_; // access encoded in expressions
+    std::vector<std::string>* dims_Final_; // access as (i) names (if 
+    // all_IntVals_), (ii) temporaries if filled in in visitor.h
     std::string offset_; // usually filled in at run-time; in case of both
                          // access and bounds all integers, at compile-time
     int num_Dims_;

@@ -148,7 +148,7 @@ public:
     Symbol_Table(std::string Name = "")
 	: name_(Name) { offsetHeap_ = offsetStack_ = 0; }
 
-    Symbol_Table(const Symbol_Table& s)
+    Symbol_Table(Symbol_Table const& s)
     {
 	offsetHeap_ = s.getOffsetHeap();
 	offsetStack_ = s.getOffsetStack();
@@ -205,25 +205,25 @@ public:
     }
 
     // retrieving Mem_Info fields ("" == 'not defined')
-    std::string const getType(std::string elem_Name)
+    std::string getType(std::string elem_Name)
     {
 	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Type();
     }
 
-    std::string const getMemType(std::string elem_Name)
+    std::string getMemType(std::string elem_Name)
     {
 	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.MemType();
     }
 
-    int const getOffset(std::string elem_Name)
+    int getOffset(std::string elem_Name)
     {
 	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Offset();
     }
 
-    int const getWidth(std::string elem_Name)
+    int getWidth(std::string elem_Name)
     {
 	Mem_Info tmp(readNameInfo(elem_Name));
 	return tmp.Width();

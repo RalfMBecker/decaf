@@ -4,9 +4,6 @@
 ********************************************************************/
 
 #include <fstream>
-
-
-
 #include "ir.h"
 
 ir_Rep iR_List;
@@ -133,14 +130,14 @@ makeRtErrorTargetTable(ir_Rep& Target)
     // some NOPs for visual clarity
     token op = token(tok_nop);
     SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame); 
-    insertLine(line, iR_RtError_Targets);
-    insertLine(line, iR_RtError_Targets);
+    insertLine(line, Target);
+    insertLine(line, Target);
 
     // emit a syscall exit to not fall into this section
     op = token(tok_syscall);
     target = "exit";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame); 
-    insertLine(line, iR_RtError_Targets);
+    insertLine(line, Target);
 
     std::vector<RtError_Type*>::const_iterator iter;
     // each error readies its specific message before handing it on
@@ -150,7 +147,7 @@ makeRtErrorTargetTable(ir_Rep& Target)
 	target = "$";
 	target += (*iter)->Ds_Addr();
 	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-	insertLine(line, iR_RtError_Targets);
+	insertLine(line, Target);
 	labels.clear();
 	LHS = "";
 
@@ -158,7 +155,7 @@ makeRtErrorTargetTable(ir_Rep& Target)
 	    op = token(tok_goto);
 	    target = "L_eExit";
 	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-	    insertLine(line, iR_RtError_Targets);
+	    insertLine(line, Target);
 	}
     }
 
@@ -167,13 +164,13 @@ makeRtErrorTargetTable(ir_Rep& Target)
     labels.push_back("L_eExit");
     target = "printf";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-    insertLine(line, iR_RtError_Targets);
+    insertLine(line, Target);
     labels.clear();
 
     op = token(tok_syscall);
     target = "exit";
     line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
-    insertLine(line, iR_RtError_Targets);
+    insertLine(line, Target);
 }
 
 void

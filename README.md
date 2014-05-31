@@ -1,4 +1,4 @@
-Compiler for the Brown Decaf language. Note that the language appears to be modified frequently. This project is based on the specifications of a Stanford 2012 class. Some changes were made (eventually, a full CFG grammar will be added):
+CCC (the Cuddly Chameleon Compiler) is a compiler for the Brown Decaf language. Note that the language seems to be modified frequently, and that CCC adds a fair amount of additional features. The project is based on the specifications of a Stanford 2012 class. Eventually, a full CFG grammar will be added.
 
 (0) options provided:
 
