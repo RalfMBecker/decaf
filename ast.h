@@ -22,12 +22,6 @@
 extern int option_Debug;
 
 // forward declarations
-/*
-class IdExpr_AST;
-typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
-extern inc_Table prefix_Table;
-extern inc_Table postfix_Table;
-*/
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
 class Env;
@@ -39,7 +33,6 @@ class Node_AST;
 class Expr_AST;
 class Tmp_AST;
 class IdExpr_AST;
-//class IncrIdExpr_AST; // remove
 class PreIncrIdExpr_AST;
 class PostIncrIdExpr_AST;
 class PostIncrIdExpr_AST;
@@ -76,7 +69,6 @@ class AST_Visitor{
 public: 
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
-//    virtual void visit(IncrIdExpr_AST*) = 0;
     virtual void visit(PreIncrIdExpr_AST*) = 0;
     virtual void visit(PostIncrIdExpr_AST*) = 0;
     virtual void visit(ArrayIdExpr_AST*) = 0;
@@ -256,9 +248,6 @@ public:
 Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0, 
 	 Node_AST* rc=0)
     : Stmt_AST(lc, rc), type_(Type), op_(OpTok)
-
-      //, prefix_(inc_Table()), postfix_(inc_Table())
-
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -298,13 +287,6 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
     int TypeW(void) const { return typeW_; }
     int TypeP(void) const { return typeP_; }
 
-/*
-    inc_Table Prefix(void) const { return prefix_; }
-    void setPrefix(const inc_Table& T) { prefix_ = T; }
-    inc_Table Postfix(void) const { return postfix_; }
-    void setPostfix(const inc_Table& T) { postfix_ = T; }
-*/
-
     virtual void accept(AST_Visitor* Visitor)
     {
 	if ( (0!= this->lChild_) )
@@ -318,8 +300,6 @@ protected:
     token op_;   // (tok_plus, "+")
     int typeW_;
     int typeP_;
-//    inc_Table prefix_;  // used in handling pre- and post increment expression
-//    inc_Table postfix_; // (a++, ++a, a--, --a)
 };
 
 class IterExprList_AST: public Node_AST{
@@ -515,48 +495,13 @@ ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI,
 
 private:
     ArrayVarDecl_AST* base_; // as declared
-    int all_IntVals_;
+    int all_IntVals_; // if 1, have names (strings) in dims_Final_
     std::vector<Expr_AST*>* dims_; // access encoded in expressions
-    std::vector<std::string>* dims_Final_; // access as (i) names (if 
-    // all_IntVals_), (ii) temporaries if filled in in visitor.h
+    std::vector<std::string>* dims_Final_; // filled in by visitor sometimes
     std::string offset_; // usually filled in at run-time; in case of both
                          // access and bounds all integers, at compile-time
     int num_Dims_;
 };
-
-/*
-// truly needed only for ease of semantic checking
-class IncrIdExpr_AST: public IdExpr_AST{
-public:
-    IncrIdExpr_AST(IdExpr_AST* P, std::string T, int V)
-	: IdExpr_AST(P->Type(), P->Op()), inc_Type_(T), inc_Value_(V)
-    {
-	setAddr( (P->Op()).Lex() );
-
-	if (option_Debug){
-	    std::string pre, post;
-	    std::ostringstream tmp_Stream;
-	    if ( ("pre" == T) )
-		pre = (1 == V)?"++":"--";
-	    else if ( ("post" == T) )
-		post = (1 == V)?"++":"--";
-	    tmp_Stream << pre << (P->Op()).Lex() << post;
-
-	    std::cout << "\tcreated IncrIdExpr_AST (";
-	    std::cout << tmp_Stream.str() << ")\n";;
-	}
-    }
-
-    std::string IncType(void) const { return inc_Type_; }
-    int IncValue(void) const { return inc_Value_; }
-
-    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
-
-private:
-    std::string inc_Type_;
-    int inc_Value_;
-};
-*/
 
 class IntExpr_AST: public Expr_AST{
 public:

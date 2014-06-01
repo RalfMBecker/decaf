@@ -13,8 +13,6 @@
 #include "parser.h"
 #include "error.h"
 
-
-//token getNextToken(void);
 extern std::string base_Name;
 extern int option_Preproc;
 

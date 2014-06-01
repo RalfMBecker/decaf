@@ -77,40 +77,18 @@ CCC (the Cuddly Chameleon Compiler) is a compiler for the Brown Decaf language. 
 
 (13) added pre- and post-increment operators (++a, a++):
 
-          The operators are at high precedence level (like (), []).
-          Operators are only allowed in expressions (not as lvalues).
-          If E is an expression having sub-expressions containing one
-          or more of such op's, generate SSA as follows, where i, j are
-          the sum of adjustments resulting from pre-/post-increments:
-
-          generate(prefix adjustments) SSAs ("+ a a i")
-          generate E SSAs
-          generate(postfix adjustments) SSAs ("+ a a j")
-
-          This means we actually have *no undefined behavior*.
-          Exception: in an assignment stmt like "a = ++a + b++;",
-                     postfix adjustments are generated at end of statement.
-          Example: int a = 2;
-                   a *= (a++ + a++) * ++a;
-		   -> a = 56
-          Note: it is hard to understand what gcc does in the above case -  
-                in 4.6.3., we get
-                case 1: int a = 2;
-                        a *= ++a; -> a = 9 (so pre-increment applies to *=)
-                        Our approach -> 9
-                case 2: int a = 2;
-                        a -= (a++ + a++) * ++a; -> a = -7 (so again does)  
-			Our approach -> -13
-
-         As all post-increments are applied as described above in all 
-         languages I know, it seems philosophically more satisfying to 
-         apply *all* prefixes encountered in a compound expr before evaluating
-         the entire expression, as we do above. This will give different
-         results from, e.g., C and C++ (where this behavior is of course
-         declared 'undefined' in the respective standards). Per the above,
-         gcc doesn't apply the increment to the first 2 a's encountered
-         before the prefix-incremented ++a - but does to the a from -=, which
-         is encountered before too; this seems fishy.
+     Pre-fix:  execute as soon as met; use updated value
+     Post-fix: save current value in a tmp t1
+               update value
+               use tmp t1 in the next enclosing expression
+     Note:     - We parse L-R. For the post-increment application, 'next' 
+               means what will next be processed in parsing.
+               - We don't really have undefined behavior.
+     Example:  int a = 1;
+               a *= a++ + (++a) * a++ + a;
+                  = (1 + 3 * 3 + 4) * 4 = 56
+     gcc:      probably different; but fails completely in case of a[i]++, etc.
+     clang:    seems to do exactly the above (scalar and array case)
 
 (14) added modifying assignments (+=, -=, *=, /=) (c. (13)), 
 

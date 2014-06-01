@@ -13,35 +13,19 @@
 * Note (errors): Warning in '='/'==' case for 'if' is off by a line
 *
 * Notes on semantic structure handling:
-* a++/++a: Global variables:
-*          Global tables prefix_Table/postfix_Table keep track, for each
-*          variable, how many pre- and post-increment operations during 
-*          the parsing of one (compound) expression have been seen.
-* 
-*          ast.h:
-*          Expr_AST has been enhanced with private versions of these 
-*          globals, which are generally empty.
-*
-*          parser.cpp 
-*          In case the expression actually is a statement of form
-*          "a++"; or "--a;", copy the globals into the privates
-*          of an IncrIdExpr_AST type (in parseAssignStmt() and
-*          parseStmt()). Clear the globals after.
-*          In case of a compound expression E, copy the globals which
-*          track pre- and post-increments in all sub-expressions to
-*          the private version of the top level E only (in dispatchExrp()). 
-*
-*          visitor.h/philosophy:
-*          Operators are only allowed in expressions (not as lvalues).
-*          If E is an expression having sub-expressions with the above
-*          tables not empty, generate SSA as follows, where i, j are
-*          the sum of adjustments resulting from pre-/post-increments:
-*          print(prefix_Table) SSAs ("+ a a i")
-*          print E SSAs
-*          print(postfix_Table) SSAs ("+ a a j")
-*          This means we actually have *no undefined behavior*.
-*          Exception: in an assignment stmt like "a = ++a + b++;",
-*                     postfix_Table is printed at end of statement.
+* a++/++a: Pre-fix: execute as soon as met; use updated value
+*          Post-fix: save current value in a tmp t1
+*                    update value
+*                    use tmp t1 in the next enclosing expression
+*          Note: we parse L-R. For the post-increment application,
+*                'next' means what will next be processed in parsing.
+*          Example: int a = 1;
+*                   a *= a++ + (++a) * a++ + a;
+*                      = (1 + 3 * 3 + 4) * 4 = 56
+*          gcc: probably different; but fails completely in case 
+*               of a[i]++, etc.
+*          clang: seems to do exactly the above (scalar and array
+*                 case)
 *
 ********************************************************************/
 
@@ -272,8 +256,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
 	pId = new PostIncrIdExpr_AST(name, 1);
-//	idModInsert(postfix_Table, name, 1); // no link to the *new* object,
-	getNextToken();                      // oviously, in postfix_Table
+	getNextToken();
 	break;
 
 	// postfix --
@@ -286,8 +269,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
 	pId = new PostIncrIdExpr_AST(name, -1);
-//	idModInsert(postfix_Table, name, -1); // no link to the *new* object,
-	getNextToken();                      // oviously, in postfix_Table
+	getNextToken();
 	break;
 
     // array
@@ -302,7 +284,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 	break;
 
     // basic type
-    default: // ** TO DO: monitor for changes after functions added
+    default: // ** TO DO: monitor for changes after functions/classes added
 	if (dynamic_cast<ArrayVarDecl_AST*>(pVD)){
 	    parseError(pVD->Addr(), e_Msg1);
 	    errorIn_Progress = 1;
@@ -421,7 +403,6 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 
 	// clarify which way to go, and if if is legal
 	int is_Assign = isAssign(next_Token);
-	// ** TO DO: probably only need to cast to IdExpr_AST*
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(LHS)) || 
 			      (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) ||
 			      (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ) ){
@@ -467,7 +448,6 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	is_Assign = isAssign(next_Token);
 	// this is essentially redundant: we also check, in next recursion,
 	// at the top of this function. Allows early error detection.
-	// ** TO DO: probably only need to cast to IdExpr_AST*
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(RHS)) || 
 			      (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) ||
 			      (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) ) ){
@@ -594,10 +574,6 @@ dispatchExpr(void)
 {
     if (option_Debug) std::cout << "dispatching an expression...\n";
 
-    static int nested = 0;
-    nested++; // helper to attach cumulative a++/--b adjustments only to top
-              // level expression (needed when expr1 contains (expr2))
-
     logOp_Tot = 0;
     Expr_AST* ret;
     switch(next_Token.Tok()){
@@ -616,21 +592,6 @@ dispatchExpr(void)
     if (errorIn_Progress) ret = 0;
     else ret = parseInfixList(ret);
 
-/*
-    if (option_Debug)
-	printIncTables();
-    // adjust **only top level** expression by prefix and postfix found
-    if ( (1 == nested--) ){
-    if ( !(prefix_Table.empty()) ){
-	ret->setPrefix(prefix_Table);
-	prefix_Table.clear();
-    }
-    if ( !(postfix_Table.empty()) ){ // both tables can have entries
-	ret->setPostfix(postfix_Table);
-	postfix_Table.clear();
-    }
-    }
-*/
     return ret;
 }
 
@@ -648,7 +609,6 @@ validInPrefix(token t)
 
 Expr_AST* parseParensExpr(void);
 
-// ** TO DO: monitor if handled fine with pre-/post-increments (should be)
 // Handle the LHS (which is a prefix) of a possible expr-list.
 // Self-contained, so can be called from within infix-list parsing
 // without logical errors/pollution.
@@ -745,7 +705,6 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1); // checks for ++a++ (and such)
 	if (errorIn_Progress)                   // comes back as IdExpr_AST
 	    break;
-//	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
 	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), 1);
 	break;
     case tok_dminus: // prefix modifier (--a)
@@ -758,10 +717,9 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1);
 	if (errorIn_Progress)
 	    break;
-//	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
 	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), -1);
 	break;
-    case tok_ID: // coming here, ID should be in symbol table
+    case tok_ID: // coming here (and ++/--), ID should be in symbol table
 	return parseIdExpr(next_Token.Lex(), 0);
 	break;
     case tok_intV: return parseIntExpr(); break;
@@ -867,6 +825,8 @@ parseDims(void)
 }
 
 // array-decl -> type id[expr] [ [expr] ]* (all expr must be of integer type)
+// invariants: entering, points to '['
+//             leaving, points to after ']'
 // Children:
 // - the IdExpr_AST* embodies all non-size related information
 // - dimensions handled in vector form (dims)
@@ -939,11 +899,12 @@ parseVarDecl(token Type)
 
     IdExpr_AST* new_Id;
     new_Id = new IdExpr_AST(Type, next_Token);
+
     token t_Id = next_Token; // to reset after '='
     getNextToken(); 
     if (errorIn_Progress) return 0;
-
     Decl_AST* ret;
+
     switch(next_Token.Tok()){
     case tok_semi: // we are done - declaration only
 	ret = new VarDecl_AST(new_Id);
@@ -957,8 +918,13 @@ parseVarDecl(token Type)
 	break;
     case tok_sqopen:
 	ret = parseArrayVarDecl(new_Id);
-	getNextToken();
-	if (errorIn_Progress) return 0;
+	if ( (tok_eq == next_Token.Tok()) )
+	    parseError(ret->Addr(), "attempt to initialize array type");
+	if ( (-1 == match(0, tok_semi, 1)) ){
+	    punctError(';', 0);
+	    errorIn_Progress = 1;
+	    return 0;
+	}
 	break;
     default: 
 	std::string e_M2 = "expected \'=\', \';\', or \'[\'";	
@@ -1005,16 +971,6 @@ parseAssignStmt(void)
     int handleMod_Assign = 0;
     switch(t){
     case tok_semi: 
-/*
-	// As we call parseIdExpr() (and not dispatchExpr()), the private
-	// table variables of an IncrIdExpr_AST are not set.
-	// For the same reason, only postfix_Table can be set now.
-	if ( (postfix_Table.empty()) )
-	else if (dynamic_cast<PostIncrIdExpr_AST*>(LHS)){ //this is a++;
-	    LHS->setPostfix(postfix_Table);
-	    postfix_Table.clear();
-	}
-*/
 	if ( !(dynamic_cast<PreIncrIdExpr_AST*>(LHS)) && 
 	     !(dynamic_cast<PostIncrIdExpr_AST*>(LHS)) )
 	    parseWarning("", "unused statement");
@@ -1058,7 +1014,6 @@ parseAssignStmt(void)
 	break;
     }
 
-    // ** TO DO: is this good enough if we have an ArrayVarDecl/ArrayVarExpr?
     if ( (0 != RHS) ){
 	if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
@@ -1318,11 +1273,6 @@ parseStmt(void)
 	    ret = 0;
 	    break;
 	}
-/*
-	// as we don't parse through dispatchExpr (c. parseAssign())
-	dynamic_cast<IncrIdExpr_AST*>(ret)->setPrefix(prefix_Table); 
-	prefix_Table.clear();
-*/
 	match(0, tok_semi, 1); // error caught after breaking
 	break;
     case tok_while:
