@@ -30,7 +30,7 @@
 #include "ir.h"
 
 typedef std::vector<std::string> label_Vec;
-typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
+//typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
 
 extern int option_Debug;
 
@@ -81,6 +81,7 @@ public:
 	needs_Label_ = 0;
     }
 
+/*
     void visit(IncrIdExpr_AST* V) 
     {
 	if (option_Debug) std::cout << "\tvisiting IncrIdExpr_AST...\n";
@@ -90,6 +91,7 @@ public:
 	    frame = ""; // ** TO DO: confirm this
 	else
 	    frame = V->getEnv()->getTableName();
+
 
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) ){
@@ -103,12 +105,15 @@ public:
 	}
 	needs_Label_ = 0;
 
+
 	table = V->Postfix();
 	if ( !(table.empty()) ){ // test different here - can be Assign_AST
 	    printIncTable(table, frame);
 	    needs_Label_ = 0;
 	}
+
     }
+*/
 
     // ** TO DO: account for pre-/post-increment case
     void visit(ArrayIdExpr_AST* V)
@@ -229,9 +234,12 @@ public:
 	if (option_Debug) std::cout << "\tvisiting ArithmExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
+*/
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -255,10 +263,12 @@ public:
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/ 
     }
 
     void visit(CoercedExpr_AST* V)
@@ -266,10 +276,11 @@ public:
 	if (option_Debug) std::cout << "\tvisiting CoercedExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -298,10 +309,12 @@ public:
 	SSA_Entry* line = new SSA_Entry(labels, Op, target,LHS, to_Str, frame);;
 	insertLine(line, iR_List);
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/  
     }
 
     void visit(UnaryArithmExpr_AST* V)
@@ -309,10 +322,11 @@ public:
 	if (option_Debug) std::cout << "\tvisiting UnaryArithmExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	needs_Label_ = 0;
 	std::string e = "parsing error detected when visiting UnaryArExpr_AST";
 	if ( (0 != V->LChild()) )
@@ -331,10 +345,12 @@ public:
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/
     }
 
     // no address update needed, but kept among expression visitor types
@@ -343,10 +359,12 @@ public:
 	if (option_Debug) std::cout << "\tvisiting AssignExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	// get expr to be assigned ready
 	needs_Label_ = 0;
 	if ( (0 != V->RChild()) )
@@ -374,11 +392,12 @@ public:
 	}
 	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
-
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/
     }
 
     // Evaluate a sequence e1 || e2 [|| e3]* left to right.
@@ -395,12 +414,14 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting OrExpr_AST...\n";
 
-	needs_Label_ = 1; // if we print prefixes, will be set to 0
+//	needs_Label_ = 1; // if we print prefixes, will be set to 0
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	std::string cond_End = makeLabel(); 
 	// variable holding the truth value of the overall expression. 
 	// If we have an || expression as the outer expression of a
@@ -413,7 +434,7 @@ public:
 	    V = dynamic_cast<OrExpr_AST*>(V->LChild());
 
 	// handle expr1...
-//	needs_Label_ = 1;
+	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
 	// ...and assign its result to the status variable (res_Var)
@@ -434,11 +455,12 @@ public:
 	    std::cout << cond_End << "\n";
 	}
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
-
+*/
 	last_Tmp_ = res_Var; // see (*) above
     }
 
@@ -494,12 +516,14 @@ public:
     {
 	if (option_Debug) std::cout << "\tvisiting AndExpr_AST...\n";
 
-	needs_Label_ = 1;
+//	needs_Label_ = 1;
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	// variable holding the truth value of the overall expression. 
 	// If we have an || expression as the outer expression of a
 	// compound expression index of a dynamic array, this is the
@@ -512,7 +536,7 @@ public:
 	    V = dynamic_cast<AndExpr_AST*>(V->LChild());
 
 	// handle expr1...
-//	needs_Label_ = 1;
+	needs_Label_ = 1;
 	V->LChild()->accept(this);
 
 	// ...and assign its result to the status variable (res_Var)
@@ -533,11 +557,12 @@ public:
 	    std::cout << cond_End << "\n";
 	}
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
-
+*/
 	last_Tmp_ = res_Var;
     }
 
@@ -593,10 +618,12 @@ public:
 	if (option_Debug) std::cout << "\tvisiting RelExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
-
+*/
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
 	    V->LChild()->accept(this);
@@ -619,10 +646,12 @@ public:
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/
     }
 
     void visit(NotExpr_AST* V)
@@ -630,9 +659,12 @@ public:
 	if (option_Debug) std::cout << "\tvisiting NotExpr_AST...\n";
 
 	std::string frame = V->getEnv()->getTableName();
+
+/*
 	inc_Table table = V->Prefix();
 	if ( !(table.empty()) )
 	    printIncTable(table, frame);
+*/
 
 	needs_Label_ = 0;
 	if ( (0 != V->LChild()) )
@@ -649,11 +681,12 @@ public:
 
 	SSA_Entry* line = new SSA_Entry(labels, Op, target, LHS, "", frame);
 	insertLine(line, iR_List);
-
+/*
 	table = V->Postfix();
 	if ( !(table.empty()) && ( !(V->Parent()) || 
 				   !(dynamic_cast<Assign_AST*>(V->Parent()))) )
 	    printIncTable(table, frame);
+*/
     }
 
     // Statements begin
@@ -795,6 +828,7 @@ public:
 	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
 	insertLine(line, iR_List);
 
+/*
 	// Assign_AST is an exception with respect to when postfix_Table is 
 	// handled. Consider the case "a = b++ + c++;" (IdExpr = Expr):
 	// while usually it is handled after handling an Expr, it is
@@ -803,6 +837,7 @@ public:
 	inc_Table postfix = (dynamic_cast<Expr_AST*>(V->RChild()))->Postfix();
 	if ( !(postfix.empty()) ) // not necessary, but saves function call
 	    printIncTable(postfix, frame);
+*/
     }
 
     // walk down the tree (see visitor If_AST)
@@ -1271,6 +1306,7 @@ public:
 	insertLine(line, iR_List);
     }	
 
+/*
     void printIncTable(inc_Table Table, std::string Frame)
     {
 	label_Vec labels = active_Labels_;
@@ -1310,6 +1346,8 @@ public:
 	if (did_Print)
 	    active_Labels_.clear();
     }
+*/
+
 
     // debugging function
     void printLabels(label_Vec labels)

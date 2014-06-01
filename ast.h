@@ -37,7 +37,9 @@ class Node_AST;
 class Expr_AST;
 class Tmp_AST;
 class IdExpr_AST;
-class IncrIdExpr_AST;
+//class IncrIdExpr_AST; // remove
+class PreIncrIdExpr_AST;
+class PostIncrIdExpr_AST;
 class ArrayIdExpr_AST;
 class IntExpr_AST;
 class FltExpr_AST;
@@ -71,7 +73,7 @@ class AST_Visitor{
 public: 
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
-    virtual void visit(IncrIdExpr_AST*) = 0;
+//    virtual void visit(IncrIdExpr_AST*) = 0;
     virtual void visit(ArrayIdExpr_AST*) = 0;
     virtual void visit(IntExpr_AST*) = 0;
     virtual void visit(FltExpr_AST*) = 0;
@@ -122,12 +124,14 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
 
     ~Node_AST() {}
 
+    virtual std::string Addr(void) { return addr_; } // not const
+    // as re-defined in IdExpr_AST, where it is not const
+
     int Line(void) const { return line_; }
     int Col(void) const { return col_; }
     Node_AST* Parent(void) const { return parent_; }
     Node_AST* LChild(void) const { return lChild_; }
     Node_AST* RChild(void) const { return rChild_; }
-    std::string Addr(void) const { return addr_; }
     Env* getEnv(void) const { return env_; }
 
     void setParent(Node_AST* Par) { parent_ = Par; }
@@ -374,12 +378,71 @@ IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
     std::string TmpAddr(void) const { return tmp_Addr_; }
     void setTmpAddr(std::string A) { tmp_Addr_ = A; } 
 
+    std::string Addr(void)
+    {
+	std::string ret = Node_AST::Addr();
+	if ( ("" != TmpAddr()) ){
+	    ret = TmpAddr();
+	    setTmpAddr("");
+	}
+
+	return ret;
+    }
+
     virtual void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
     int initialized_;
     int warning_Emitted_;
     std::string tmp_Addr_; // used for Incr type descendants
+};
+
+class PreIncrIdExpr_AST: public IdExpr_AST{
+public:
+    PreIncrIdExpr_AST(IdExpr_AST* P, int V)
+	: IdExpr_AST(P->Type(), P->Op()), inc_Value_(V)
+    {
+	if (option_Debug){
+	    std::ostringstream tmp_Stream;
+	    if ( (0 < V) )
+		tmp_Stream << "++";
+	    else
+		tmp_Stream << "--";
+	    tmp_Stream << (P->Op()).Lex();
+
+	    std::cout << "\tcreated PreIncrIdExpr_AST (";
+	    std::cout << tmp_Stream.str() << ")\n";;
+	}
+    }
+
+    int IncValue(void) const { return inc_Value_; }
+
+private:
+    int inc_Value_;
+};
+
+class PostIncrIdExpr_AST: public IdExpr_AST{
+public:
+    PostIncrIdExpr_AST(IdExpr_AST* P, int V)
+	: IdExpr_AST(P->Type(), P->Op()), inc_Value_(V)
+    {
+	if (option_Debug){
+	    std::ostringstream tmp_Stream;
+	    tmp_Stream << (P->Op()).Lex();
+	    if ( (0 < V) )
+		tmp_Stream << "++";
+	    else
+		tmp_Stream << "--";
+
+	    std::cout << "\tcreated PostIncrIdExpr_AST (";
+	    std::cout << tmp_Stream.str() << ")\n";;
+	}
+    }
+
+    int IncValue(void) const { return inc_Value_; }
+
+private:
+    int inc_Value_;
 };
 
 class ArrayVarDecl_AST;
@@ -444,6 +507,7 @@ private:
     int num_Dims_;
 };
 
+/*
 // truly needed only for ease of semantic checking
 class IncrIdExpr_AST: public IdExpr_AST{
 public:
@@ -475,6 +539,7 @@ private:
     std::string inc_Type_;
     int inc_Value_;
 };
+*/
 
 class IntExpr_AST: public Expr_AST{
 public:
@@ -579,6 +644,7 @@ UnaryArithmExpr_AST(token Op, Expr_AST* LHS)
 
 };
 
+// ** TO DO: initialization is too simplistic
 class AssignExpr_AST: public Expr_AST{
 public:
 AssignExpr_AST(IdExpr_AST* Id, Expr_AST* Expr)

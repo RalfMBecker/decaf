@@ -271,8 +271,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	pId = new IncrIdExpr_AST(name, "post", 1);
-	idModInsert(postfix_Table, name, 1); // no link to the *new* object,
+	pId = new PostIncrIdExpr_AST(name, 1);
+//	idModInsert(postfix_Table, name, 1); // no link to the *new* object,
 	getNextToken();                      // oviously, in postfix_Table
 	break;
 
@@ -285,8 +285,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	pId = new IncrIdExpr_AST(name, "post", -1);
-	idModInsert(postfix_Table, name, -1); // no link to the *new* object,
+	pId = new PostIncrIdExpr_AST(name, -1);
+//	idModInsert(postfix_Table, name, -1); // no link to the *new* object,
 	getNextToken();                      // oviously, in postfix_Table
 	break;
 
@@ -349,11 +349,13 @@ void
 checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
 {
     IdExpr_AST* pId;
-    // initialization information for IncrIdExpr_AST is in its parent
-    if (dynamic_cast<IncrIdExpr_AST*>(LHS))
-	LHS = dynamic_cast<IdExpr_AST*>(LHS->Parent());
-    if (dynamic_cast<IncrIdExpr_AST*>(RHS))
-	RHS = dynamic_cast<IdExpr_AST*>(RHS->Parent());
+    // initialization information for Pre(Post)IncrIdExpr_AST is in its parent
+    if ( (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) || 
+	 (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ) // works with Parent()...
+	LHS = dynamic_cast<IdExpr_AST*>(LHS);  // ...but why?
+    if ( (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) || 
+	 (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) )
+	RHS = dynamic_cast<IdExpr_AST*>(RHS);
 
     if ( !(dynamic_cast<ArrayIdExpr_AST*>(LHS)) ){
 	    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
@@ -416,8 +418,10 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 
 	// clarify which way to go, and if if is legal
 	int is_Assign = isAssign(next_Token);
+	// ** TO DO: probably only need to cast to IdExpr_AST*
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(LHS)) || 
-			      dynamic_cast<IncrIdExpr_AST*>(LHS) ) ){
+			      (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) ||
+			      (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;     
@@ -460,8 +464,10 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	is_Assign = isAssign(next_Token);
 	// this is essentially redundant: we also check, in next recursion,
 	// at the top of this function. Allows early error detection.
+	// ** TO DO: probably only need to cast to IdExpr_AST*
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(RHS)) || 
-			      dynamic_cast<IncrIdExpr_AST*>(RHS) ) ){
+			      (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) ||
+			      (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) ) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -607,6 +613,7 @@ dispatchExpr(void)
     if (errorIn_Progress) ret = 0;
     else ret = parseInfixList(ret);
 
+/*
     if (option_Debug)
 	printIncTables();
     // adjust **only top level** expression by prefix and postfix found
@@ -620,7 +627,7 @@ dispatchExpr(void)
 	postfix_Table.clear();
     }
     }
-
+*/
     return ret;
 }
 
@@ -735,8 +742,8 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1); // checks for ++a++ (and such)
 	if (errorIn_Progress)                   // comes back as IdExpr_AST
 	    break;
-	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
-	return new IncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), "pre", 1);
+//	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), 1);
+	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), 1);
 	break;
     case tok_dminus: // prefix modifier (--a)
 	getNextToken();
@@ -748,8 +755,8 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1);
 	if (errorIn_Progress)
 	    break;
-	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
-	return new IncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), "pre", -1);
+//	idModInsert(prefix_Table, dynamic_cast<IdExpr_AST*>(tmp), -1);
+	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), -1);
 	break;
     case tok_ID: // coming here, ID should be in symbol table
 	return parseIdExpr(next_Token.Lex(), 0);
@@ -976,7 +983,7 @@ parseAssignStmt(void)
 
     IdExpr_AST* LHS = parseIdExpr(next_Token.Lex(), 0);
     if ( (0 == LHS) ){
-	// varAccessError(next_Token.Lex(), 0); report at IdExpr level
+	// varAccessError(next_Token.Lex(), 0); // report at IdExpr level
 	errorIn_Progress = 1;
 	return 0;
     }
@@ -985,7 +992,8 @@ parseAssignStmt(void)
     tokenType t = next_Token.Tok();
     // no assignment to a++, ++a (although, by construction, could only 
     // have parsed an a++ type when we come here)
-    if ( (tok_semi != t) && (dynamic_cast<IncrIdExpr_AST*>(LHS)) ){
+    if ( (tok_semi != t) && ( (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) || 
+			      (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ) ){
 	parseError(LHS->Addr(), "lvalue required on LHS in assignment");
 	errorIn_Progress = 1;
 	return 0;
@@ -994,15 +1002,19 @@ parseAssignStmt(void)
     int handleMod_Assign = 0;
     switch(t){
     case tok_semi: 
+/*
 	// As we call parseIdExpr() (and not dispatchExpr()), the private
 	// table variables of an IncrIdExpr_AST are not set.
 	// For the same reason, only postfix_Table can be set now.
 	if ( (postfix_Table.empty()) )
-	    parseWarning("", "unused statement");
-	else if (dynamic_cast<IncrIdExpr_AST*>(LHS)){ //this is the case of a++;
+	else if (dynamic_cast<PostIncrIdExpr_AST*>(LHS)){ //this is a++;
 	    LHS->setPostfix(postfix_Table);
 	    postfix_Table.clear();
 	}
+*/
+	if ( !(dynamic_cast<PreIncrIdExpr_AST*>(LHS)) && 
+	     !(dynamic_cast<PostIncrIdExpr_AST*>(LHS)) )
+	    parseWarning("", "unused statement");
 	RHS = 0; // ** TO DO: needs thinking (with processing in visitor.h)
 	break;
 
@@ -1301,10 +1313,11 @@ parseStmt(void)
 	    ret = 0;
 	    break;
 	}
+/*
 	// as we don't parse through dispatchExpr (c. parseAssign())
 	dynamic_cast<IncrIdExpr_AST*>(ret)->setPrefix(prefix_Table); 
 	prefix_Table.clear();
-
+*/
 	match(0, tok_semi, 1); // error caught after breaking
 	break;
     case tok_while:
