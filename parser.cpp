@@ -348,15 +348,18 @@ parseCoercion(Expr_AST* Expr, tokenType Type)
 void
 checkInitialized(Expr_AST* LHS, Expr_AST* RHS)
 {
-    IdExpr_AST* pId;
-    // initialization information for Pre(Post)IncrIdExpr_AST is in its parent
-    if ( (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) || 
-	 (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ) // works with Parent()...
-	LHS = dynamic_cast<IdExpr_AST*>(LHS);  // ...but why?
-    if ( (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) || 
-	 (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) )
-	RHS = dynamic_cast<IdExpr_AST*>(RHS);
+    // initialization information for Incr type in its Name() member, of
+    // type IdExpr_AST* (this is rather ugly...)
+    if ( (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) )
+	LHS = (dynamic_cast<PreIncrIdExpr_AST*>(LHS))->Name();
+    else if ( (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) )
+	LHS = (dynamic_cast<PostIncrIdExpr_AST*>(LHS))->Name();
+    if ( (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) )
+	RHS = (dynamic_cast<PreIncrIdExpr_AST*>(RHS))->Name();
+    else if ( (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) )
+	RHS = (dynamic_cast<PostIncrIdExpr_AST*>(RHS))->Name();
 
+    IdExpr_AST* pId;
     if ( !(dynamic_cast<ArrayIdExpr_AST*>(LHS)) ){
 	    if ( (0 != LHS) && (pId = dynamic_cast<IdExpr_AST*>(LHS)) && 
 		 !(pId->WarningEmitted()) && !(pId->isInitialized()) ){
@@ -1015,7 +1018,9 @@ parseAssignStmt(void)
 	if ( !(dynamic_cast<PreIncrIdExpr_AST*>(LHS)) && 
 	     !(dynamic_cast<PostIncrIdExpr_AST*>(LHS)) )
 	    parseWarning("", "unused statement");
-	RHS = 0; // ** TO DO: needs thinking (with processing in visitor.h)
+	else // this is case a++; (entire line)
+	    checkInitialized(LHS, 0);
+	RHS = 0; 
 	break;
 
     case tok_assign_plus:

@@ -22,10 +22,12 @@
 extern int option_Debug;
 
 // forward declarations
+/*
 class IdExpr_AST;
 typedef std::map<IdExpr_AST*, int> inc_Table; // inc and dec; simpler name
 extern inc_Table prefix_Table;
 extern inc_Table postfix_Table;
+*/
 extern std::map<std::string, int> typePrec_Table;
 extern std::map<std::string, int> typeWidth_Table;
 class Env;
@@ -39,6 +41,7 @@ class Tmp_AST;
 class IdExpr_AST;
 //class IncrIdExpr_AST; // remove
 class PreIncrIdExpr_AST;
+class PostIncrIdExpr_AST;
 class PostIncrIdExpr_AST;
 class ArrayIdExpr_AST;
 class IntExpr_AST;
@@ -74,6 +77,8 @@ public:
     virtual void visit(Tmp_AST*) = 0;
     virtual void visit(IdExpr_AST*) = 0;
 //    virtual void visit(IncrIdExpr_AST*) = 0;
+    virtual void visit(PreIncrIdExpr_AST*) = 0;
+    virtual void visit(PostIncrIdExpr_AST*) = 0;
     virtual void visit(ArrayIdExpr_AST*) = 0;
     virtual void visit(IntExpr_AST*) = 0;
     virtual void visit(FltExpr_AST*) = 0;
@@ -250,8 +255,10 @@ class Expr_AST: public Stmt_AST{
 public:
 Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0, 
 	 Node_AST* rc=0)
-    : Stmt_AST(lc, rc), type_(Type), op_(OpTok), prefix_(inc_Table()), 
-	postfix_(inc_Table())
+    : Stmt_AST(lc, rc), type_(Type), op_(OpTok)
+
+      //, prefix_(inc_Table()), postfix_(inc_Table())
+
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
 	    typeW_ = setWidth();
@@ -291,10 +298,12 @@ Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0,
     int TypeW(void) const { return typeW_; }
     int TypeP(void) const { return typeP_; }
 
+/*
     inc_Table Prefix(void) const { return prefix_; }
     void setPrefix(const inc_Table& T) { prefix_ = T; }
     inc_Table Postfix(void) const { return postfix_; }
     void setPostfix(const inc_Table& T) { postfix_ = T; }
+*/
 
     virtual void accept(AST_Visitor* Visitor)
     {
@@ -309,8 +318,8 @@ protected:
     token op_;   // (tok_plus, "+")
     int typeW_;
     int typeP_;
-    inc_Table prefix_;  // used in handling pre- and post increment expression
-    inc_Table postfix_; // (a++, ++a, a--, --a)
+//    inc_Table prefix_;  // used in handling pre- and post increment expression
+//    inc_Table postfix_; // (a++, ++a, a--, --a)
 };
 
 class IterExprList_AST: public Node_AST{
@@ -400,7 +409,7 @@ private:
 class PreIncrIdExpr_AST: public IdExpr_AST{
 public:
     PreIncrIdExpr_AST(IdExpr_AST* P, int V)
-	: IdExpr_AST(P->Type(), P->Op()), inc_Value_(V)
+	: IdExpr_AST(P->Type(), P->Op()), name_(P), inc_Value_(V)
     {
 	if (option_Debug){
 	    std::ostringstream tmp_Stream;
@@ -415,16 +424,20 @@ public:
 	}
     }
 
+    IdExpr_AST* Name(void) const { return name_; } 
     int IncValue(void) const { return inc_Value_; }
 
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
-    int inc_Value_;
+    IdExpr_AST* name_; // we need to stay linked to the object tracking
+    int inc_Value_;    // initialization etc. 
 };
 
 class PostIncrIdExpr_AST: public IdExpr_AST{
 public:
     PostIncrIdExpr_AST(IdExpr_AST* P, int V)
-	: IdExpr_AST(P->Type(), P->Op()), inc_Value_(V)
+	: IdExpr_AST(P->Type(), P->Op()), name_(P), inc_Value_(V)
     {
 	if (option_Debug){
 	    std::ostringstream tmp_Stream;
@@ -439,9 +452,13 @@ public:
 	}
     }
 
+    IdExpr_AST* Name(void) const { return name_; } 
     int IncValue(void) const { return inc_Value_; }
 
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
 private:
+    IdExpr_AST* name_;
     int inc_Value_;
 };
 

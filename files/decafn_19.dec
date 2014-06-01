@@ -1,5 +1,5 @@
 { // add: array case, when ready
-    int a = 1;
+    int a;
     int b = 0;
 
     a++;
