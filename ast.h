@@ -518,13 +518,11 @@ private:
     int num_Dims_;
 };
 
-/*
 class PreIncrArrayIdExpr_AST: public ArrayIdExpr_AST{
 public:
-    PreIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
-	: ArrayIdExpr_AST(P), name_(P), inc_Value_(V)
+PreIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
+    : ArrayIdExpr_AST(*P), name_(P), inc_Value_(V)
     { 
-
 	if (option_Debug){
 	    std::ostringstream tmp_Stream;
 	    if ( (0 < V) )
@@ -532,8 +530,10 @@ public:
 	    else
 		tmp_Stream << "--";
 	    tmp_Stream << (P->Op()).Lex();
+	    for (int i = 0; i < P->numDims(); i++)
+		tmp_Stream << "[]";
 
-	    std::cout << "\tcreated PreIncrIdExpr_AST (";
+	    std::cout << "\tcreated PreIncrArrayIdExpr_AST (";
 	    std::cout << tmp_Stream.str() << ")\n";;
 	}
     }
@@ -544,10 +544,39 @@ public:
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 
 private:
-    ArrayIdExpr_AST* name_; // we need to stay linked to the object tracking
-    int inc_Value_;    // initialization etc. 
+    ArrayIdExpr_AST* name_; // we need to stay linked to variable object
+    int inc_Value_; 
 };
-*/
+
+class PostIncrArrayIdExpr_AST: public ArrayIdExpr_AST{
+public:
+PostIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
+    : ArrayIdExpr_AST(*P), name_(P), inc_Value_(V)
+    { 
+	if (option_Debug){
+	    std::ostringstream tmp_Stream;
+	    tmp_Stream << (P->Op()).Lex();
+	    for (int i = 0; i < P->numDims(); i++)
+		tmp_Stream << "[]";
+	    if ( (0 < V) )
+		tmp_Stream << "++";
+	    else
+		tmp_Stream << "--";
+
+	    std::cout << "\tcreated PreIncrArrayIdExpr_AST (";
+	    std::cout << tmp_Stream.str() << ")\n";;
+	}
+    }
+
+    IdExpr_AST* Name(void) const { return name_; } 
+    int IncValue(void) const { return inc_Value_; }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    ArrayIdExpr_AST* name_; // we need to stay linked variable object
+    int inc_Value_;
+};
 
 class IntExpr_AST: public Expr_AST{
 public:

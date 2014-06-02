@@ -250,7 +250,12 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	pId = new PostIncrIdExpr_AST(name, 1);
+	if (dynamic_cast<ArrayIdExpr_AST*>(name)){
+	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(name);
+	    pId = new PostIncrArrayIdExpr_AST(pAId, 1);
+	}
+	else
+	    pId = new PostIncrIdExpr_AST(name, 1);
 	getNextToken();
 	break;
 
@@ -263,7 +268,12 @@ parseIdExpr(std::string Name, int hasPrefix)
 	}
 	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	pId = new PostIncrIdExpr_AST(name, -1);
+	if (dynamic_cast<ArrayIdExpr_AST*>(name)){
+	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(name);
+	    pId = new PostIncrArrayIdExpr_AST(pAId, -1);
+	}
+	else
+	    pId = new PostIncrIdExpr_AST(name, -1);
 	getNextToken();
 	break;
 
@@ -700,7 +710,12 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1); // checks for ++a++ (and such)
 	if (errorIn_Progress)                   // comes back as IdExpr_AST
 	    break;
-	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), 1);
+	if (dynamic_cast<ArrayIdExpr_AST*>(tmp)){
+	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(tmp);
+	    return new PreIncrArrayIdExpr_AST(pAId, 1);
+	}
+	else
+	    return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), 1);
 	break;
     case tok_dminus: // prefix modifier (--a)
 	getNextToken();
@@ -712,7 +727,12 @@ parsePrimaryExpr(void)
 	tmp = parseIdExpr(next_Token.Lex(), 1);
 	if (errorIn_Progress)
 	    break;
-	return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), -1);
+	if (dynamic_cast<ArrayIdExpr_AST*>(tmp)){
+	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(tmp);
+	    return new PreIncrArrayIdExpr_AST(pAId, -1);
+	}
+	else
+	    return new PreIncrIdExpr_AST(dynamic_cast<IdExpr_AST*>(tmp), -1);
 	break;
     case tok_ID: // coming here (and ++/--), ID should be in symbol table
 	return parseIdExpr(next_Token.Lex(), 0);

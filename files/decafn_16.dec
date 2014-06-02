@@ -12,6 +12,6 @@
     if (b == 0)
 	b = 1;
 
-//    double d[++b*b || a[1][b] && b++][3]; // compound expr bounds
+    double d[++b*b || a[1][b] && b++][3]; // compound expr bounds
 //    d[a[1][2]++ && ++a[b || a[1][1]++][2] && 4+5*b++][2] = ++c[3][2][1];
 }
