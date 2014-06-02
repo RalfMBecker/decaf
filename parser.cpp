@@ -201,11 +201,9 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 	tmp_Stream << offset_V;
 	off = tmp_Stream.str();
     }
-    ArrayIdExpr_AST* ret;
-    ret = new ArrayIdExpr_AST(Base, Base->Expr(), all_Ints, dims_V, dims_Final,
-			      off);
 
-    return ret;
+    return new ArrayIdExpr_AST(Base, Base->Expr(), all_Ints, dims_V, dims_Final,
+			      off);
 }
 
 // id -> alpha* [alphanum | _]*
@@ -219,7 +217,6 @@ parseIdExpr(std::string Name, int hasPrefix)
     std::string e_Msg1 = "array index not specified - illegal access";
     std::string e_Msg2 = "attempt to access non-array as an array";
     std::string e_Msg3 = "attempt to post-fix adjust an identifier with prefix";
-    IdExpr_AST* pId;
     Decl_AST* pVD;
 
     if ( ( 0 == (pVD = (findVarByName(top_Env, Name))) ) ){
@@ -232,8 +229,11 @@ parseIdExpr(std::string Name, int hasPrefix)
     if (errorIn_Progress)
 	return 0;
 
-    tokenType t = next_Token.Tok();
+    IdExpr_AST* pId;
     IdExpr_AST* name;
+    ArrayIdExpr_AST* name_Array;
+    tokenType t = next_Token.Tok();
+
     switch(t){
 
 	// case function
@@ -248,14 +248,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	    errorIn_Progress = 1;
 	    return 0;
 	}
-	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	if (dynamic_cast<ArrayIdExpr_AST*>(name)){
-	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(name);
-	    pId = new PostIncrArrayIdExpr_AST(pAId, 1);
-	}
-	else
-	    pId = new PostIncrIdExpr_AST(name, 1);
+	pId = new PostIncrIdExpr_AST(name, 1);
 	getNextToken();
 	break;
 
@@ -266,14 +260,8 @@ parseIdExpr(std::string Name, int hasPrefix)
 	    errorIn_Progress = 1;
 	    return 0;
 	}
-	// ** TO DO: monitor - need special check for array/function?
 	name = pVD->Expr(); // Decl::Expr() member is of right type
-	if (dynamic_cast<ArrayIdExpr_AST*>(name)){
-	    ArrayIdExpr_AST* pAId = dynamic_cast<ArrayIdExpr_AST*>(name);
-	    pId = new PostIncrArrayIdExpr_AST(pAId, -1);
-	}
-	else
-	    pId = new PostIncrIdExpr_AST(name, -1);
+	pId = new PostIncrIdExpr_AST(name, -1);
 	getNextToken();
 	break;
 
@@ -284,9 +272,35 @@ parseIdExpr(std::string Name, int hasPrefix)
 	    errorIn_Progress = 1;
 	    pId = 0;
 	}
-	else
+	else{
 	    pId = parseArrayIdExpr(dynamic_cast<ArrayVarDecl_AST*>(pVD));
-	break;
+
+	    switch(next_Token.Tok()){
+	    case tok_dplus:
+		if (hasPrefix){
+		    parseError(pVD->Addr(), e_Msg3);
+		    errorIn_Progress = 1;
+		    return 0;
+		}
+		name_Array = dynamic_cast<ArrayIdExpr_AST*>(pId); 
+		pId = new PostIncrArrayIdExpr_AST(name_Array, 1);
+		getNextToken();
+		break;
+	    case tok_dminus:
+		if (hasPrefix){
+		    parseError(pVD->Addr(), e_Msg3);
+		    errorIn_Progress = 1;
+		    return 0;
+		}
+		name_Array = dynamic_cast<ArrayIdExpr_AST*>(pId); 
+		pId = new PostIncrArrayIdExpr_AST(name_Array, -1);
+		getNextToken();
+		break;
+	    default:
+		break;
+	    }
+	}
+	break; // of array check
 
     // basic type
     default: // ** TO DO: monitor for changes after functions/classes added
@@ -808,8 +822,10 @@ parseDims(void)
 	errExit(0, "invalid use of parseDims() (should point at [)");
 
     std::vector<Expr_AST*>* dims = new std::vector<Expr_AST*>;
-    while ( (0 == match(0, tok_sqopen, 1)) ){
-	if ( (0 == match(0, tok_sqclosed, 0)) ){
+
+// ** TO DO: change correct?
+    while ( (0 == match(0, tok_sqopen, 0)) ){
+	if ( (0 == match(1, tok_sqclosed, 0)) ){
 	    parseError(next_Token.Lex(), "array dimension not specified");
 	    errorIn_Progress = 1;
 	    return 0;
@@ -843,7 +859,6 @@ parseDims(void)
 // invariants: entering, points to '['
 //             leaving, points to after ']'
 // Children:
-// - the IdExpr_AST* embodies all non-size related information
 // - dimensions handled in vector form (dims)
 Decl_AST*
 parseArrayVarDecl(IdExpr_AST* Name)

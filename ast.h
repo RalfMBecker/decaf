@@ -563,7 +563,7 @@ PostIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
 	    else
 		tmp_Stream << "--";
 
-	    std::cout << "\tcreated PreIncrArrayIdExpr_AST (";
+	    std::cout << "\tcreated PostIncrArrayIdExpr_AST (";
 	    std::cout << tmp_Stream.str() << ")\n";;
 	}
     }
