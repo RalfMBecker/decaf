@@ -233,6 +233,64 @@ public:
 	}
     }
 
+    void visit(PreIncrArrayIdExpr_AST* V) 
+    {
+	if (option_Debug) std::cout << "\tvisiting PreIncrArrayIdExpr_AST...\n";
+
+	(V->Name())->accept(this); // get offset/address
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+	Env* pFrame = V->getEnv();
+	std::string frame = pFrame->getTableName();
+	std::string target = (V->Name())->Addr();
+	token op;
+	op = ( (1 == V->IncValue()) )?tok_plus:tok_minus;
+	std::string LHS = target;
+	std::string RHS = "1";
+	SSA_Entry* line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	insertLine(line, iR_List);
+
+	needs_Label_ = 0;
+    }
+
+    void visit(PostIncrArrayIdExpr_AST* V) 
+    {
+	if (option_Debug) std::cout <<"\tvisiting PostIncrArrayIdExpr_AST...\n";
+
+	(V->Name())->accept(this); // get offset/address
+
+	label_Vec labels = active_Labels_;
+	active_Labels_.clear();
+	Env* pFrame = V->getEnv();
+	std::string frame = pFrame->getTableName();
+	std::string target, LHS, RHS;
+	token op;
+	SSA_Entry* line;
+
+	// create a tmp linking to the variable to use in post-increment
+	// Note: not needed if this is a line a++;
+	LHS =  (V->Name())->Addr();
+	if ( !(dynamic_cast<Assign_AST*>(V->Parent())) ){
+	    target = makeTmp();
+	    op = tok_eq;
+	    line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	    insertLine(line, iR_List);
+	    labels.clear();
+	    // hand it on for use in next Addr() retrieval (c. IdExpr_AST)
+	    V->setTmpAddr(target);
+	}
+
+	// post-increment
+	target = LHS;
+	op = ( (1 == V->IncValue()) )?tok_plus:tok_minus;
+	RHS = "1";
+	line = new SSA_Entry(labels, op, target, LHS, RHS, frame);
+	insertLine(line, iR_List);
+
+	needs_Label_ = 0;
+    }
+
     void visit(NOP_AST* V)
     {
 	if (option_Debug) std::cout << "\tvisiting NOP_AST...\n";

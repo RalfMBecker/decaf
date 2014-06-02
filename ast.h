@@ -35,8 +35,9 @@ class Tmp_AST;
 class IdExpr_AST;
 class PreIncrIdExpr_AST;
 class PostIncrIdExpr_AST;
-class PostIncrIdExpr_AST;
 class ArrayIdExpr_AST;
+class PreIncrArrayIdExpr_AST;
+class PostIncrArrayIdExpr_AST;
 class IntExpr_AST;
 class FltExpr_AST;
 class ArithmExpr_AST;
@@ -72,6 +73,8 @@ public:
     virtual void visit(PreIncrIdExpr_AST*) = 0;
     virtual void visit(PostIncrIdExpr_AST*) = 0;
     virtual void visit(ArrayIdExpr_AST*) = 0;
+    virtual void visit(PreIncrArrayIdExpr_AST*) = 0;
+    virtual void visit(PostIncrArrayIdExpr_AST*) = 0;
     virtual void visit(IntExpr_AST*) = 0;
     virtual void visit(FltExpr_AST*) = 0;
     virtual void visit(ArithmExpr_AST*) = 0;
@@ -538,7 +541,7 @@ PreIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
 	}
     }
 
-    IdExpr_AST* Name(void) const { return name_; } 
+    ArrayIdExpr_AST* Name(void) const { return name_; } 
     int IncValue(void) const { return inc_Value_; }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
@@ -568,7 +571,7 @@ PostIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
 	}
     }
 
-    IdExpr_AST* Name(void) const { return name_; } 
+    ArrayIdExpr_AST* Name(void) const { return name_; } 
     int IncValue(void) const { return inc_Value_; }
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
