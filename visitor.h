@@ -88,7 +88,9 @@ public:
 	active_Labels_.clear();
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
-	std::string target = (V->Name())->Addr();
+
+	V->setAddr( (V->Name())->Addr() ); // don't forget update!
+	std::string target = V->Addr();
 	token op;
 	op = ( (1 == V->IncValue()) )?tok_plus:tok_minus;
 	std::string LHS = target;
@@ -113,7 +115,8 @@ public:
 
 	// create a tmp linking to the variable to use in post-increment
 	// Note: not needed if this is a line a++;
-	LHS =  (V->Name())->Addr();
+	V->setAddr( (V->Name())->Addr() ); // don't forget update!
+	LHS = V->Addr();
 	if ( !(dynamic_cast<Assign_AST*>(V->Parent())) ){
 	    target = makeTmp();
 	    op = tok_eq;
@@ -243,7 +246,8 @@ public:
 	active_Labels_.clear();
 	Env* pFrame = V->getEnv();
 	std::string frame = pFrame->getTableName();
-	std::string target = (V->Name())->Addr();
+	V->setAddr( (V->Name())->Addr() ); // don't forget update!
+	std::string target = V->Addr();
 	token op;
 	op = ( (1 == V->IncValue()) )?tok_plus:tok_minus;
 	std::string LHS = target;
@@ -270,7 +274,8 @@ public:
 
 	// create a tmp linking to the variable to use in post-increment
 	// Note: not needed if this is a line a++;
-	LHS =  (V->Name())->Addr();
+	V->setAddr( (V->Name())->Addr() ); // don't forget update!
+	LHS = V->Addr();
 	if ( !(dynamic_cast<Assign_AST*>(V->Parent())) ){
 	    target = makeTmp();
 	    op = tok_eq;

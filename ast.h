@@ -373,6 +373,7 @@ IdExpr_AST(token Type, token Op, int I = 0, int W = 0)
     std::string Addr(void)
     {
 	std::string ret = Node_AST::Addr();
+
 	if ( ("" != TmpAddr()) ){
 	    ret = TmpAddr();
 	    setTmpAddr("");
