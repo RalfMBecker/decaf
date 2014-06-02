@@ -76,7 +76,9 @@ CCC (the Cuddly Chameleon Compiler) is a compiler for the Brown Decaf language. 
     of declaration; use before declaration is error-checked,
 
 (13) added pre- and post-increment operators (++a, a++):
-
+     
+     Semantic: The operators are at high precedence level (like (), []).
+               Operators are only allowed in expressions (not as lvalues).
      Pre-fix:  execute as soon as met; use updated value
      Post-fix: save current value in a tmp t1
                update value
@@ -88,7 +90,7 @@ CCC (the Cuddly Chameleon Compiler) is a compiler for the Brown Decaf language. 
                a *= a++ + (++a) * a++ + a;
                   = (1 + 3 * 3 + 4) * 4 = 56
      gcc:      probably different; but fails completely in case of a[i]++, etc.
-     clang:    seems to do exactly the above (scalar and array case)
+     clang:    seems to do exactly the above (scalar and array case),
 
 (14) added modifying assignments (+=, -=, *=, /=) (c. (13)), 
 

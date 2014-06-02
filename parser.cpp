@@ -204,11 +204,6 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
     ArrayIdExpr_AST* ret;
     ret = new ArrayIdExpr_AST(Base, Base->Expr(), all_Ints, dims_V, dims_Final,
 			      off);
-    if (all_Ints){
-	std::ostringstream tmp_Stream;
-	tmp_Stream << "(-$" <<  offset_V << ")" << Base->Addr();
-	ret->setAddr(tmp_Stream.str());
-    }
 
     return ret;
 }

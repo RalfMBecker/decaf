@@ -453,10 +453,15 @@ class ArrayIdExpr_AST: public IdExpr_AST{
 public:
 ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI, 
 		std::vector<Expr_AST*>* Access, 
-		std::vector<std::string>* Final = 0, std::string OS = "")
+		std::vector<std::string>* Final = 0, std::string A = "")
     : IdExpr_AST(N->Type(), N->Op()), base_(B), all_IntVals_(AI), 
-	dims_(Access), dims_Final_(Final), offset_(OS)
+	dims_(Access), dims_Final_(Final)
     {
+	if (AI){
+	    std::ostringstream tmp_Stream;
+	    tmp_Stream << "(-$" <<  A << ")" << N->Addr();
+	    setAddr(tmp_Stream.str());
+	}
 	num_Dims_ = dims_->size();
 
 	if (option_Debug){
@@ -498,8 +503,6 @@ private:
     int all_IntVals_; // if 1, have names (strings) in dims_Final_
     std::vector<Expr_AST*>* dims_; // access encoded in expressions
     std::vector<std::string>* dims_Final_; // filled in by visitor sometimes
-    std::string offset_; // usually filled in at run-time; in case of both
-                         // access and bounds all integers, at compile-time
     int num_Dims_;
 };
 
