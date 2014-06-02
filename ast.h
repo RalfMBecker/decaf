@@ -454,8 +454,8 @@ public:
 ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI, 
 		std::vector<Expr_AST*>* Access, 
 		std::vector<std::string>* Final = 0, std::string A = "")
-    : IdExpr_AST(N->Type(), N->Op()), base_(B), all_IntVals_(AI), 
-	dims_(Access), dims_Final_(Final)
+    : IdExpr_AST(N->Type(), N->Op()), base_(B), base_Id_(N), 
+	all_IntVals_(AI), dims_(Access), dims_Final_(Final)
     {
 	if (AI){
 	    std::ostringstream tmp_Stream;
@@ -473,6 +473,16 @@ ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI,
 	}
     }
 
+ArrayIdExpr_AST(const ArrayIdExpr_AST& r)
+    : IdExpr_AST( *(r.BaseId()) ) // use default copy ctor
+    {
+	base_ = r.Base();
+	base_Id_ = r.BaseId();
+	all_IntVals_ = r.allInts();
+	dims_ = r.Dims();
+	dims_Final_ = r.DimsFinal();
+    }
+
     ~ArrayIdExpr_AST()
     {
 	if ( (0 != dims_) ) delete dims_; 
@@ -485,11 +495,12 @@ ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI,
     }
 
     ArrayVarDecl_AST* Base(void) const { return base_; } 
+    IdExpr_AST* BaseId(void) const { return base_Id_; }
     int allInts(void) const { return all_IntVals_; }
-    std::vector<Expr_AST*>* Dims(void) { return dims_;}
+    std::vector<Expr_AST*>* Dims(void) const { return dims_;}
     int numDims(void) const { return num_Dims_; }
 
-    std::vector<std::string>* DimsFinal(void) { return dims_Final_;}
+    std::vector<std::string>* DimsFinal(void) const { return dims_Final_;}
     void addToDimsFinalEnd(std::string V) { dims_Final_->push_back(V); }
     void addToDimsFinalFront(std::string V) 
     {
@@ -500,11 +511,43 @@ ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI,
 
 private:
     ArrayVarDecl_AST* base_; // as declared
+    IdExpr_AST* base_Id_; 
     int all_IntVals_; // if 1, have names (strings) in dims_Final_
     std::vector<Expr_AST*>* dims_; // access encoded in expressions
     std::vector<std::string>* dims_Final_; // filled in by visitor sometimes
     int num_Dims_;
 };
+
+/*
+class PreIncrArrayIdExpr_AST: public ArrayIdExpr_AST{
+public:
+    PreIncrArrayIdExpr_AST(ArrayIdExpr_AST* P, int V)
+	: ArrayIdExpr_AST(P), name_(P), inc_Value_(V)
+    { 
+
+	if (option_Debug){
+	    std::ostringstream tmp_Stream;
+	    if ( (0 < V) )
+		tmp_Stream << "++";
+	    else
+		tmp_Stream << "--";
+	    tmp_Stream << (P->Op()).Lex();
+
+	    std::cout << "\tcreated PreIncrIdExpr_AST (";
+	    std::cout << tmp_Stream.str() << ")\n";;
+	}
+    }
+
+    IdExpr_AST* Name(void) const { return name_; } 
+    int IncValue(void) const { return inc_Value_; }
+
+    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+
+private:
+    ArrayIdExpr_AST* name_; // we need to stay linked to the object tracking
+    int inc_Value_;    // initialization etc. 
+};
+*/
 
 class IntExpr_AST: public Expr_AST{
 public:
