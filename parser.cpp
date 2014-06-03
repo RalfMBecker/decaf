@@ -455,14 +455,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	if (errorIn_Progress) 
 	    return 0;
 	std::string tmp_Str;
-//	if ( !(is_Assign) ){ 
-	    RHS = parsePrimaryExpr();
-//	    tmp_Str = err_Msg;
-//	}
-//	else{ // handle everything to the right first
-//	    RHS = dispatchExpr();
-//	    tmp_Str = "invalid expression";
-//	}
+	RHS = parsePrimaryExpr();
 	if ( (!RHS) ){
 	    parseError(next_Token.Lex(), err_Msg);
 	    errorIn_Progress = 1;
@@ -957,10 +950,11 @@ parseVarDecl(token Type)
 	break;
     case tok_sqopen:
 	ret = parseArrayVarDecl(new_Id);
-	if ( (tok_eq == next_Token.Tok()) )
-	    parseError(ret->Addr(), "attempt to initialize array type");
 	if ( (-1 == match(0, tok_semi, 1)) ){
-	    punctError(';', 0);
+	    if ( (tok_eq == next_Token.Tok()) )
+		parseError(ret->Addr(), "attempt to initialize array type");
+	    else
+		punctError(';', 0);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -1002,7 +996,7 @@ parseAssignStmt(void)
     // have parsed an a++ type when we come here)
     if ( (tok_semi != t) && isNoLvalue(LHS) ){
 	if ( (tok_eq == t) )
-	    parseError(LHS->Addr(), "lvalue required on LHS in assignment");
+	    parseError(LHS->Addr(), "illegal assignment: lvalue expected");
 	else
 	    parseError(next_Token.Lex(), "invalid in context");
 	errorIn_Progress = 1;
@@ -1314,10 +1308,16 @@ parseStmt(void)
 	    ret = 0;
 	    break;
 	}
-	if ( (-1 == match(0, tok_semi, 1)) ){
-	    punctError(';', 0);
+	if ( (-1 == match(0, tok_semi, 0)) ){
 	    errorIn_Progress = 1;
+	    if ( isAssign(next_Token) )
+		parseError(ret->Addr(), "illegal assignment: lvalue expected");
+	    else
+		punctError(';', 0);
 	}
+	else
+	    checkInitialized(dynamic_cast<Expr_AST*>(ret), 0);
+	getNextToken();
 	break;
     case tok_while:
 	ret = parseWhileStmt();
@@ -1369,7 +1369,7 @@ parseStmt(void)
 
     // cases to improve error handling in case of errors in nested if's
     if (errorIn_Progress){
-	if ( dynamic_cast<IfType_AST*>(ret) )
+	if ( (ret) && dynamic_cast<IfType_AST*>(ret) )
 	    errorResetStmt();
 	else
 	    return errorResetStmt();

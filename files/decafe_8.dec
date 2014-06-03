@@ -1,0 +1,17 @@
+{ 
+    int a;
+    double b;
+    int c[2] = {1}; // initilization of arrays illegal
+// 5
+    a++;  // used uninitialized
+    a;    // unused statement
+    --b;  // used uninitialized
+
+    a++ = a-- -a++; // (10) illegal assignment: not an lvalue
+    --b = a + a;   // type
+    a = -!-!--a;    // chain of infix expressions illegal to end in pre-incr
+
+    +c[2];
+    b = c[2]+; // 15
+    a = 1;
+}
