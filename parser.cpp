@@ -455,17 +455,16 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	if (errorIn_Progress) 
 	    return 0;
 	std::string tmp_Str;
-	// distinguishing the 2 cases matters to properly emit prefix- and
-	if ( !(is_Assign) ){         // postfix-Tables
+//	if ( !(is_Assign) ){ 
 	    RHS = parsePrimaryExpr();
-	    tmp_Str = err_Msg;
-	}
-	else{ // handle everything to the right first
-	    RHS = dispatchExpr();
-	    tmp_Str = "invalid expression";
-	}
+//	    tmp_Str = err_Msg;
+//	}
+//	else{ // handle everything to the right first
+//	    RHS = dispatchExpr();
+//	    tmp_Str = "invalid expression";
+//	}
 	if ( (!RHS) ){
-	    parseError(next_Token.Lex(), tmp_Str);
+	    parseError(next_Token.Lex(), err_Msg);
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -480,7 +479,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	// at the top of this function. Allows early error detection.
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(RHS)) || 
 			      isNoLvalue(RHS) ) ){
-	    parseError(next_Token.Lex(), err_Msg3);
+//	    parseError(next_Token.Lex(), err_Msg3); // double reporting
 	    errorIn_Progress = 1;
 	    return 0;
 	}
@@ -493,7 +492,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	if ( (prec_2 < prec_3) || go_Right){ // flip from l-r, to r-l, until
 	    RHS = parseInfixRHS(prec_2 + 1, prec_2, RHS); // reverted
 	    if ( (!RHS) ){ 
-		parseError(next_Token.Lex(), err_Msg);
+//		parseError(next_Token.Lex(), err_Msg); // double reporting
 		errorIn_Progress = 1;
 		return 0;
 	    }
@@ -985,7 +984,6 @@ parseVarDecl(token Type)
 // assign -> idExpr [= Expr; | ; ] 
 // invariant: - upon exit, guarantees that ';' terminates
 //            - upon entry, points at id
-
 Assign_AST*
 parseAssignStmt(void)
 {
@@ -1002,16 +1000,18 @@ parseAssignStmt(void)
     tokenType t = next_Token.Tok();
     // no assignment to a++, ++a (although, by construction, could only 
     // have parsed an a++ type when we come here)
-    if ( (tok_semi != t) && ( (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) || 
-			      (dynamic_cast<PostIncrArrayIdExpr_AST*>(LHS)) ) ){
-	parseError(LHS->Addr(), "lvalue required on LHS in assignment");
+    if ( (tok_semi != t) && isNoLvalue(LHS) ){
+	if ( (tok_eq == t) )
+	    parseError(LHS->Addr(), "lvalue required on LHS in assignment");
+	else
+	    parseError(next_Token.Lex(), "invalid in context");
 	errorIn_Progress = 1;
 	return 0;
     }
 	
     int handleMod_Assign = 0;
     switch(t){
-	// ** TO DO: monitor for when functions/classes added
+
     case tok_semi: 
 	if ( !(isNoLvalue(LHS)) )
 	    parseWarning("", "unused statement");
@@ -1314,7 +1314,10 @@ parseStmt(void)
 	    ret = 0;
 	    break;
 	}
-	match(0, tok_semi, 1); // error caught after breaking
+	if ( (-1 == match(0, tok_semi, 1)) ){
+	    punctError(';', 0);
+	    errorIn_Progress = 1;
+	}
 	break;
     case tok_while:
 	ret = parseWhileStmt();
