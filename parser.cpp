@@ -389,6 +389,18 @@ isAssign(token T)
 	return 0;
 }
 
+// ** TO DO: update after functions/classes?
+int
+isNoLvalue(Expr_AST* E)
+{
+    if ( (dynamic_cast<PreIncrIdExpr_AST*>(E)) ||
+	 (dynamic_cast<PostIncrIdExpr_AST*>(E)) ||
+	 (dynamic_cast<PreIncrArrayIdExpr_AST*>(E)) ||
+	 (dynamic_cast<PostIncrArrayIdExpr_AST*>(E)) )
+	return 1;
+    return 0;
+}
+
 Expr_AST* parsePrimaryExpr(void);
 Expr_AST* dispatchExpr(void);
 int logOp_Tot = 0;
@@ -423,10 +435,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	// clarify which way to go, and if if is legal
 	int is_Assign = isAssign(next_Token);
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(LHS)) || 
-			      (dynamic_cast<PreIncrIdExpr_AST*>(LHS)) ||
-			      (dynamic_cast<PostIncrIdExpr_AST*>(LHS)) ||
-			      (dynamic_cast<PreIncrArrayIdExpr_AST*>(LHS)) ||
-			      (dynamic_cast<PostIncrArrayIdExpr_AST*>(LHS)) ) ){
+			      isNoLvalue(LHS)) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;     
@@ -470,10 +479,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	// this is essentially redundant: we also check, in next recursion,
 	// at the top of this function. Allows early error detection.
 	if ( (is_Assign) && ( !(dynamic_cast<IdExpr_AST*>(RHS)) || 
-			      (dynamic_cast<PreIncrIdExpr_AST*>(RHS)) ||
-			      (dynamic_cast<PostIncrIdExpr_AST*>(RHS)) ||
-			      (dynamic_cast<PreIncrArrayIdExpr_AST*>(RHS)) ||
-			      (dynamic_cast<PostIncrArrayIdExpr_AST*>(RHS)) ) ){
+			      isNoLvalue(RHS) ) ){
 	    parseError(next_Token.Lex(), err_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -1005,11 +1011,9 @@ parseAssignStmt(void)
 	
     int handleMod_Assign = 0;
     switch(t){
+	// ** TO DO: monitor for when functions/classes added
     case tok_semi: 
-	if ( !(dynamic_cast<PreIncrIdExpr_AST*>(LHS)) && 
-	     !(dynamic_cast<PostIncrIdExpr_AST*>(LHS)) &&
-	     !(dynamic_cast<PreIncrArrayIdExpr_AST*>(LHS)) && 
-	     !(dynamic_cast<PostIncrArrayIdExpr_AST*>(LHS)) )
+	if ( !(isNoLvalue(LHS)) )
 	    parseWarning("", "unused statement");
 	else // this is case a++; (entire line)
 	    checkInitialized(LHS, 0);
