@@ -11,7 +11,7 @@
     --b = a + a;   // type
     a = -!-!--a;    // chain of infix expressions illegal to end in pre-incr
 
-    +c[2];
-    b = c[2]+; // 15
-    a = 1;
+    double d[4];
+    +d[2];
+    b = d[2]+; // 15
 }

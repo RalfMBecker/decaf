@@ -1,0 +1,43 @@
+-----------------------------------------------
+code generated for ./files/decafe_8.dec
+-----------------------------------------------
+Error near 4:14: Syntax error (c) - attempt to initialize array type
+Warning near 6:8: In (a) - variable used un-initialized
+Warning near 7:6: unused statement
+Warning near 8:8: In (b) - variable used un-initialized
+Error near 10:9: Syntax error (a) - illegal assignment: lvalue expected
+Error near 11:9: Syntax error (b) - illegal assignment: lvalue expected
+Error near 12:14: Syntax error (--) - expected infix operator or primary expression
+Error near 12:14: Syntax error (a) - in assignment - invalid expression as RHS
+Error near 15:5: Syntax error (+) - not legal at start of an expression
+Error near 16:14: Syntax error (;) - expected primary expression
+Error near 16:14: Syntax error (b) - in assignment - invalid expression as RHS
+
+found 8 syntactic/semantic errors
+found 3 warnings
+
+Info for table Env1
+---------------------------------------------------
+Memory allocation - stack: 44
+                     heap: 0
+
+a	Type: int
+	MemType: stack
+	Offset: 0
+	Width: 4
+
+b	Type: double
+	MemType: stack
+	Offset: 4
+	Width: 8
+
+d	Type: double
+	MemType: stack
+	Offset: 12
+	Width: 32
+
+    1                        dec:         a,       int             (Env1)
+    2                        dec:         b,    double             (Env1)
+    3                          +:         a,         a,         1  (Env1)
+    4                          -:         b,         b,         1  (Env1)
+    5                        dec:         d,    double             (Env1)

@@ -1286,7 +1286,7 @@ parseStmt(void)
 {
     if (option_Debug) std::cout << "parsing a statement...\n";
 
-    Stmt_AST* ret;
+    Stmt_AST* ret = 0;
     switch(next_Token.Tok()){
     case tok_int:
 	getNextToken();
@@ -1356,7 +1356,15 @@ parseStmt(void)
 	break;
     default: // empty stmt-expr
 	dispatchExpr(); // parse and discard
-	if (errorIn_Progress) break;
+	if (errorIn_Progress){
+	    // handle rare case of hitting this while error processing 
+	    // hits eof
+	    if ( (tok_eof != next_Token.Tok()) ){
+		std::string e_Msg = "not legal at start of an expression";
+		parseError(next_Token.Lex(), e_Msg);
+	    }
+	    break;
+	}
 	parseWarning("", "unused expression");
 
 	if ( (0 != match(0, tok_semi, 1)) ){
