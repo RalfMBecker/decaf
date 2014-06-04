@@ -248,8 +248,8 @@ EOB_AST(void)
 // Arithmetic, logical, basic, and access (array) types
 class Expr_AST: public Stmt_AST{
 public:
-Expr_AST(token Type=token(), token OpTok = token(), Node_AST* lc=0, 
-	 Node_AST* rc=0)
+Expr_AST(token Type=token(), token OpTok = token(), Expr_AST* lc=0, 
+	 Expr_AST* rc=0)
     : Stmt_AST(lc, rc), type_(Type), op_(OpTok)
     {
 	if ( ( "" != type_.Lex() ) ){ // in case of default constructor
