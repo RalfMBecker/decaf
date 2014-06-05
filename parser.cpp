@@ -411,14 +411,19 @@ int logOp_Tot = 0;
 //         prec_1: precedence of LHS      prec_2 + 1
 //         prec_2: precedence of '+'      precedence of '*' (changed role)
 //         prec_3: precedence of '*'      precedence of '-'
+//
 // The way we track recursion, could go bad for deeply recursive infix (> 99).
-// Restriction should be added to a full description of the compiler/language.
+//
 // Allowing for chained assignments:
 // 1st operator's precedence (prec_2 -> prec_0) is handed on to a recursive 
 // call of parseInfixRHS(), then compared to the prec of the newly read op:
 //   2 3(0)/2
 // a = a = a = 4 + a = 5 (illegal, last =)
 // -> go right if 2 and 3(0)/2 are both '=' (or '+=') 
+//
+// C99 6.5.9, example 92): a < b < c is legals, but evaluated as
+//                         (a < b) < c = 1(0) < c, which is hardly ever
+//                         intended. Hence, we disallow chaining.
 Expr_AST*
 parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 { 
@@ -503,11 +508,25 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	} 
 
 	switch(binOp1.Tok()){
+
+	case tok_mod: // C99 6.5.5. (2): both integer type
+	    if ( !(LHS) || ( (tok_int != (LHS->Type()).Tok()) && 
+			     (tok_intV != (LHS->Type()).Tok()) ) ){
+		parseError(LHS->Addr(),"operands of % must be of integer type");
+		errorIn_Progress = 1;
+		return 0;
+	    }
+	    else if ( !(RHS) || ( (tok_int != (RHS->Type()).Tok()) && 
+			     (tok_intV != (RHS->Type()).Tok()) ) ){
+		parseError(RHS->Addr(),"operands of % must be of integer type");
+		errorIn_Progress = 1;
+		return 0;
+	    }
 	case tok_plus: case tok_minus: case tok_div: case tok_mult:
-	case tok_mod: 
 	    checkInitialized(LHS, RHS);
 	    LHS = new ArithmExpr_AST(binOp1, LHS, RHS);
 	    break;
+
 	case tok_eq: // validity check above
 	    checkInitialized(0, RHS);
 	    LHS = new AssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS);
@@ -520,6 +539,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    LHS = new ModAssignExpr_AST(dynamic_cast<IdExpr_AST*>(LHS), RHS, 
 					binOp1);
 	    break;
+
 	case tok_log_or: 
 	    checkInitialized(LHS, RHS);
 	    LHS = new OrExpr_AST(LHS, RHS);
@@ -528,6 +548,8 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    checkInitialized(LHS, RHS);
 	    LHS = new AndExpr_AST(LHS, RHS);
 	    break;
+
+	    // ** TO DO: coerce (truncate) floats to int type
 	case tok_log_eq: case tok_log_ne: case tok_lt:
 	case tok_le: case tok_gt: case tok_ge:
 	    if ( (1 < ++logOp_Tot) ){
@@ -538,6 +560,7 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    checkInitialized(LHS, RHS);
 	    LHS = new RelExpr_AST(binOp1, LHS, RHS);
 	    break;
+
 	default:
 	    parseError(binOp1.Lex(), "illegal in context");
 	    errorIn_Progress = 1;

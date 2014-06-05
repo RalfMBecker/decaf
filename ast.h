@@ -390,6 +390,12 @@ private:
     std::string tmp_Addr_; // used for Incr type descendants
 };
 
+// C99 6.5 (2): Between sequence points, value cannot be read and stored.
+//              Taken literally, this disallows ++a; a++;, but a FAQ 
+//              clarifies intent (it is legal).
+//              Sequence points (SP's) are declared to delineate what we call
+//              an AssignExpr_AST (among others); C does not have our
+//              Assign_AST (probably simplifies definition of SP's, say).
 class PreIncrIdExpr_AST: public IdExpr_AST{
 public:
     PreIncrIdExpr_AST(IdExpr_AST* P, int V)
@@ -453,6 +459,9 @@ class ArrayVarDecl_AST;
 // Handing on N (which could be read as B->Expr()) separately to avoid 
 // changing order of definitions (would need full definition of
 // ArrayVarDecl_AST, not only forward declaration).
+// C99 6.3.2.1 (3): handled similarly - treated as if base is a reference
+//                  to base, with element access calculated as an offset
+//                  from that base
 class ArrayIdExpr_AST: public IdExpr_AST{
 public:
 ArrayIdExpr_AST(ArrayVarDecl_AST* B, IdExpr_AST* N, int AI, 
@@ -626,6 +635,9 @@ NOP_AST(void)
 };
 
 // ******TO DO: STRING (etc.)********************
+// C99 6.4.5 (4) - string literals:
+//               - append a '\0' at end (done in pre-processing)
+//               - assign to static storage (aka, .data segment)
 
 /***************************************
 * Expression Non-logical children
@@ -648,6 +660,7 @@ ArithmExpr_AST(token Op, Expr_AST* LHS, Expr_AST* RHS)
 };
 
 // replaces old position of LHS in AST, with new LC being the TMP
+// C99 6.3.1.4 (1) truncate float -> int case
 class CoercedExpr_AST: public Expr_AST{
 public:
 CoercedExpr_AST(Expr_AST* TMP, Expr_AST* Expr)
@@ -922,6 +935,7 @@ private:
     // either an integer or a tmp variable), for reference later in visitor
 };
 
+// C99: doesn't exist (c. also comment to PreIncrIdExpr_AST)
 class Assign_AST: public Stmt_AST{
 public:
 Assign_AST(IdExpr_AST* Id, Expr_AST* Expr)

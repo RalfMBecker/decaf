@@ -137,7 +137,6 @@ public:
 	needs_Label_ = 0;
     }
 
-    // ** TO DO: account for pre-/post-increment case
     void visit(ArrayIdExpr_AST* V)
     {
 	if (option_Debug) std::cout << "visiting ArrayIdExpr_AST...\n";

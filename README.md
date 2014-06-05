@@ -1,4 +1,4 @@
-CCC (the Cuddly Chameleon Compiler) is a compiler for the Brown Decaf language 
+CCC (the Cuddly Chameleon Compiler) is a compiler for the Decaf language 
 as per the specifications of a Stanford 2012 class. Note that CCC adds a large 
 amount of additional features (see below). Eventually, a full CFG grammar will 
 be added to this README.
@@ -14,6 +14,15 @@ be added to this README.
      -O: optimize; currently -
          0: remove NOPs from IR,
 
+(0.1) implementation limits: 
+
+     similarly to C99 5.2.4.1, some implementation limits were added:
+     - maximum length identifier: 31
+     - maximum length of an arithmetic literal: 32
+     - maximum string length: 32 (first 3 in compiler.h)
+     - maximum nesting depth of a compound expression: 99 (c. 
+       ParseInfixRHS()),
+
 (1) pre-processing: implemented some steps of C++03 preprocessing directives -
 
       - remove comments
@@ -23,7 +32,7 @@ be added to this README.
 
      Lexer operates on pre-processed tmp-file,
 
-(2) we use (greedy) LR parsing, and how tokens are recognized reflects this:
+(2) we use (greedy) LL parsing, and how tokens are recognized reflects this:
 
     a+++++b -> a ++ ++ + b -> syntax error
     --b+--a -> -- b + -- a -> --b + --a

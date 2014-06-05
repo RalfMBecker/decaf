@@ -393,6 +393,9 @@ getTok()
     //                  - unary +/- are processed at end of gettoken()
     //                  - we allow d., but not .d style of doubles
     //                    (as also specified in Decaf grammar)
+    // C99 6.4.4.2 (1): allowed floats - 1.4., 1., and .4
+    //             (2): 1.4e6 must have either . or e, but not both
+    // ** TO DO: consider adjusting to more liberal C handling
     if ( std::isdigit(last_Char) ){
 	char *end_Ptr;
 	int i = 0, base, ret;
