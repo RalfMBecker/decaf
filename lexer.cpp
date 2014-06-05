@@ -35,7 +35,7 @@ int col_No = 0;
 int last_Char = ' ';
 int errorIn_Progress = 0;
 
-token next_Token;
+token next_Token = token(tok_nop);
 
 int
 getNext(void)
@@ -61,9 +61,34 @@ putBack(char c)
 }
 
 token
+peekNextToken(int User_Call = 0)
+{
+    // choose an initializer token that cannot be legally found
+    static token peeked_Value = token(tok_nop);
+
+    token ret = token(tok_nop);
+    if ( (tok_eof == next_Token.Tok()) )
+	ret = token(tok_eof);
+    else if (User_Call)
+	ret = peeked_Value = next_Token = getTok();
+    else if ( (tok_nop != peeked_Value.Tok()) ){
+	ret = peeked_Value;
+	peeked_Value = token(tok_nop);
+    }
+    else
+	ret = next_Token = getTok();
+
+    return ret;
+}
+
+token
 getNextToken(void)
 {
-    next_Token = getTok();
+    if ( (tok_nop != next_Token.Tok()) )
+	next_Token = peekNextToken(0);
+    else // first time any token read
+	next_Token = getTok();
+
     if (option_Debug)   
 	std::cout << "\t\tnext Token = " << next_Token.Lex() << "\n";
     return next_Token;

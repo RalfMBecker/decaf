@@ -396,6 +396,8 @@ private:
 //              Sequence points (SP's) are declared to delineate what we call
 //              an AssignExpr_AST (among others); C does not have our
 //              Assign_AST (probably simplifies definition of SP's, say).
+// ** TO DO: monitor - if we add more types, only ints and double can be 
+//           pre- and post-incremented
 class PreIncrIdExpr_AST: public IdExpr_AST{
 public:
     PreIncrIdExpr_AST(IdExpr_AST* P, int V)
@@ -617,6 +619,22 @@ FltExpr_AST(token Op)
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
 
+// C99 6.4.5 (4) - string literals:
+//               - append a '\0' at end (done in pre-processing)
+//               - assign to static storage (aka, .data segment)
+// We allocate in .data section, so the object is addressless at this level.
+class String_AST: public Expr_AST{
+public:
+String_AST(token Op)
+    : Expr_AST(token(tok_string), Op, 0, 0) 
+    {
+	if (option_Debug)
+	    std::cout << "\tcreated StringExpr \"" << Op.Lex()  << "\"\n";
+    }
+
+//    void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
+};
+
 // Class is useful in case of semantically important 'empty expressions';
 // e.g., in if (expr) stmt clauses, to ease emitting jump lables to expr.
 // It is probably not necessary for empty statements, but sometimes emitted
@@ -633,11 +651,6 @@ NOP_AST(void)
 
     void accept(AST_Visitor* Visitor) { Visitor->visit(this); }
 };
-
-// ******TO DO: STRING (etc.)********************
-// C99 6.4.5 (4) - string literals:
-//               - append a '\0' at end (done in pre-processing)
-//               - assign to static storage (aka, .data segment)
 
 /***************************************
 * Expression Non-logical children

@@ -123,11 +123,28 @@ parseFltExpr(void)
     return res;
 }
 
+// string -> <string value>
+// we delegate checking the entire "<string>" sequence here
+// invariants - upon entry, should points to tok_stringV
+//            - upon exit, points after to token after
+Expr_AST*
+parseString(void)
+{
+    if (option_Debug) std::cout << "parsing a string...\n";
+ 
+    Expr_AST* res = new String_AST(next_Token);
+    getNextToken();
+    if (errorIn_Progress) return 0;
+    return res;
+}
+
 std::vector<Expr_AST*>* parseDims(void);
 
 IdExpr_AST*
 parseArrayIdExpr(ArrayVarDecl_AST* Base)
 {
+    if (option_Debug) std::cout << "parsing an ArrayIdExpr...\n";
+
     int num_Dims = Base->numDims();
     std::vector<Expr_AST*>* dims_V = parseDims();
     if (errorIn_Progress)
@@ -549,7 +566,6 @@ parseInfixRHS(int prec_1, int prec_0, Expr_AST* LHS)
 	    LHS = new AndExpr_AST(LHS, RHS);
 	    break;
 
-	    // ** TO DO: coerce (truncate) floats to int type
 	case tok_log_eq: case tok_log_ne: case tok_lt:
 	case tok_le: case tok_gt: case tok_ge:
 	    if ( (1 < ++logOp_Tot) ){
@@ -848,7 +864,6 @@ parseDims(void)
 
     std::vector<Expr_AST*>* dims = new std::vector<Expr_AST*>;
 
-// ** TO DO: change correct?
     while ( (0 == match(0, tok_sqopen, 0)) ){
 	if ( (0 == match(1, tok_sqclosed, 0)) ){
 	    parseError(next_Token.Lex(), "array dimension not specified");
@@ -931,7 +946,7 @@ parseArrayVarDecl(IdExpr_AST* Name)
 
 // decl -> type id;
 //         type id = expr; (currently no basic ctor - easily added)
-//         arrary-decl;
+//         array-decl;
 // Shadowing: allowed
 // invariant: - exiting, we confirm ';' (decl), or move back to Id (dec+init)
 //            - entering, points at Id
@@ -952,8 +967,7 @@ parseVarDecl(token Type)
 	return 0;
     }
 
-    IdExpr_AST* new_Id;
-    new_Id = new IdExpr_AST(Type, next_Token);
+    IdExpr_AST* new_Id = new IdExpr_AST(Type, next_Token);
 
     token t_Id = next_Token; // to reset after '='
     getNextToken(); 
@@ -1025,6 +1039,8 @@ parseAssignStmt(void)
 	errorIn_Progress = 1;
 	return 0;
     }
+// ** TO DO
+//    if ( (tok_string == LHS->Type()) && !( tok_semi == 
 	
     int handleMod_Assign = 0;
     switch(t){
@@ -1321,6 +1337,11 @@ parseStmt(void)
 	if (errorIn_Progress) break;
 	ret = parseVarDecl(token(tok_double));
 	break;
+    case tok_string:
+	getNextToken();
+	if (errorIn_Progress) break;
+	ret = parseVarDecl(token(tok_string));
+	break;
     case tok_ID: // note: an 'empty' expr like a++; dispatches here
 	ret = parseAssignStmt();
 	break;
@@ -1475,7 +1496,7 @@ parseStmtList(void)
 // Logic: Once we see '}', we unroll from the right. As we don't read any new
 //        tokens until done, each unrolled pass through the loop back sees
 //        the same terminating '}', and keeps unrolling, until 
-//        return LHS links back to the caller parserStmtList().
+//        return LHS links back to the caller parseStmtList().
 // Note: the eternal loop logic works (only) because '}' serves as a
 //       terminator that doesn't have an object creation action attached.  
 StmtList_AST*
