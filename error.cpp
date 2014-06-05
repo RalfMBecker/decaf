@@ -25,6 +25,7 @@ const int MAX_MSG = 120;
 // Returns number of scope level adjustments, if any (used in 
 // helper adjScopeLevel(int n) in parser.cpp)
 // Returning just an int minimizes dependencies of error.cpp.
+// Return -200 (illegal scope depth) upon reaching eof
 int
 panicModeFwd(void)
 {
@@ -53,7 +54,7 @@ panicModeFwd(void)
     }
     else
 	errExit(0, "end of file reached while processing error");
-    return -1; // == tok_eof
+    return -200; // == tok_eof
 }
 
 #ifdef __GNUC__

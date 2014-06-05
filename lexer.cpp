@@ -60,6 +60,7 @@ putBack(char c)
     input->putback(c);
 }
 
+// 0 - regular access; 1 - by user; 2 - only to reset peek during error proc
 token
 peekNextToken(int User_Call = 0)
 {
@@ -69,8 +70,14 @@ peekNextToken(int User_Call = 0)
     token ret = token(tok_nop);
     if ( (tok_eof == next_Token.Tok()) )
 	ret = token(tok_eof);
-    else if (User_Call)
-	ret = peeked_Value = next_Token = getTok();
+    else if ( (2 == User_Call) )
+	ret = peeked_Value = token(tok_nop);
+    else if (User_Call){
+	if ( (tok_nop != peeked_Value.Tok()) )
+	    errExit(0, "illegal use of peekNextToken(): only one look-ahead");
+	else
+	    ret = peeked_Value = getTok();
+    }
     else if ( (tok_nop != peeked_Value.Tok()) ){
 	ret = peeked_Value;
 	peeked_Value = token(tok_nop);

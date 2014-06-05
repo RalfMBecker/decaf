@@ -156,6 +156,7 @@ extern int last_Char; // not ideal, but nice to be able to access elsewhere
 extern int errorIn_Progress;
 extern token next_Token;
 
+token peekNextToken(int);
 token getNextToken(void);
 token getTok(void);
 int getNext(void);

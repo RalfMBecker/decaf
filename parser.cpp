@@ -51,10 +51,14 @@ int emitRtError_Section = 0; // if we encounter an array declaration whose
 *  Helper functions
 ***************************************/
 // used in error handling (fed by rv of panicModeFwd())
+// N == -200: reached eof
 void
 adjScopeLevel(int N)
 {
     int i;
+
+    if ( (-200 == N) )
+	return;
 
     frame_Depth += N;
     if ( (0 < N) ){
@@ -77,6 +81,7 @@ errorResetStmt(void)
 {
     if (option_Debug) std::cerr << "\trecovering from error...\n";
 
+    peekNextToken(2); // wipe any stored values
     adjScopeLevel(panicModeFwd());
     errorIn_Progress = 0;
     return 0;
@@ -124,7 +129,6 @@ parseFltExpr(void)
 }
 
 // string -> <string value>
-// we delegate checking the entire "<string>" sequence here
 // invariants - upon entry, should points to tok_stringV
 //            - upon exit, points after to token after
 Expr_AST*
@@ -1021,11 +1025,8 @@ parseAssignStmt(void)
     if (option_Debug) std::cout << "parsing an assignment...\n";
 
     IdExpr_AST* LHS = parseIdExpr(next_Token.Lex(), 0);
-    if ( (0 == LHS) ){
-	// varAccessError(next_Token.Lex(), 0); // report at IdExpr level
-	errorIn_Progress = 1;
+    if (errorIn_Progress)
 	return 0;
-    }
 
     Expr_AST* RHS;
     tokenType t = next_Token.Tok();
@@ -1316,6 +1317,18 @@ parseContStmt(void)
     return ret;
 }
 
+// 1 - tokenType handled in parseAssign(); 0 - not
+// ** TO DO: monitor what to add after adding functions/classes
+int
+goAssign(tokenType t)
+{
+    int ret = 0;
+    if ( (isAssign(t)) || (tok_dplus == t) || (tok_dminus == t) || 
+	 (tok_sqopen == t) || (tok_semi == t) )
+	ret = 1;
+    return ret;
+}
+
 // stmt    -> [ varDecl | expr | if-stmt | while-stmt | epsilon ]
 // invariant -> leaving, guarantees a ';' has been found where needed;
 //              entering, next_Token=first token of stmt, which is
@@ -1326,6 +1339,7 @@ parseStmt(void)
     if (option_Debug) std::cout << "parsing a statement...\n";
 
     Stmt_AST* ret = 0;
+    token peek;
     switch(next_Token.Tok()){
     case tok_int:
 	getNextToken();
@@ -1341,9 +1355,6 @@ parseStmt(void)
 	getNextToken();
 	if (errorIn_Progress) break;
 	ret = parseVarDecl(token(tok_string));
-	break;
-    case tok_ID: // note: an 'empty' expr like a++; dispatches here
-	ret = parseAssignStmt();
 	break;
     case tok_dplus:  // case ++a;
     case tok_dminus: //      --a;
@@ -1398,6 +1409,12 @@ parseStmt(void)
 //	errorIn_Progress = 1; // see comment above 
 	ret = 0;
 	break;
+    case tok_ID: // note: an 'empty' expr like a++; dispatches here
+	peek = peekNextToken(1);
+	if ( goAssign(peek.Tok()) ){
+	    ret = parseAssignStmt();
+	    break;
+	} // deliberate fall-through if not
     default: // empty stmt-expr
 	dispatchExpr(); // parse and discard
 	if (errorIn_Progress){
