@@ -593,6 +593,7 @@ private:
     int inc_Value_;
 };
 
+// Type: tok_int; Op.Tok() = tok_intV (similar for flt, string)
 class IntExpr_AST: public Expr_AST{
 public:
 IntExpr_AST(token Op)

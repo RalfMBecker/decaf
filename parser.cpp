@@ -231,7 +231,7 @@ parseArrayIdExpr(ArrayVarDecl_AST* Base)
 // Used for *reading an ID*, not its definition
 // Disambiguates shadowed names; returning the currently active one.
 IdExpr_AST*
-parseIdExpr(std::string Name, int hasPrefix)
+parseIdExpr(std::string Name, int has_Prefix)
 {
     if (option_Debug) std::cout << "parsing (retrieving) an Id...\n";
 
@@ -255,6 +255,17 @@ parseIdExpr(std::string Name, int hasPrefix)
     ArrayIdExpr_AST* name_Array;
     tokenType t = next_Token.Tok();
 
+    // strings only can be combined using '=' and '=='
+    if ( ( !((tok_eq == t) || (tok_log_eq == t) || (tok_semi == t))  || 
+	   (has_Prefix) ) && (dynamic_cast<String_AST*>(pVD->Expr())) ){
+	std::string tmp_Str = next_Token.Lex();
+	if (has_Prefix)
+	    tmp_Str = Name;
+	parseError(Name, "illegal operation on string type");
+	errorIn_Progress = 1;
+	return 0;
+    }
+
     switch(t){
 
 	// case function
@@ -264,7 +275,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 
 	// postfix ++
     case tok_dplus:
-	if (hasPrefix){
+	if (has_Prefix){
 	    parseError(pVD->Addr(), e_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -276,7 +287,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 
 	// postfix --
     case tok_dminus:
-	if (hasPrefix){
+	if (has_Prefix){
 	    parseError(pVD->Addr(), e_Msg3);
 	    errorIn_Progress = 1;
 	    return 0;
@@ -298,7 +309,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 
 	    switch(next_Token.Tok()){
 	    case tok_dplus:
-		if (hasPrefix){
+		if (has_Prefix){
 		    parseError(pVD->Addr(), e_Msg3);
 		    errorIn_Progress = 1;
 		    return 0;
@@ -308,7 +319,7 @@ parseIdExpr(std::string Name, int hasPrefix)
 		getNextToken();
 		break;
 	    case tok_dminus:
-		if (hasPrefix){
+		if (has_Prefix){
 		    parseError(pVD->Addr(), e_Msg3);
 		    errorIn_Progress = 1;
 		    return 0;
@@ -698,7 +709,14 @@ dispatchPrefixExpr(token t)
 
     // process legal expression types prefix(es) operate on
     switch(next_Token.Tok()){
-    case tok_ID: ret = parseIdExpr(next_Token.Lex(), 0); break;
+    case tok_ID: 
+	ret = parseIdExpr(next_Token.Lex(), 0);
+	if (dynamic_cast<String_AST*>(ret)){
+	    parseError(ret->Addr(), "illegal operation on string type");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	break;
     case tok_intV: ret = parseIntExpr(); break;
     case tok_doubleV: ret = parseFltExpr(); break;
     case tok_rdopen: ret = parseParensExpr(); break;
@@ -978,6 +996,14 @@ parseVarDecl(token Type)
     if (errorIn_Progress) return 0;
     Decl_AST* ret;
 
+    // see longer comment in parseAssignStmt()
+    if ( (tok_string == (new_Id->Type()).Tok()) && 
+	 !( (tok_semi == t_Id.Tok()) || (tok_eq == t_Id.Tok())) ){
+	parseError(next_Token.Lex(), "illegal operation on string type");
+	errorIn_Progress = 1;
+	return 0;
+    }
+
     switch(next_Token.Tok()){
     case tok_semi: // we are done - declaration only
 	ret = new VarDecl_AST(new_Id);
@@ -1040,8 +1066,15 @@ parseAssignStmt(void)
 	errorIn_Progress = 1;
 	return 0;
     }
-// ** TO DO
-//    if ( (tok_string == LHS->Type()) && !( tok_semi == 
+
+    // strings: only allowed here if...
+    // declaration: int a; int a = initializer;
+    // assignment: a = initializer; a = b (another string); chained ok
+    if ( (dynamic_cast<String_AST*>(LHS)) && (tok_semi != t) && (tok_eq != t) ){
+	parseError(next_Token.Lex(), "illegal operation on string type");
+	errorIn_Progress = 1;
+	return 0;
+    }
 	
     int handleMod_Assign = 0;
     switch(t){
@@ -1079,7 +1112,7 @@ parseAssignStmt(void)
 	}
 	break;
 
-    default:
+    default: // shouldn't come here by new routing through parseStmt()
 	std::ostringstream tmp_Stream;
 	tmp_Stream << "\';\', \'=\', \'+=\', \'-=\', \'*=\', or \'/=\'";
 	tmp_Stream << " expected"; 
@@ -1088,9 +1121,16 @@ parseAssignStmt(void)
 	return 0;
 	break;
     }
-
+   
     if ( (0 != RHS) ){
-	if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
+	if ( ( (dynamic_cast<String_AST*>(LHS)) || 
+	       (dynamic_cast<String_AST*>(RHS)) ) && 
+	     ( (LHS->Type()).Tok() != (RHS->Type()).Tok() ) ){
+	    parseError(LHS->Addr(), "types incompatible for assignment");
+	    errorIn_Progress = 1;
+	    return 0;
+	}
+	else if ( (LHS->Type().Tok() != RHS->Type().Tok()) )
 	    RHS = parseCoercion(RHS, LHS->Type().Tok());
     }
 
