@@ -34,7 +34,7 @@ extern int option_Preproc;
 extern int option_IR;
 extern int option_OptLevel;
 
-extern std::string base_Name;
+extern std::string base_Name; // from preproc.cpp
 extern std::fstream* input;
 extern std::fstream* file_Source;
 extern std::fstream* file_Preproc;

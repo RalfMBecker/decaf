@@ -191,7 +191,7 @@ checkReserved(std::string Str)
 }
 
 // Some operators are also the first character of a two-char operator; 
-// thery are handled in parseTwoChar():
+// they are handled in parseTwoChar():
 //      *, /, <, >, =, !, [
 // + and - are handled separately as their 2nd character is ambigous.
 token
@@ -266,7 +266,7 @@ readOctHex(int* Last, std::string& Str, int Base)
     return i-1; // we read one too far
 }
 
-// Returns: lenght of escape sequence if fine; -2 if not
+// Returns: length of escape sequence if fine; -2 if not
 // Upon entry, *last point to '\\'. 
 // Upon exit, it points to the last valid character in the escape sequence
 int
@@ -336,7 +336,7 @@ getBase(int* Last)
 }
 
 // Returns: tok_int if octal/hex; 0 if so far correct processing of a dec int;
-//          token(tok_err) if error
+//          tok_err if error
 // Note:    returning tok_err could be a perfectly valid integer; hence,
 //          caller is expted to check errorIn_Prog instead
 // (handled differently as octal/hex can only be integers; but for decimals,

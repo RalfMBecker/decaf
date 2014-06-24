@@ -72,14 +72,14 @@ deallocateIR(void)
 {
     if ( !(rtError_Table.empty()) ){
 	std::vector<RtError_Type*>::iterator iter;
-	std::vector<RtError_Type*> t;	
+	std::vector<RtError_Type*> t = rtError_Table;	
 	for ( iter = t.begin(); iter != t.end(); iter++ )
 	    if ( (0 != *iter) ) delete *iter;
     }
 
     if ( !(Ds_Table.empty()) ){
 	std::vector<Ds_Object*>::iterator iter;
-	std::vector<Ds_Object*> t;
+	std::vector<Ds_Object*> t = Ds_Table;
 	for ( iter = t.begin(); iter != t.end(); iter++ )
 	    if ( (0 != *iter) ) delete *iter;
     }
@@ -165,7 +165,8 @@ astToIR(void)
     if ( (0 != pFirst_Node) ){
 
 	printSTInfo();
-	pFirst_Node->accept(new MakeIR_Visitor);
+	MakeIR_Visitor* IR_Root = new MakeIR_Visitor();
+	pFirst_Node->accept(IR_Root);
 
 	if (emitRtError_Section)
 	    printDataSection();
@@ -177,6 +178,7 @@ astToIR(void)
 	    iR_List_2 = removeNOPs(iR_List);
 	    printIR_List(iR_List_2);
 	}
+//	delete IR_Root; // ** TO DO: clarify why can't delete
     }
     else{
 	std::cerr << "---no valid statements found---\n";

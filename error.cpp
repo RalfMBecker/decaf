@@ -119,9 +119,13 @@ errExit(int pError, const char* format, ...)
     fputs(str, stderr);
     fflush(stderr);
 
-    // if we created the preproc tmp file, make sure to delete it
+    // if we created a tmp file, make sure to delete it
     struct stat buffer;
     std::string tmp_Str = base_Name + ".pre";
+    if ( (0 == stat(tmp_Str.c_str(), &buffer)) )
+	unlink(tmp_Str.c_str());
+
+    tmp_Str = base_Name + ".ir";
     if ( (0 == stat(tmp_Str.c_str(), &buffer)) )
 	unlink(tmp_Str.c_str());
 
@@ -133,7 +137,7 @@ errExit(int pError, const char* format, ...)
 ***************************************/
 // Type: 0 - regular; 1 - toolong/strtonum
 void
-lexerError(int Type, std::string const& Name, std::string const& Second)
+lexerError(int Type, const std::string& Name, const std::string& Second)
 {
     errorBase(1);
 
@@ -155,7 +159,7 @@ lexerError(int Type, std::string const& Name, std::string const& Second)
 // Enforcing max lengths of identifiers, etc. Sample usage:
 //            name=<identifier>, type_Str="MAX_ID", type=MAX_ID
 void
-tooLongError(std::string const& Name, std::string const& type_Str, int Type)
+tooLongError(const std::string& Name, const std::string& type_Str, int Type)
 {    
     lexerError(1, Name, "");
     std::cerr << "longer than " << type_Str << " (" << Type << ")\n";
@@ -163,7 +167,7 @@ tooLongError(std::string const& Name, std::string const& type_Str, int Type)
 
 // strtod has arcane error repoting; c./ man page
 void
-strToNumError(std::string const& Name, std::string const& Type, char C)
+strToNumError(const std::string& Name, const std::string& Type, char C)
 {
     lexerError(1, Name, "");
     if ( (0 != errno) ){ // overflow/underflow
@@ -184,7 +188,7 @@ strToNumError(std::string const& Name, std::string const& Type, char C)
 ***************************************/
 // Type: 0 - not defined; 1 - attempt to redefine
 void
-varAccessError(std::string Name, int Type)
+varAccessError(const std::string& Name, int Type)
 {
     errorBase(1);
     no_par_Errors++;
@@ -204,7 +208,7 @@ varAccessError(std::string Name, int Type)
 
 // has default arguments set for L and C (in error.h)
 void
-parseError(std::string tok_Str, std::string com_Str, int L, int C)
+parseError(const std::string& tok_Str, const std::string& com_Str, int L, int C)
 {
     errorBase(1, L, C);
     no_par_Errors++;
@@ -216,7 +220,7 @@ parseError(std::string tok_Str, std::string com_Str, int L, int C)
 }
 
 void
-parseWarning(std::string tok_Str, std::string com_Str) 
+parseWarning(const std::string& tok_Str, const std::string& com_Str) 
 {
     errorBase(0);
     no_Warnings++;

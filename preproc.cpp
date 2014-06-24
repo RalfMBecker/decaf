@@ -4,6 +4,7 @@
 * Currently does:
 * - strip comments
 * - concatenate adjacent strings
+* - terminate strings with a '\0'
 * - add a "\n" at EOF
 *
 * Error checking: none (job of the lexer), except for comments
@@ -33,9 +34,8 @@ extern std::fstream* file_Preproc;
 // Entry:       should point to " (caller to ensure it's not escape sequence \")
 // Exit:        points to terminating " (or to eof, if none found)
 // Rv:          -1 - eof; 0 - found " " delimited string
-// Arg ret_Str: write characters found to end of ret_Str
+// Arg ret_Str: write characters found to end of ret_Str (concatenate strings)
 // Errors:      done by lexer (e.g., accept \n and other escape sequences)
-// Note:        reads in illegal-in-string '\n' char - lexer to handle
 int
 getString(std::string& ret_Str)
 {
@@ -111,7 +111,6 @@ preProcess(std::string In_Name)
 			    tmp_Str = "";
 			    for (int i = 0; i < count; i++)
 				tmp_Str += "\n";
-			    //int size = tmp_Str.size();
 			    if ( (0 < count) )
 				file_Preproc->write(tmp_Str.c_str(), count);
 			    break; 
@@ -170,8 +169,8 @@ preProcess(std::string In_Name)
 deep_Jump:
     file_Preproc->put('\n');
     file_Preproc->flush(); // as we don't delete the pointer in this function
-
-    file_Preproc->seekg(0, file_Preproc->beg); // won't put to it, so not reset
+                           // Review: ** TO DO: why?
+    file_Preproc->seekg(0, file_Preproc->beg);
 
     input = file_Preproc;
 }

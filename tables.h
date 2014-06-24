@@ -43,7 +43,7 @@ Env* makeEnvRootTop(void);
 Env* addEnv(Env*);
 void printEnvAncestorInfo(Env*);
 
-// ct basic type & arrays of basic type management
+// compile-time basic type & arrays of basic type management
 int addDeclToEnv(Env* pEnv, Decl_AST* new_Object, std::string MemType);
 Decl_AST* findVarByIdId(Env* p, IdExpr_AST* Id);
 Decl_AST* findVarByName(Env* p, std::string Name);
@@ -56,7 +56,7 @@ void printSTInfo(void);
 
 // Table for: basic types; arrays of basic types
 // Compile-time object, part of a linked list of (rt) Symbol Tables, each
-// a (name, <basic type>/class) pair
+// a (name, <basic type>/c-t array/class) pair
 class Env{
 public:
     Env(Env* P = 0)
@@ -137,7 +137,7 @@ private:
 // from maker function addIdToEnv(). 
 // Offset: rel offset to beginning of mem area that will be reserved 
 //         for objects in the scope managed by this Symbol_Table, by
-//         heap and stack area
+//         heap and stack area (doesn't really apply on heap, though)
 class Symbol_Table{
 public:
     Symbol_Table(std::string Name = "")

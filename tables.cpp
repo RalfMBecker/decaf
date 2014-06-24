@@ -27,11 +27,11 @@ std::map<std::string, int> typeWidth_Table;
 Env* root_Env;
 Env* top_Env; // currently active environment table
 
-// run-time globals
-std::map<std::string, Symbol_Table> ST;
-
 // static int used in Symbol Table maintenance in file tables.h
 int Env::count_ = -1; // associate 0 with never-used root_Env pointer
+
+// run-time globals
+std::map<std::string, Symbol_Table> ST;
 
 // the following tokens have a precedence priority, but are not tracked
 // using this table:
@@ -70,8 +70,6 @@ opPriority(token t)
 
 // Prepare type_Table with basic types and their coercion priority
 // (void is not a legal type for var declaration).
-// As we'll also use the table for a 'valid type' check, we added string
-// (which cannot be converted to any other type)
 void
 makeTypePrecTable(void)
 {

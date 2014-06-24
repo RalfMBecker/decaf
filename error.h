@@ -40,13 +40,14 @@ int panicModeFwd(void);
 void errExit(int pError, const char* format, ...);
 void usageErr(std::string);
 
-void lexerError(int Type, std::string const& Name, std::string const& Second);
-void tooLongError(std::string const& Name,std::string const& type_Str,int Type);
-void strToNumError(std::string const& Name, std::string const& Type, char C);
+void lexerError(int Type, const std::string& Name, const std::string& Second);
+void tooLongError(const std::string& Name,const std::string& type_Str,int Type);
+void strToNumError(const std::string& Name, const std::string& Type, char C);
 
-void varAccessError(std::string Name, int Type);
-void parseError(std::string tok_Str, std::string com_Str, int L = -1, int C=-1);
-void parseWarning(std::string tok_Str, std::string com_Str);
+void varAccessError(const std::string& Name, int Type);
+void parseError(const std::string& tok_Str, const std::string& com_Str, 
+		int L = -1, int C = -1);
+void parseWarning(const std::string& tok_Str, const std::string& com_Str);
 void punctError(char C, int What);
 
 #endif
