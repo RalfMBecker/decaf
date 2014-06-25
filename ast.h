@@ -103,8 +103,11 @@ public:
 /***************************************
 * Base class
 ***************************************/
-// parents manage their children: once they are created, add a pointer
-// to parent in any child
+// Parents manage their children: once they are created, add a pointer
+// to parent in any child.
+// As we have partial DAG features (eg., all expressions with a variable
+// child share this same object), we use hand-written refcounting to
+// manage de-allocation).
 class Node_AST{
 public:
 Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
@@ -149,7 +152,7 @@ Node_AST(Node_AST* lC = 0, Node_AST* rC = 0)
 	    this->rChild_->accept(Visitor);
     }
 
-protected:
+protected: // we don't really use protected variables in children
     Node_AST* parent_;
     Node_AST* lChild_;
     Node_AST* rChild_;
@@ -201,7 +204,7 @@ StmtList_AST(Node_AST* LHS = 0, Node_AST* RHS = 0)
 	if ( (0!= this->rChild_) )
 	    this->rChild_->accept(Visitor);
 //	Visitor->visit(this); // as we visit all children and children of
-	// children first, then would visit the StrmtList proper AFTER where
+	// children first, then would visit the StmtList proper AFTER, and
 	// we do nothing, it only confuses in -d p/o (si does nothing below).
         //      sl                 
 	//   lc1  s2                 -> visit lc1-lc2-rc1-s2-s1
@@ -229,6 +232,8 @@ Stmt_AST(Node_AST* LC = 0, Node_AST* RC = 0)
 };
 
 
+// ** TO DO: REFACTOR - this could be key to manage better tmp allocation
+// ******************************************************
 // End of Block marker (used to clean up after arrays with integer
 // expression bounds)
 class EOB_AST: public Stmt_AST{
@@ -305,6 +310,7 @@ protected:
     int typeP_;
 };
 
+// 3 (or less) expressions used in cond part of iteration types
 class IterExprList_AST: public Node_AST{
 public:
 IterExprList_AST(Expr_AST* E1 = 0, Expr_AST* E2 = 0, Expr_AST* E3 = 0) 

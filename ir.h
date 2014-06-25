@@ -1,6 +1,9 @@
 /********************************************************************
 * ir.h - IR for decaf
 *
+* Note: includes handling .data section, and emission or RT error
+*       section 
+*
 ********************************************************************/
 
 #ifndef IR_H_
@@ -36,16 +39,18 @@ typedef std::map<int, SSA_Entry*> ir_Rep;
 extern ir_Rep iR_List;
 extern ir_Rep iR_List_2;
 extern ir_Rep iR_RtError_Targets;
+
+void insertLine(SSA_Entry*, ir_Rep&, int Reset = 0);
+void printIR_List(ir_Rep const&);
+ir_Rep removeNOPs(ir_Rep const&);
+
+// also from ir.cpp
 extern std::vector<RtError_Type*> rtError_Table;
 extern std::vector<Ds_Object*> Ds_Table;
 
 void makeRtErrorTable(void);
 void makeRtErrorTargetTable(ir_Rep& Target);
 void printDataSection(void);
-
-void insertLine(SSA_Entry*, ir_Rep&, int Reset = 0);
-void printIR_List(ir_Rep const&);
-ir_Rep removeNOPs(ir_Rep const&);
 
 class SSA_Entry{
 public: 

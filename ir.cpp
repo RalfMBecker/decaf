@@ -15,7 +15,7 @@ std::vector<RtError_Type*> rtError_Table;
 std::vector<Ds_Object*> Ds_Table;
 
 std::vector<std::string>
-appendLabels(std::vector<std::string> Old, std::vector<std::string> const& Add)
+appendLabels(std::vector<std::string> Old, const std::vector<std::string>& Add)
 {
     std::vector<std::string> ret;
  
@@ -61,6 +61,7 @@ removeNOPs(ir_Rep const& Old)
     if (is_Nop){
 	line = new SSA_Entry( *(iter->second) );
 	insertLine(line, ir_New, Reset);
+	Reset = 0; // not really necessary as this case couldn't happen
     }
 
     return ir_New;
@@ -76,7 +77,7 @@ insertLine(SSA_Entry* Line, ir_Rep& List, int Reset)
 }
 
 void
-printIR_List(ir_Rep const& List)
+printIR_List(const ir_Rep& List)
 {
     ir_Rep::const_iterator iter;
     for (iter = List.begin(); iter != List.end(); iter++){
@@ -87,7 +88,9 @@ printIR_List(ir_Rep const& List)
     }
 }
 
-// Run-time error management object
+// Run-time error management object (prepare the objects needed):
+// - make RtError section
+// - add string constants to be referenced (in .data section)
 void
 makeRtErrorTable(void)
 {
@@ -120,6 +123,7 @@ makeRtErrorTable(void)
     rtError_Table.push_back(pRT);
 }
 
+// make the section (preparation in makeRtErrorTable() done)
 void
 makeRtErrorTargetTable(ir_Rep& Target)
 {
